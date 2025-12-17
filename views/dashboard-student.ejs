@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Online Gradebook</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>Welcome, <%= user.name %>!</h1>
+            
+            <div class="user-info">
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Role:</strong> <%= user.role %></p>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Subjects & Grades Section -->
+            <div class="section">
+                <h2>Notele Mele</h2>
+                
+                <div class="grades-grid">
+                    <!-- Subject Card 1 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Matematică</h3>
+                            <span class="grade-badge grade-10">10.00</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">10</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 2 (1 nemotivată)</span>
+                                </div>
+                                <div class="absences-list">
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">15 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item unmotivated">
+                                        <span class="absence-date">03 Nov 2024</span>
+                                        <span class="absence-status">Nemotivată</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Excelent la algebră și geometrie!</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 2 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Limba Română</h3>
+                            <span class="grade-badge grade-9">8.80</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">9</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 0</span>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Foarte bună analiza textelor literare.</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 3 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Fizică</h3>
+                            <span class="grade-badge grade-9">9.25</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">9</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 1 (0 nemotivate)</span>
+                                </div>
+                                <div class="absences-list">
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">22 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Cunoștințe solide la mecanică.</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 4 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Istorie</h3>
+                            <span class="grade-badge grade-8">8.17</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">7</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">9</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 3 (1 nemotivată)</span>
+                                </div>
+                                <div class="absences-list">
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">10 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">18 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item unmotivated">
+                                        <span class="absence-date">07 Nov 2024</span>
+                                        <span class="absence-status">Nemotivată</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Bună lucrarea despre Primul Război Mondial.</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 5 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Informatică</h3>
+                            <span class="grade-badge grade-10">9.86</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">10</span>
+                                <span class="grade-item">10</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 0</span>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Excelente abilități de programare!</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 6 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Chimie</h3>
+                            <span class="grade-badge grade-8">8.50</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">9</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 1 (1 nemotivată)</span>
+                                </div>
+                                <div class="absences-list">
+                                    <div class="absence-item unmotivated">
+                                        <span class="absence-date">28 Oct 2024</span>
+                                        <span class="absence-status">Nemotivată</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Bună activitate la laborator.</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 7 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Limba Engleză</h3>
+                            <span class="grade-badge grade-9">9.00</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">9</span>
+                                <span class="grade-item">10</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 2 (0 nemotivate)</span>
+                                </div>
+                                <div class="absences-list">
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">15 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">22 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Foarte bună exprimare scrisă și orală.</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 8 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Biologie</h3>
+                            <span class="grade-badge grade-8">7.75</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">7</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">8</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 4 (1 nemotivată)</span>
+                                </div>
+                                <div class="absences-list">
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">08 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">15 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">22 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item unmotivated">
+                                        <span class="absence-date">12 Nov 2024</span>
+                                        <span class="absence-status">Nemotivată</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Bună înțelegere a sistemelor biologice.</p>
+                        </div>
+                    </div>
+
+                    <!-- Subject Card 9 -->
+                    <div class="subject-card">
+                        <div class="subject-header">
+                            <h3>Geografie</h3>
+                            <span class="grade-badge grade-7">7.00</span>
+                        </div>
+                        <div class="subject-details">
+                            <div class="grades-list">
+                                <span class="grade-item">7</span>
+                                <span class="grade-item">6</span>
+                                <span class="grade-item">7</span>
+                                <span class="grade-item">8</span>
+                                <span class="grade-item">7</span>
+                            </div>
+                            <div class="absences-section">
+                                <div class="absences-header">
+                                    <span class="absences-label">Absențe: 5 (3 nemotivate)</span>
+                                </div>
+                                <div class="absences-list">
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">05 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item unmotivated">
+                                        <span class="absence-date">12 Oct 2024</span>
+                                        <span class="absence-status">Nemotivată</span>
+                                    </div>
+                                    <div class="absence-item motivated">
+                                        <span class="absence-date">19 Oct 2024</span>
+                                        <span class="absence-status">Motivată</span>
+                                    </div>
+                                    <div class="absence-item unmotivated">
+                                        <span class="absence-date">02 Nov 2024</span>
+                                        <span class="absence-status">Nemotivată</span>
+                                    </div>
+                                    <div class="absence-item unmotivated">
+                                        <span class="absence-date">16 Nov 2024</span>
+                                        <span class="absence-status">Nemotivată</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="grade-comment">Satisfăcător, ai nevoie de mai multă atenție.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grade Summary -->
+            <div class="section">
+                <h2>Statistici</h2>
+                <div class="summary-stats">
+                    <div class="stat-card">
+                        <div class="stat-value">8.70</div>
+                        <div class="stat-label">Media Generală</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">9</div>
+                        <div class="stat-label">Total Materii</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">43</div>
+                        <div class="stat-label">Total Note</div>
+                    </div>
+                    <div class="stat-card stat-warning">
+                        <div class="stat-value">18</div>
+                        <div class="stat-label">Total Absențe</div>
+                        <div class="stat-sublabel">7 nemotivate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">Foarte Bine</div>
+                        <div class="stat-label">Calificativ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Logout</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

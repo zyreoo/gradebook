@@ -1,0 +1,451 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #ffffff;
+    color: #000000;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Container */
+.container {
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Cards */
+.login-card,
+.dashboard {
+    background-color: #ffffff;
+    border: 1px solid #000000;
+    padding: 40px;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: normal;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+/* Form */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #000000;
+    background-color: #ffffff;
+    color: #000000;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border: 2px solid #000000;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #000000;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.btn-secondary {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.btn-secondary:hover {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+/* Messages */
+.error-message,
+.success-message {
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #000000;
+    font-size: 14px;
+}
+
+.error-message {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.success-message {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+/* Links */
+.register-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.register-link a {
+    color: #000000;
+    text-decoration: underline;
+}
+
+.register-link a:hover {
+    text-decoration: none;
+}
+
+/* Dashboard */
+.user-info {
+    border: 1px solid #000000;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.user-info p {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.user-info p:last-child {
+    margin-bottom: 0;
+}
+
+.actions {
+    margin-top: 20px;
+}
+
+/* Dashboard Layout */
+body:has(.dashboard-container) {
+    display: block;
+    padding: 0;
+}
+
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.dashboard-header {
+    margin-bottom: 40px;
+}
+
+.dashboard-header h1 {
+    font-size: 32px;
+    margin-bottom: 20px;
+}
+
+.dashboard-header .user-info {
+    background-color: #f5f5f5;
+    border: 1px solid #000000;
+    padding: 15px 20px;
+    display: flex;
+    gap: 30px;
+}
+
+.dashboard-header .user-info p {
+    margin-bottom: 0;
+}
+
+/* Section */
+.section {
+    margin-bottom: 50px;
+}
+
+.section h2 {
+    font-size: 20px;
+    font-weight: normal;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #000000;
+}
+
+/* Grades Grid */
+.grades-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* Subject Card */
+.subject-card {
+    border: 1px solid #000000;
+    padding: 20px;
+    background-color: #ffffff;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.subject-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 4px 4px 0 #000000;
+}
+
+.subject-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.subject-header h3 {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0;
+}
+
+/* Grade Badges - Romanian System (1-10) */
+.grade-badge {
+    padding: 5px 15px;
+    border: 2px solid #000000;
+    font-weight: bold;
+    font-size: 20px;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* Excellent: 10 */
+.grade-10 {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+/* Very Good: 9 */
+.grade-9 {
+    background-color: #333333;
+    color: #ffffff;
+}
+
+/* Good: 8 */
+.grade-8 {
+    background-color: #666666;
+    color: #ffffff;
+}
+
+/* Satisfactory: 7 */
+.grade-7 {
+    background-color: #999999;
+    color: #000000;
+}
+
+/* Sufficient: 6 */
+.grade-6 {
+    background-color: #cccccc;
+    color: #000000;
+}
+
+/* Insufficient: 5 and below */
+.grade-5,
+.grade-4,
+.grade-3,
+.grade-2,
+.grade-1 {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ff0000;
+}
+
+/* Subject Details */
+.subject-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Grades List */
+.grades-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 0;
+}
+
+.grade-item {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #f5f5f5;
+    border: 1px solid #000000;
+    font-weight: bold;
+    font-size: 14px;
+    min-width: 35px;
+    text-align: center;
+}
+
+/* Absences Section */
+.absences-section {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+}
+
+.absences-header {
+    margin-bottom: 10px;
+}
+
+.absences-label {
+    font-weight: bold;
+    color: #000000;
+    font-size: 13px;
+}
+
+.absences-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.absence-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background-color: #ffffff;
+    border: 1px solid #000000;
+    font-size: 12px;
+}
+
+.absence-item.motivated {
+    border-left: 3px solid #666666;
+}
+
+.absence-item.unmotivated {
+    border-left: 3px solid #000000;
+    background-color: #fff8f8;
+}
+
+.absence-date {
+    font-weight: bold;
+    color: #000000;
+}
+
+.absence-status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border: 1px solid #000000;
+}
+
+.absence-item.motivated .absence-status {
+    background-color: #f5f5f5;
+    color: #666666;
+}
+
+.absence-item.unmotivated .absence-status {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.grade-comment {
+    font-size: 13px;
+    color: #666666;
+    margin: 0;
+    line-height: 1.5;
+    padding-top: 8px;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Summary Stats */
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    border: 1px solid #000000;
+    padding: 30px 20px;
+    text-align: center;
+    background-color: #ffffff;
+}
+
+.stat-card.stat-warning {
+    border: 2px solid #000000;
+    background-color: #f9f9f9;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-sublabel {
+    font-size: 12px;
+    color: #999999;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+/* Dashboard Footer */
+.dashboard-footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #000000;
+}
+
+.dashboard-footer form {
+    max-width: 200px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .grades-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-header .user-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .summary-stats {
+        grid-template-columns: 1fr;
+    }
+}

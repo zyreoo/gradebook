@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 
 
 
-class User {
+class User {    
 
 
     static async create({name, email, password, role =  "student "}){

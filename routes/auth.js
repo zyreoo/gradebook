@@ -10,7 +10,7 @@ router.get('/login', (req, res) => {
     });
 });
 
-// POST login (placeholder - you'll implement this later)
+
 router.post('/login', async (req, res) => {
     try{
         const {email, password} = req.body
@@ -36,7 +36,7 @@ router.post('/login', async (req, res) => {
         req.session.userName = user.name;
         req.session.userRole = user.role;
 
-        // Redirect to dashboard
+
         res.redirect('/dashboard');
 
     }catch (error){
@@ -78,9 +78,10 @@ router.post('/register', async (req, res) => {
             return res.redirect('/auth/register?error=' + encodeURIComponent('Password must be at least 6 characters'));
         }
 
-        const existingUser = await User.findbyEmail({ email });
+        const existingUser = await User.findbyEmail(email);
         if (existingUser) {
-            return res.redirect('/auth/register?error=' + encodeURIComponent('User with this email already exists'));
+            
+            return res.redirect('/auth/login?error=' + encodeURIComponent('User with this email already exists'));
         }
 
         
@@ -88,12 +89,18 @@ router.post('/register', async (req, res) => {
             name,
             email,
             password,
-            role: role || 'student'
+            role
         });
 
         res.redirect('/auth/login?success=' + encodeURIComponent('Registration successful! Please login.'));
     } catch (error) {
         console.error('Registration error:', error);
+
+        if (error.code === 'auth/email-already-exists') {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('This email is already registered. Please login instead.'));
+        }
+
+
         res.redirect('/auth/register?error=' + encodeURIComponent('Registration failed. Please try again.'));
     }
 });

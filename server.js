@@ -46,16 +46,24 @@ app.get('/dashboard', (req, res) => {
         return res.redirect('/auth/login');
     }
 
-    res.render('dashboard', {
-        user: {
-            name: req.session.userName,
-            email: req.session.userEmail,
-            role: req.session.userRole
-        }
-    });
+    const userData = {
+        name: req.session.userName,
+        email: req.session.userEmail,
+        role: req.session.userRole
+    };
+
+    if (req.session.userRole === 'teacher') {
+        res.render('dashboard-teacher', { user: userData });
+    } else if (req.session.userRole === 'student') {
+        res.render('dashboard-student', { user: userData });
+    } else {
+        res.render('dashboard', { user: userData }); 
+    }
 });
 
-// Start server
+
+
+
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
