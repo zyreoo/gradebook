@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students - Online Gradebook</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <h1>All Students</h1>
+            
+            <div class="navigation">
+                <a href="/dashboard">← Back to Dashboard</a>
+            </div>
+
+            <% if (students.length === 0) { %>
+                <p>No students found.</p>
+            <% } else { %>
+                <div class="students-list">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Registered</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% students.forEach(function(student) { %>
+                                <tr>
+                                    <td><%= student.name %></td>
+                                    <td><%= student.email %></td>
+                                    <td><%= new Date(student.createdAt).toLocaleDateString() %></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+
+            <div class="actions">
+                <form action="/auth/logout" method="GET">
+                    <button type="submit" class="btn-primary">Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

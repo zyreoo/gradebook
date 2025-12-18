@@ -62,6 +62,40 @@ app.get('/dashboard', (req, res) => {
 });
 
 
+app.get('/students', (req, res) =>{
+
+
+    if (!req.session.userId) {
+        return res.redirect('/auth/login');
+    }
+
+
+    if (req.session.userRole !== 'teacher') {
+        return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. Teachers only.'));
+    }
+
+
+    const User = require('./models/User')
+
+
+    User.getUserByRole('student')
+        .then(students => {
+            res.render('students', {
+                user: {
+                    name: req.session.userName,
+                    email: req.session.userEmail,
+                    role: req.session.userRole
+                },
+                students: students
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching students:', error);
+            res.redirect('/dashboard?error=' + encodeURIComponent('Failed to load students'));
+        });
+});
+
+
 
 
 app.listen(PORT, () => {

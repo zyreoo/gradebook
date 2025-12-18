@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 class User {    
 
 
-    static async create({name, email, password, role =  "student "}){
+    static async create({name, email, password, role =  "student"}){
 
 
         const hashedpassword = await bcrypt.hash(password, 10); 
@@ -60,6 +60,21 @@ class User {
     static async comparepassword(candidatePassword, hashedpassword){
 
         return await bcrypt.compare(candidatePassword, hashedpassword);
+    }
+
+
+
+    static async getUserByRole(role){
+        const snapshot = await db.collection('users')
+
+        .where('role', "==", role)
+        .get()
+
+        if (snapshot.empty){
+            return [];
+        }
+
+        return snapshot.docs.map(doc => doc.data()); 
     }
 }
 

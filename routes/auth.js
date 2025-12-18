@@ -70,8 +70,12 @@ router.post('/register', async (req, res) => {
         const { name, email, password, role } = req.body;
 
 
-        if (!name || !email || !password) {
+        if (!name || !email || !password || !role) {
             return res.redirect('/auth/register?error=' + encodeURIComponent('All fields are required'));
+        }
+
+        if (role !== 'student' && role !== 'teacher') {
+            return res.redirect('/auth/register?error=' + encodeURIComponent('Invalid role selected'));
         }
 
         if (password.length < 6) {
@@ -80,7 +84,6 @@ router.post('/register', async (req, res) => {
 
         const existingUser = await User.findbyEmail(email);
         if (existingUser) {
-            
             return res.redirect('/auth/login?error=' + encodeURIComponent('User with this email already exists'));
         }
 

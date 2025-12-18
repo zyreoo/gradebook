@@ -7,18 +7,28 @@
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <div class="container">
-        <div class="dashboard">
+    <div class="dashboard-container">
+        <div class="dashboard-header">
             <h1>Teacher Dashboard</h1>
-            <p>Welcome, <%= user.name %>!</p>
-            
-            <ul>
-                <li><a href="/classes">Manage Classes</a></li>
-                <li><a href="/students">View Students</a></li>
-                <li><a href="/grades">Grade Assignments</a></li>
-                <li><a href="/reports">Generate Reports</a></li>
-            </ul>
+            <div class="user-info">
+                <p><strong>Welcome, <%= user.name %>!</strong></p>
+                <p>Email: <%= user.email %></p>
+                <p>Role: <%= user.role %></p>
+            </div>
+        </div>
 
+        <div class="section">
+            <h2>Quick Actions</h2>
+            <div class="action-grid">
+                <a href="/students" class="action-card">
+                    <div class="action-icon">👥</div>
+                    <h3>View Students</h3>
+                    <p>View and manage all registered students</p>
+                </a>
+            </div>
+        </div>
+
+        <div class="dashboard-footer">
             <form action="/auth/logout" method="GET">
                 <button type="submit" class="btn-primary">Logout</button>
             </form>
