@@ -78,7 +78,40 @@ online-gradebook/
 
 ## 🔐 Authentication
 
-The app uses session-based authentication. Passwords are hashed with bcrypt, so they're secure. Users can register as either a teacher or student, and each role sees different stuff.
+The app uses session-based authentication. Passwords are hashed with bcrypt, so they're secure. 
+
+### Admin System
+
+**Important:** Public registration is now disabled. Only admins can create new users.
+
+#### Creating Your First Admin
+
+After installing dependencies and setting up Firebase, create your first admin user:
+
+```bash
+node create-admin.js
+```
+
+Follow the prompts to enter:
+- Admin name
+- Admin email
+- Admin password (minimum 6 characters)
+
+#### Admin Features
+
+Once you have an admin account:
+1. Login at `/auth/login`
+2. You'll be automatically redirected to the admin panel
+3. From there you can:
+   - Create new students, teachers, and admins
+   - View all registered users
+   - Manage the entire system
+
+### User Roles
+
+- **Admin** - Can create and manage all users, has full system access
+- **Teacher** - Can view students, add grades, manage classes
+- **Student** - Can view their own grades and track their progress
 
 ## 🎓 Grade System
 
