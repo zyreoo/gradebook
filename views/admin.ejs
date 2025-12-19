@@ -30,14 +30,9 @@
         }
 
         .admin-header h1 {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 600;
             margin: 0;
-            text-align: left;
-            background: linear-gradient(135deg, var(--accent) 0%, var(--text-dim) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
         
         .welcome-text {
@@ -54,14 +49,8 @@
         .admin-card {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 8px;
             padding: 30px;
             margin-bottom: 30px;
-            transition: border-color 0.2s ease;
-        }
-
-        .admin-card:hover {
-            border-color: #3a3a3a;
         }
 
         .admin-card h2 {
@@ -74,8 +63,8 @@
         .user-list {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 8px;
             padding: 30px;
+            margin-bottom: 30px;
         }
 
         .user-list h2 {
@@ -93,17 +82,10 @@
         .user-item {
             background: var(--bg);
             border: 1px solid var(--border);
-            border-radius: 6px;
             padding: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: all 0.2s ease;
-        }
-
-        .user-item:hover {
-            border-color: #3a3a3a;
-            transform: translateX(2px);
         }
         
         .user-info {
@@ -124,52 +106,31 @@
         }
         
         .user-role {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: 1px solid;
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid var(--border);
         }
         
         .role-admin { 
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--text);
         }
         
         .role-teacher { 
-            background: rgba(59, 130, 246, 0.1);
-            color: #3b82f6;
-            border-color: rgba(59, 130, 246, 0.2);
+            color: var(--text);
         }
         
         .role-student { 
-            background: rgba(74, 222, 128, 0.1);
-            color: #4ade80;
-            border-color: rgba(74, 222, 128, 0.2);
+            color: var(--text);
         }
         
         .logout-btn {
             background: transparent;
             color: var(--text);
-            padding: 10px 18px;
+            padding: 8px 16px;
             text-decoration: none;
-            border-radius: 6px;
             font-size: 14px;
-            font-weight: 500;
             border: 1px solid var(--border);
-            transition: all 0.2s ease;
             display: inline-block;
-        }
-
-        .logout-btn:hover {
-            background: var(--bg);
-            border-color: var(--error);
-            color: var(--error);
         }
 
         .no-users {
@@ -186,34 +147,22 @@
 
         .admin-card .btn-primary {
             margin-top: 10px;
-            background: var(--accent);
-            color: var(--bg);
-            font-weight: 500;
-        }
-
-        .admin-card .btn-primary:hover {
-            background: var(--text);
         }
 
         /* Messages */
         .error-message,
         .success-message {
-            padding: 14px 18px;
-            border-radius: 6px;
+            padding: 12px;
             margin-bottom: 20px;
             font-size: 14px;
-            border: 1px solid;
+            border: 1px solid var(--border);
         }
 
         .error-message {
-            background: rgba(248, 113, 113, 0.1);
-            border-color: rgba(248, 113, 113, 0.2);
             color: var(--error);
         }
 
         .success-message {
-            background: rgba(74, 222, 128, 0.1);
-            border-color: rgba(74, 222, 128, 0.2);
             color: var(--success);
         }
 
@@ -228,23 +177,40 @@
         .stat-card {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 8px;
             padding: 20px;
             text-align: center;
         }
 
         .stat-number {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 600;
-            color: var(--accent);
             margin-bottom: 5px;
         }
 
         .stat-label {
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        }
+
+        /* Filter group */
+        .filter-group {
+            margin-bottom: 20px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .filter-group label {
+            font-size: 14px;
+            color: var(--text);
+            margin-right: 10px;
+        }
+
+        .filter-group select {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            font-size: 14px;
         }
 
         /* Responsive */
@@ -415,11 +381,35 @@
 
         <!-- Teachers List -->
         <div class="user-list">
-            <h2>Teachers (<%=teachers.length%>)</h2>
+            <h2>Teachers (<span id="teacher-count"><%=teachers.length%></span>)</h2>
+            
             <% if (teachers.length > 0) { %>
-                <div class="users-grid">
+                <!-- Subject Filter -->
+                <div class="filter-group">
+                    <label for="subject-filter">Filter by Subject:</label>
+                    <select id="subject-filter" onchange="filterTeachers()">
+                        <option value="all">All Subjects</option>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="English">English</option>
+                        <option value="Science">Science</option>
+                        <option value="History">History</option>
+                        <option value="Geography">Geography</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Biology">Biology</option>
+                        <option value="Physical Education">Physical Education</option>
+                        <option value="Art">Art</option>
+                        <option value="Music">Music</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Foreign Language">Foreign Language</option>
+                        <option value="Other">Other</option>
+                        <option value="none">No Subject Assigned</option>
+                    </select>
+                </div>
+
+                <div class="users-grid" id="teachers-grid">
                     <% teachers.forEach(function(t) { %>
-                        <div class="user-item">
+                        <div class="user-item teacher-item" data-subject="<%= t.subject || 'none' %>">
                             <div class="user-info">
                                 <strong><%= t.name %></strong>
                                 <span class="user-email"><%= t.email %></span>
@@ -431,6 +421,10 @@
                         </div>
                     <% }); %>
                 </div>
+                
+                <p class="no-users" id="no-teachers-filtered" style="display: none;">
+                    No teachers found for this subject.
+                </p>
             <% } else { %>
                 <p class="no-users">No teachers yet. Add your first teacher above.</p>
             <% } %>
@@ -438,19 +432,40 @@
 
         <!-- Students List -->
         <div class="user-list">
-            <h2>Students (<%=students.length%>)</h2>
+            <h2>Students (<span id="student-count"><%=students.length%></span>)</h2>
+            
             <% if (students.length > 0) { %>
-                <div class="users-grid">
+                <!-- Class Year Filter -->
+                <div class="filter-group">
+                    <label for="class-filter">Filter by Grade:</label>
+                    <select id="class-filter" onchange="filterStudents()">
+                        <option value="all">All Grades</option>
+                        <option value="9">9th Grade</option>
+                        <option value="10">10th Grade</option>
+                        <option value="11">11th Grade</option>
+                        <option value="12">12th Grade</option>
+                        <option value="none">No Grade Assigned</option>
+                    </select>
+                </div>
+
+                <div class="users-grid" id="students-grid">
                     <% students.forEach(function(s) { %>
-                        <div class="user-item">
+                        <div class="user-item student-item" data-classyear="<%= s.classYear || 'none' %>">
                             <div class="user-info">
                                 <strong><%= s.name %></strong>
                                 <span class="user-email"><%= s.email %></span>
+                                <% if (s.classYear) { %>
+                                    <span class="user-email"> • Grade <%= s.classYear %></span>
+                                <% } %>
                             </div>
                             <span class="user-role role-student">Student</span>
                         </div>
                     <% }); %>
                 </div>
+                
+                <p class="no-users" id="no-students-filtered" style="display: none;">
+                    No students found for this grade.
+                </p>
             <% } else { %>
                 <p class="no-users">No students yet. Add your first student above.</p>
             <% } %>
@@ -487,7 +502,62 @@
             }
         }
 
-        // Attach event listener to role dropdown
+        function filterTeachers() {
+            const selectedSubject = document.getElementById('subject-filter').value;
+            const teacherItems = document.querySelectorAll('.teacher-item');
+            const noTeachersMsg = document.getElementById('no-teachers-filtered');
+            const teacherCount = document.getElementById('teacher-count');
+            
+            let visibleCount = 0;
+            
+            teacherItems.forEach(function(item) {
+                const teacherSubject = item.getAttribute('data-subject');
+                
+                if (selectedSubject === 'all' || teacherSubject === selectedSubject) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            teacherCount.textContent = visibleCount;
+            
+            if (visibleCount === 0) {
+                noTeachersMsg.style.display = 'block';
+            } else {
+                noTeachersMsg.style.display = 'none';
+            }
+        }
+
+        function filterStudents() {
+            const selectedClass = document.getElementById('class-filter').value;
+            const studentItems = document.querySelectorAll('.student-item');
+            const noStudentsMsg = document.getElementById('no-students-filtered');
+            const studentCount = document.getElementById('student-count');
+            
+            let visibleCount = 0;
+            
+            studentItems.forEach(function(item) {
+                const studentClass = item.getAttribute('data-classyear');
+                
+                if (selectedClass === 'all' || studentClass === selectedClass) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            studentCount.textContent = visibleCount;
+            
+            if (visibleCount === 0) {
+                noStudentsMsg.style.display = 'block';
+            } else {
+                noStudentsMsg.style.display = 'none';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const roleSelect = document.getElementById('role');
             if (roleSelect) {
