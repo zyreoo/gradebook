@@ -10,6 +10,19 @@
     <div class="container">
         <div class="dashboard">
             <h1>All Students</h1>
+
+
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div class="error-message">
+                    <%= error %>
+                </div>
+            <% } %>
+            
+            <% if (typeof success !== 'undefined' && success) { %>
+                <div class="success-message">
+                    <%= success %>
+                </div>
+            <% } %>
             
             <div class="navigation">
                 <a href="/dashboard">← Back to Dashboard</a>
@@ -24,7 +37,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Email</th>
-                                <th>Registered</th>
+                                <th>Add a grade</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -32,7 +45,35 @@
                                 <tr>
                                     <td><%= student.name %></td>
                                     <td><%= student.email %></td>
-                                    <td><%= new Date(student.createdAt).toLocaleDateString() %></td>
+                                    <td>
+                                        <form action="/add-grade" method="POST" class="grade-form">
+
+                                            <input type="hidden" name="studentId" value="<%= student.uid %>">
+                                            
+                                            <input 
+                                            type="text" 
+                                            name="subject" 
+                                            placeholder="Subject (optional)" 
+                                            class="subject-input"
+                                            >
+
+                                            <select id="grade" name="grade" class="grade-select" required>
+                                                <option value="">Select Grade</option>
+                                                <option value="10">10 - Excellent</option>
+                                                <option value="9">9 - Very Good</option>
+                                                <option value="8">8 - Good</option>
+                                                <option value="7">7 - Satisfactory</option>
+                                                <option value="6">6 - Sufficient</option>
+                                                <option value="5">5 - Insufficient</option>
+                                                <option value="4">4 - Insufficient</option>
+                                                <option value="3">3 - Insufficient</option>
+                                                <option value="2">2 - Insufficient</option>
+                                                <option value="1">1 - Insufficient</option>
+                                            </select>
+                                            <button type="submit" class="btn-add-grade">Add</button>
+                                        </form>
+                                    </td>
+
                                 </tr>
                             <% }); %>
                         </tbody>

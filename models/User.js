@@ -1,11 +1,9 @@
-const { collectMeta } = require('next/dist/build/utils');
 const {db, auth} = require('../config/firebase')
 const bcrypt = require('bcryptjs');
 
 
 
-class User {    
-
+class User {
 
     static async create({name, email, password, role =  "student"}){
 
@@ -75,6 +73,44 @@ class User {
         }
 
         return snapshot.docs.map(doc => doc.data()); 
+    }
+
+
+    static async addGrade({studentId, studentName, grade, teacherId, teacherName, subject}){
+        
+        const gradeData = {
+            studentId, 
+            studentName, 
+            grade: parseInt(grade), 
+            teacherId, 
+            teacherName, 
+            subject: subject || 'General', 
+            createdAt: new Date(),
+            timestamp: Date.now()
+        }; 
+
+        const gradeRef = await db.collection('grades').add(gradeData);
+
+        return { id: gradeRef.id, ...gradeData}
+    }
+
+    static async getStudentGrades(studentId){
+        const snapshot = await db.collection('grades')
+            .where('studentId', "==", studentId)
+            .orderBy('createdAt', 'desc')
+            .get()
+
+        if(snapshot.empty){
+            return [];
+        }
+
+        return snapshot.docs.map(doc => ({
+            id: doc.id, 
+            ...doc.data()
+        })); 
+
+
+        
     }
 }
 

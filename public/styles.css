@@ -594,6 +594,58 @@ body:has(.dashboard-container) {
     color: var(--gray-300);
 }
 
+/* Grade Form in Table */
+.grade-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.grade-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background-color: var(--card-bg);
+    color: var(--foreground);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 160px;
+}
+
+.grade-select:hover {
+    border-color: var(--gray-600);
+    background-color: var(--hover-bg);
+}
+
+.grade-select:focus {
+    outline: none;
+    border-color: var(--foreground);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.btn-add-grade {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background-color: var(--foreground);
+    color: var(--background);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-add-grade:hover {
+    background-color: var(--gray-200);
+    transform: translateY(-1px);
+}
+
+.btn-add-grade:active {
+    transform: translateY(0);
+}
+
 /* Wider container for students page */
 body:has(.students-list) .container {
     max-width: 1000px;
@@ -668,6 +720,88 @@ body:has(.students-list) .container {
     line-height: 1.6;
 }
 
+/* Students Grid */
+.students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.student-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--card-bg) 0%, var(--gray-900) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.student-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--gray-600);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.student-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gray-700), var(--gray-800));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--foreground);
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+}
+
+.student-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.student-info h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-email {
+    font-size: 13px;
+    color: var(--gray-400);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-date {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin: 0;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gray-500);
+}
+
+.empty-state p {
+    font-size: 16px;
+    margin: 0;
+}
+
 /* Dashboard Footer */
 .dashboard-footer {
     margin-top: 60px;
@@ -721,9 +855,27 @@ body:has(.students-list) .container {
         grid-template-columns: 1fr;
     }
 
+    .students-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .student-card {
+        padding: 16px;
+    }
+
+    .student-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+
     .login-card,
     .dashboard {
         padding: 32px 24px;
+    }
+
+    .dashboard-container {
+        padding: 40px 16px;
     }
 }
 
