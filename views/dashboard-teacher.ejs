@@ -22,10 +22,34 @@
             <div class="action-grid">
                 <a href="/students" class="action-card">
                     <div class="action-icon">👥</div>
-                    <h3>View Students</h3>
-                    <p>View and manage all registered students</p>
+                    <h3>View All Students</h3>
+                    <p>See complete list with details</p>
                 </a>
             </div>
+        </div>
+
+        <div class="section">
+            <h2>Students (<%= students.length %>)</h2>
+            <% if (students.length === 0) { %>
+                <div class="empty-state">
+                    <p>No students yet. They'll show up here once they register.</p>
+                </div>
+            <% } else { %>
+                <div class="students-grid">
+                    <% students.forEach(function(student) { %>
+                        <div class="student-card">
+                            <div class="student-avatar">
+                                <%= student.name.charAt(0).toUpperCase() %>
+                            </div>
+                            <div class="student-info">
+                                <h3><%= student.name %></h3>
+                                <p class="student-email"><%= student.email %></p>
+                                <p class="student-date">Joined <%= new Date(student.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></p>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
         </div>
 
         <div class="dashboard-footer">

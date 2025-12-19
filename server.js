@@ -155,6 +155,61 @@ app.post('/add-grade', async (req, res) =>{
     }
 }); 
 
+
+
+app.post('/api/reset-database', async (req, res) => {
+    
+    try {
+        const { secret } = req.body;
+        const SECRET_KEY = process.env.RESET_SECRET || 'DELETE_MY_DATA_2025';
+        
+        if (secret !== SECRET_KEY) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Invalid secret key' 
+            });
+        }
+
+        const User = require('./models/User');
+        const { db } = require('./config/firebase');
+
+
+        const usersSnapshot = await db.collection('users').get();
+        const userDeletePromises = usersSnapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(userDeletePromises);
+
+
+        const gradesSnapshot = await db.collection('grades').get();
+        const gradeDeletePromises = gradesSnapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(gradeDeletePromises);
+
+
+        const { auth } = require('./config/firebase');
+        const listUsersResult = await auth.listUsers();
+        const authDeletePromises = listUsersResult.users.map(user => 
+            auth.deleteUser(user.uid)
+        );
+        await Promise.all(authDeletePromises);
+        
+        res.json({ 
+            success: true, 
+            message: 'All data deleted successfully',
+            deleted: {
+                users: usersSnapshot.size,
+                grades: gradesSnapshot.size,
+                authUsers: listUsersResult.users.length
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to delete data', 
+            error: error.message 
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
