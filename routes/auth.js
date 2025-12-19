@@ -16,10 +16,15 @@ router.get('/admin/register', (req, res) => {
 
 router.post('/admin/register', async (req, res) => {
     try { 
-        const {name, email, password, schoolName, adress} = req.body; 
-        if (!name || !email || !password || !schoolName){
+        const {name, email, password, confirmPassword, schoolName, adress} = req.body; 
+        if (!name || !email || !password || !confirmPassword || !schoolName){
             return res.redirect('/auth/admin/register?error=' + 
                 encodeURIComponent('All fields are required'));
+        }
+
+        if (password !== confirmPassword) {
+            return res.redirect('/auth/admin/register?error=' + 
+                encodeURIComponent('Passwords do not match'));
         }
 
         if (password.length < 6) {
@@ -152,57 +157,6 @@ router.get('/logout', (req, res) => {
         }
         res.redirect('/auth/login');
     });
-});
-
-// GET register page
-router.get('/register', (req, res) => {
-    res.render('register', { 
-        error: req.query.error || null,
-        success: req.query.success || null
-    });
-});
-// POST register
-router.post('/register', async (req, res) => {
-    try {
-        const { name, email, password, role } = req.body;
-
-
-        if (!name || !email || !password || !role) {
-            return res.redirect('/auth/register?error=' + encodeURIComponent('All fields are required'));
-        }
-
-        if (role !== 'student' && role !== 'teacher') {
-            return res.redirect('/auth/register?error=' + encodeURIComponent('Invalid role selected'));
-        }
-
-        if (password.length < 6) {
-            return res.redirect('/auth/register?error=' + encodeURIComponent('Password must be at least 6 characters'));
-        }
-
-        const existingUser = await User.findbyEmail(email);
-        if (existingUser) {
-            return res.redirect('/auth/login?error=' + encodeURIComponent('User with this email already exists'));
-        }
-
-        
-        const user = await User.create({
-            name,
-            email,
-            password,
-            role
-        });
-
-        res.redirect('/auth/login?success=' + encodeURIComponent('Registration successful! Please login.'));
-    } catch (error) {
-        console.error('Registration error:', error);
-
-        if (error.code === 'auth/email-already-exists') {
-            return res.redirect('/auth/login?error=' + encodeURIComponent('This email is already registered. Please login instead.'));
-        }
-
-
-        res.redirect('/auth/register?error=' + encodeURIComponent('Registration failed. Please try again.'));
-    }
 });
 
 module.exports = router;

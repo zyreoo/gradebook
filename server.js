@@ -27,15 +27,16 @@ app.use(session({
 }))
 
 
-// View engine setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Routes
-const authRoutes = require('./routes/auth');
-app.use('/auth', authRoutes);
 
-// Home routed
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+
 app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });
@@ -75,87 +76,6 @@ app.get('/dashboard', async (req, res) => {
         res.render('dashboard', { user: userData }); 
     }
 });
-
-app.get('/admin/dashboard', async (req, res) => {
-    try {
-        if (!req.session.userId) {
-            return res.redirect('/auth/login');
-        }
-
-        if (req.session.userRole !== 'school_admin') {
-            return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. School admins only.'));
-        }
-
-        const schoolId = req.session.schoolId;
-        if (!schoolId) {
-            return res.redirect('/auth/login?error=' + encodeURIComponent('School information not found'));
-        }
-
-        const School = require('./models/School');
-        const school = await School.findById(schoolId);
-        const teachers = await School.getSchoolUsers(schoolId, 'teacher');
-        const students = await School.getSchoolUsers(schoolId, 'student');
-
-        res.render('admin', {
-            user: {
-                name: req.session.userName,
-                email: req.session.userEmail,
-                role: req.session.userRole
-            },
-            school: school,
-            teachers: teachers,
-            students: students,
-            error: req.query.error || null,
-            success: req.query.success || null
-        });
-    } catch (error) {
-        console.error('Admin dashboard error:', error);
-        res.redirect('/auth/login?error=' + encodeURIComponent('Failed to load admin dashboard'));
-    }
-});
-
-app.post('/admin/create-user', async (req, res) => {
-    try {
-        if (!req.session.userId || req.session.userRole !== 'school_admin') {
-            return res.redirect('/auth/login');
-        }
-
-        const { name, email, password, role } = req.body;
-        const schoolId = req.session.schoolId;
-
-        if (!name || !email || !password || !role) {
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('All fields are required'));
-        }
-
-        if (role !== 'student' && role !== 'teacher') {
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Invalid role selected'));
-        }
-
-        if (password.length < 6) {
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Password must be at least 6 characters'));
-        }
-
-        const User = require('./models/User');
-        const existingUser = await User.findbyEmail(email);
-        if (existingUser) {
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('User with this email already exists'));
-        }
-
-        await User.create({
-            name,
-            email,
-            password,
-            role,
-            schoolId
-        });
-
-        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`${role.charAt(0).toUpperCase() + role.slice(1)} ${name} created successfully!`));
-    } catch (error) {
-        console.error('Create user error:', error);
-        res.redirect('/admin/dashboard?error=' + encodeURIComponent('Failed to create user. Please try again.'));
-    }
-});
-
 
 app.get('/students', (req, res) =>{
 
@@ -265,16 +185,17 @@ app.post('/api/reset-database', async (req, res) => {
         const User = require('./models/User');
         const { db } = require('./config/firebase');
 
-
         const usersSnapshot = await db.collection('users').get();
         const userDeletePromises = usersSnapshot.docs.map(doc => doc.ref.delete());
         await Promise.all(userDeletePromises);
 
+        const schoolsSnapshot = await db.collection('schools').get();
+        const schoolDeletePromises = schoolsSnapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(schoolDeletePromises);
 
         const gradesSnapshot = await db.collection('grades').get();
         const gradeDeletePromises = gradesSnapshot.docs.map(doc => doc.ref.delete());
         await Promise.all(gradeDeletePromises);
-
 
         const { auth } = require('./config/firebase');
         const listUsersResult = await auth.listUsers();
@@ -288,6 +209,7 @@ app.post('/api/reset-database', async (req, res) => {
             message: 'All data deleted successfully',
             deleted: {
                 users: usersSnapshot.size,
+                schools: schoolsSnapshot.size,
                 grades: gradesSnapshot.size,
                 authUsers: listUsersResult.users.length
             }

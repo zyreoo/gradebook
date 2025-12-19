@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 
 class User {
 
-    static async create({name, email, password, role = "student", schoolId, classYear}){
+    static async create({name, email, password, role = "student",subject, schoolId, classYear}){
 
 
         const hashedpassword = await bcrypt.hash(password, 10); 
@@ -22,7 +22,8 @@ class User {
             password: hashedpassword, 
             role,
             schoolId: schoolId || null, 
-            classYear: role === 'student'? (classYear || null) : null, 
+            classYear: role === 'student'? (classYear || null) : null,
+            subject: role === 'teacher'? (subject || null): null, 
             createdAt: new Date(),
             updatedAt: new Date()
         };

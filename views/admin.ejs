@@ -355,11 +355,57 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="confirmPassword">Confirm Password:</label>
+                    <input 
+                        type="password" 
+                        id="confirmPassword" 
+                        name="confirmPassword" 
+                        required 
+                        autocomplete="new-password"
+                        minlength="6"
+                        placeholder="Re-enter password"
+                    >
+                </div>
+
+                <div class="form-group">
                     <label for="role">Role:</label>
                     <select id="role" name="role" required>
                         <option value="">Select a role</option>
                         <option value="student">Student</option>
                         <option value="teacher">Teacher</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="classYearGroup" style="display: none;">
+                    <label for="classYear">Grade Level:</label>
+                    <select id="classYear" name="classYear">
+                        <option value="">-- Select Grade --</option>
+                        <option value="9">9th Grade</option>
+                        <option value="10">10th Grade</option>
+                        <option value="11">11th Grade</option>
+                        <option value="12">12th Grade</option>
+                    </select>
+                </div>
+            
+                <!-- For TEACHERS: Subject -->
+                <div class="form-group" id="subjectGroup" style="display: none;">
+                    <label for="subject">Subject:</label>
+                    <select id="subject" name="subject">
+                        <option value="">-- Select Subject --</option>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="English">English</option>
+                        <option value="Science">Science</option>
+                        <option value="History">History</option>
+                        <option value="Geography">Geography</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Biology">Biology</option>
+                        <option value="Physical Education">Physical Education</option>
+                        <option value="Art">Art</option>
+                        <option value="Music">Music</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Foreign Language">Foreign Language</option>
+                        <option value="Other">Other</option>
                     </select>
                 </div>
 
@@ -377,6 +423,9 @@
                             <div class="user-info">
                                 <strong><%= t.name %></strong>
                                 <span class="user-email"><%= t.email %></span>
+                                <% if (t.subject) { %>
+                                    <span class="user-email"> • <%= t.subject %></span>
+                                <% } %>
                             </div>
                             <span class="user-role role-teacher">Teacher</span>
                         </div>
@@ -407,6 +456,45 @@
             <% } %>
         </div>
     </div>
+
+    <script>
+        function toggleRoleFields() {
+            const role = document.getElementById('role').value;
+            const classYearGroup = document.getElementById('classYearGroup');
+            const classYearSelect = document.getElementById('classYear');
+            const subjectGroup = document.getElementById('subjectGroup');
+            const subjectSelect = document.getElementById('subject');
+            
+            if (role === 'student') {
+                classYearGroup.style.display = 'block';
+                classYearSelect.required = true;
+                subjectGroup.style.display = 'none';
+                subjectSelect.required = false;
+                subjectSelect.value = '';
+            } else if (role === 'teacher') {
+                classYearGroup.style.display = 'none';
+                classYearSelect.required = false;
+                classYearSelect.value = '';
+                subjectGroup.style.display = 'block';
+                subjectSelect.required = false;
+            } else {
+                classYearGroup.style.display = 'none';
+                classYearSelect.required = false;
+                classYearSelect.value = '';
+                subjectGroup.style.display = 'none';
+                subjectSelect.required = false;
+                subjectSelect.value = '';
+            }
+        }
+
+        // Attach event listener to role dropdown
+        document.addEventListener('DOMContentLoaded', function() {
+            const roleSelect = document.getElementById('role');
+            if (roleSelect) {
+                roleSelect.addEventListener('change', toggleRoleFields);
+            }
+        });
+    </script>
 </body>
 </html>
 
