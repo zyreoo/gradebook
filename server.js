@@ -47,7 +47,8 @@ app.get('/dashboard', async (req, res) => {
         return res.redirect('/auth/login');
     }
 
-    // Redirect school admins to their admin dashboard
+
+    
     if (req.session.userRole === 'school_admin') {
         return res.redirect('/admin/dashboard');
     }

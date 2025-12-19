@@ -213,6 +213,200 @@
             font-size: 14px;
         }
 
+        /* Subject Management Styles */
+        .subjects-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            min-height: 60px;
+            align-items: flex-start;
+            align-content: flex-start;
+        }
+
+        .subjects-container:empty {
+            display: none;
+        }
+
+        .subject-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .subject-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-color: var(--text-dim);
+        }
+
+        .subject-pill span {
+            line-height: 1;
+        }
+
+        .subject-pill .remove-subject {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            transition: all 0.2s ease;
+            border-radius: 50%;
+        }
+
+        .subject-pill .remove-subject:hover {
+            color: white;
+            background: var(--error);
+        }
+
+        .add-subject-form {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .add-subject-form .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .add-subject-form .form-group label {
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 14px;
+        }
+
+        .add-subject-form input {
+            width: 100%;
+        }
+
+        .add-subject-form button {
+            white-space: nowrap;
+            padding: 10px 24px;
+        }
+
+        .subjects-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .subjects-count {
+            font-size: 13px;
+            color: var(--text-dim);
+            font-weight: normal;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .modal-content p {
+            margin-bottom: 20px;
+            color: var(--text-dim);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: var(--text);
+        }
+
+        .btn-delete {
+            background: var(--error);
+            color: white;
+            border-color: var(--error);
+        }
+
+        /* Class Year Subject Management Styles */
+        .class-year-section {
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg);
+        }
+
+        .class-year-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .class-year-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .admin-container {
@@ -265,6 +459,100 @@
                 <div class="stat-number"><%= teachers.length + students.length %></div>
                 <div class="stat-label">Total Users</div>
             </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="subjects-header">
+                <h2>Manage Subjects</h2>
+                <% if (school.subjects && school.subjects.length > 0) { %>
+                    <span class="subjects-count">(<%= school.subjects.length %> subject<%= school.subjects.length !== 1 ? 's' : '' %>)</span>
+                <% } %>
+            </div>
+            
+            <% if (school.subjects && school.subjects.length > 0) { %>
+                <div class="subjects-container">
+                    <% school.subjects.forEach(function(subject) { %>
+                        <div class="subject-pill">
+                            <span><%= subject %></span>
+                            <button type="button" class="remove-subject" onclick="confirmRemoveSubject('<%= subject %>')" title="Remove subject" aria-label="Remove <%= subject %>">×</button>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <p class="no-users" style="margin-bottom: 20px;">No subjects yet. Add your first subject below.</p>
+            <% } %>
+
+            <form action="/admin/add-subject" method="POST" class="add-subject-form" onsubmit="return validateSubjectForm()">
+                <div class="form-group">
+                    <label for="subjectName">Add New Subject</label>
+                    <input 
+                        type="text" 
+                        id="subjectName" 
+                        name="subjectName" 
+                        required 
+                        placeholder="e.g., Economics, Drama, Computer Science"
+                        maxlength="50"
+                    >
+                </div>
+                <button type="submit" class="btn-primary">+ Add Subject</button>
+            </form>
+        </div>
+
+        <!-- Class Year Subject Management -->
+        <div class="admin-card">
+            <h2>Manage Subjects by Grade Level</h2>
+            <p style="color: var(--text-dim); font-size: 14px; margin-bottom: 20px;">
+                Assign subjects from your master list to specific grade levels.
+            </p>
+
+            <% const classYears = ['9', '10', '11', '12']; %>
+            <% const classYearSubjects = school.classYearSubjects || {}; %>
+            
+            <% classYears.forEach(function(year) { %>
+                <div class="class-year-section">
+                    <div class="class-year-header">
+                        <h3>Grade <%= year %> 
+                            <span class="subjects-count">
+                                (<%= (classYearSubjects[year] || []).length %> subject<%= (classYearSubjects[year] || []).length !== 1 ? 's' : '' %>)
+                            </span>
+                        </h3>
+                    </div>
+                    
+                    <% if (classYearSubjects[year] && classYearSubjects[year].length > 0) { %>
+                        <div class="subjects-container" style="margin-bottom: 15px;">
+                            <% classYearSubjects[year].forEach(function(subject) { %>
+                                <div class="subject-pill">
+                                    <span><%= subject %></span>
+                                    <form action="/admin/remove-subject-from-class" method="POST" style="display: inline; margin: 0;">
+                                        <input type="hidden" name="classYear" value="<%= year %>">
+                                        <input type="hidden" name="subjectName" value="<%= subject %>">
+                                        <button type="submit" class="remove-subject" title="Remove subject">×</button>
+                                    </form>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 15px;">No subjects assigned yet.</p>
+                    <% } %>
+                    
+                    <form action="/admin/add-subject-to-class" method="POST" style="display: flex; gap: 10px; align-items: flex-end;">
+                        <input type="hidden" name="classYear" value="<%= year %>">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <select name="subjectName" required style="width: 100%; padding: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text);">
+                                <option value="">-- Add Subject --</option>
+                                <% if (school.subjects && school.subjects.length > 0) { %>
+                                    <% school.subjects.forEach(function(subject) { %>
+                                        <% if (!classYearSubjects[year] || !classYearSubjects[year].includes(subject)) { %>
+                                            <option value="<%= subject %>"><%= subject %></option>
+                                        <% } %>
+                                    <% }); %>
+                                <% } %>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="padding: 8px 16px;">+ Add</button>
+                    </form>
+                </div>
+            <% }); %>
         </div>
 
         <div class="admin-card">
@@ -358,20 +646,11 @@
                     <label for="subject">Subject:</label>
                     <select id="subject" name="subject">
                         <option value="">-- Select Subject --</option>
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="English">English</option>
-                        <option value="Science">Science</option>
-                        <option value="History">History</option>
-                        <option value="Geography">Geography</option>
-                        <option value="Physics">Physics</option>
-                        <option value="Chemistry">Chemistry</option>
-                        <option value="Biology">Biology</option>
-                        <option value="Physical Education">Physical Education</option>
-                        <option value="Art">Art</option>
-                        <option value="Music">Music</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Foreign Language">Foreign Language</option>
-                        <option value="Other">Other</option>
+                        <% if (school.subjects && school.subjects.length > 0) { %>
+                            <% school.subjects.forEach(function(subject) { %>
+                                <option value="<%= subject %>"><%= subject %></option>
+                            <% }); %>
+                        <% } %>
                     </select>
                 </div>
 
@@ -389,20 +668,11 @@
                     <label for="subject-filter">Filter by Subject:</label>
                     <select id="subject-filter" onchange="filterTeachers()">
                         <option value="all">All Subjects</option>
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="English">English</option>
-                        <option value="Science">Science</option>
-                        <option value="History">History</option>
-                        <option value="Geography">Geography</option>
-                        <option value="Physics">Physics</option>
-                        <option value="Chemistry">Chemistry</option>
-                        <option value="Biology">Biology</option>
-                        <option value="Physical Education">Physical Education</option>
-                        <option value="Art">Art</option>
-                        <option value="Music">Music</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Foreign Language">Foreign Language</option>
-                        <option value="Other">Other</option>
+                        <% if (school.subjects && school.subjects.length > 0) { %>
+                            <% school.subjects.forEach(function(subject) { %>
+                                <option value="<%= subject %>"><%= subject %></option>
+                            <% }); %>
+                        <% } %>
                         <option value="none">No Subject Assigned</option>
                     </select>
                 </div>
@@ -417,7 +687,7 @@
                                     <span class="user-email"> • <%= t.subject %></span>
                                 <% } %>
                             </div>
-                            <span class="user-role role-teacher">Teacher</span>
+
                         </div>
                     <% }); %>
                 </div>
@@ -458,7 +728,7 @@
                                     <span class="user-email"> • Grade <%= s.classYear %></span>
                                 <% } %>
                             </div>
-                            <span class="user-role role-student">Student</span>
+
                         </div>
                     <% }); %>
                 </div>
@@ -472,7 +742,107 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Subject Deletion</h3>
+            <p id="modal-message"></p>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn-delete" onclick="deleteSubject()">Delete Subject</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="application/json" id="school-subjects-data">
+        <%- JSON.stringify(school.subjects || []) %>
+    </script>
+
     <script>
+        let subjectToDelete = null;
+        const schoolSubjects = JSON.parse(document.getElementById('school-subjects-data').textContent);
+
+        // Subject Management Functions
+        function validateSubjectForm() {
+            const subjectName = document.getElementById('subjectName').value.trim();
+            
+            if (!subjectName) {
+                alert('Please enter a subject name');
+                return false;
+            }
+
+            // Check for duplicates
+            if (schoolSubjects.some(s => s.toLowerCase() === subjectName.toLowerCase())) {
+                alert('This subject already exists');
+                return false;
+            }
+
+            return true;
+        }
+
+        async function confirmRemoveSubject(subjectName) {
+            subjectToDelete = subjectName;
+            
+            try {
+                // Check if subject is in use
+                const response = await fetch('/admin/check-subject-usage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ subjectName })
+                });
+
+                const data = await response.json();
+                
+                const modal = document.getElementById('deleteModal');
+                const message = document.getElementById('modal-message');
+                
+                if (data.inUse && data.count > 0) {
+                    message.innerHTML = `Warning: This subject is currently assigned to <strong>${data.count} teacher(s)</strong>. Deleting it will not affect existing teacher assignments, but the subject will no longer be available for new assignments.<br><br>Are you sure you want to delete "<strong>${subjectName}</strong>"?`;
+                } else {
+                    message.innerHTML = `Are you sure you want to delete the subject "<strong>${subjectName}</strong>"?`;
+                }
+                
+                modal.classList.add('active');
+            } catch (error) {
+                console.error('Error checking subject usage:', error);
+                alert('Error checking subject usage. Please try again.');
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('deleteModal');
+            modal.classList.remove('active');
+            subjectToDelete = null;
+        }
+
+        function deleteSubject() {
+            if (!subjectToDelete) return;
+            
+            // Create and submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/admin/remove-subject';
+            
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'subjectName';
+            input.value = subjectToDelete;
+            
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
         function toggleRoleFields() {
             const role = document.getElementById('role').value;
             const classYearGroup = document.getElementById('classYearGroup');

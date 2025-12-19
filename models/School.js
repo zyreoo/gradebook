@@ -14,11 +14,28 @@ class School {
         }); 
 
 
+        const defaultSubjects = [
+            "Mathematics",
+            "English",
+            "Science",
+            "History",
+            "Geography",
+            "Physics",
+            "Chemistry",
+            "Biology",
+            "Physical Education",
+            "Art",
+            "Music",
+            "Computer Science",
+            "Foreign Language"
+        ];
+
         const schoolData = {
             name: schoolName, 
             adminName: name, 
             adminEmail: email, 
             adress: adress || '', 
+            subjects: defaultSubjects,
             createdAt: new Date()
         }; 
 
@@ -46,7 +63,37 @@ class School {
     static async findById(schoolId){
         const doc = await db.collection('schools').doc(schoolId).get(); 
         if (!doc.exists) return null; 
+
+
+        const schoolData = doc.data(); 
+
+
+        if(!schoolData.subjects || schoolData.subjects.length === 0){
+
+            const defaultSubjects = [
+                "Mathematics",
+                "English",
+                "Science",
+                "History",
+                "Geography",
+                "Physics",
+                "Chemistry",
+                "Biology",
+                "Physical Education",
+                "Art",
+                "Music",
+                "Computer Science",
+                "Foreign Language"
+            ];
+
+            await db.collection('schools').doc(schoolId).update({ 
+                subjects: defaultSubjects 
+            });
+            schoolData.subjects = defaultSubjects;
+    }
+
         return {id: doc.id, ...doc.data()}; 
+        
     }
 
 
@@ -58,6 +105,136 @@ class School {
 
         const snapshot = await query.get(); 
         return snapshot.docs.map(doc => doc.data()); 
+    }
+
+    // Subject Management Methods
+    static async addSubject(schoolId, subjectName) {
+        const trimmedSubject = subjectName.trim();
+        
+        if (!trimmedSubject) {
+            throw new Error('Subject name cannot be empty');
+        }
+
+        const schoolRef = db.collection('schools').doc(schoolId);
+        const doc = await schoolRef.get();
+        
+        if (!doc.exists) {
+            throw new Error('School not found');
+        }
+
+        const schoolData = doc.data();
+        const subjects = schoolData.subjects || [];
+        
+        // Check for duplicates (case-insensitive)
+        if (subjects.some(s => s.toLowerCase() === trimmedSubject.toLowerCase())) {
+            throw new Error('Subject already exists');
+        }
+
+        subjects.push(trimmedSubject);
+        await schoolRef.update({ subjects });
+        
+        return { id: schoolId, ...schoolData, subjects };
+    }
+
+    static async removeSubject(schoolId, subjectName) {
+        const schoolRef = db.collection('schools').doc(schoolId);
+        const doc = await schoolRef.get();
+        
+        if (!doc.exists) {
+            throw new Error('School not found');
+        }
+
+        const schoolData = doc.data();
+        const subjects = schoolData.subjects || [];
+        
+        const updatedSubjects = subjects.filter(s => s !== subjectName);
+        await schoolRef.update({ subjects: updatedSubjects });
+        
+        return { id: schoolId, ...schoolData, subjects: updatedSubjects };
+    }
+
+    static async getSubjects(schoolId) {
+        const doc = await db.collection('schools').doc(schoolId).get();
+        if (!doc.exists) return [];
+        
+        const data = doc.data();
+        return data.subjects || [];
+    }
+
+    static async isSubjectInUse(schoolId, subjectName) {
+        const query = db.collection('users')
+            .where('schoolId', '==', schoolId)
+            .where('role', '==', 'teacher')
+            .where('subject', '==', subjectName);
+        
+        const snapshot = await query.get();
+        return {
+            inUse: !snapshot.empty,
+            count: snapshot.size,
+            teachers: snapshot.docs.map(doc => ({
+                name: doc.data().name,
+                email: doc.data().email
+            }))
+        };
+    }
+
+
+    static async addSubjectToClassYear(schoolId, classYear, subjectName){
+        const schoolRef = db.collection('schools').doc(schoolId); 
+        const doc = await schoolRef.get();
+
+        if(!doc.exists){
+            throw new Error('School not found'); 
+        }
+
+        const schoolData = doc.data(); 
+        const masterSubjects = schoolData.subjects || []; 
+        
+        // Validate subject exists in master list
+        if (!masterSubjects.includes(subjectName)) {
+            throw new Error('Subject does not exist in school master list');
+        }
+
+        const classYearSubjects = schoolData.classYearSubjects || {};
+        const yearSubjects = classYearSubjects[classYear] || [];
+
+        // Check for duplicates
+        if (yearSubjects.includes(subjectName)){
+            throw new Error('Subject already assigned to this class year');
+        }
+
+        yearSubjects.push(subjectName);
+        classYearSubjects[classYear] = yearSubjects;
+
+        await schoolRef.update({classYearSubjects}); 
+        return classYearSubjects; 
+    }
+
+    static async removeSubjectFromClassYear(schoolId, classYear, subjectName){
+        const schoolRef = db.collection('schools').doc(schoolId); 
+        const doc = await schoolRef.get();
+
+        if(!doc.exists){
+            throw new Error('School not found'); 
+        }
+
+        const schoolData = doc.data(); 
+        const classYearSubjects = schoolData.classYearSubjects || {};
+        const yearSubjects = classYearSubjects[classYear] || [];
+
+        classYearSubjects[classYear] = yearSubjects.filter(s => s !== subjectName);
+
+        await schoolRef.update({classYearSubjects}); 
+        return classYearSubjects; 
+    }
+
+    static async getClassYearSubjects(schoolId, classYear){
+        const doc = await db.collection('schools').doc(schoolId).get(); 
+        if (!doc.exists) return []; 
+
+        const data = doc.data(); 
+        const classYearSubjects = data.classYearSubjects || {}; 
+        return classYearSubjects[classYear] || [];
     }
 }
 
