@@ -223,7 +223,7 @@ class School {
         const yearSubjects = classYearSubjects[classYear] || [];
 
         classYearSubjects[classYear] = yearSubjects.filter(s => s !== subjectName);
-
+        
         await schoolRef.update({classYearSubjects}); 
         return classYearSubjects; 
     }
