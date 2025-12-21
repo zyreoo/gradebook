@@ -223,7 +223,7 @@ class School {
         const yearSubjects = classYearSubjects[classYear] || [];
 
         classYearSubjects[classYear] = yearSubjects.filter(s => s !== subjectName);
-        
+
         await schoolRef.update({classYearSubjects}); 
         return classYearSubjects; 
     }
@@ -235,6 +235,67 @@ class School {
         const data = doc.data(); 
         const classYearSubjects = data.classYearSubjects || {}; 
         return classYearSubjects[classYear] || [];
+    }
+
+
+    static async assignTeacherToClassSubject(schoolId, classYear, subject, teacherId){
+        const schoolRef = db.collection("schools").doc(schoolId); 
+        const doc = await schoolRef.get(); 
+
+        if(!doc.exists){
+            throw new Error('School not found');
+        }
+
+
+        const schoolData = doc.data(); 
+        const classYearTeachers = schoolData.classYearTeachers || {}; 
+
+        if(!classYearTeachers[classYear]){
+            classYearTeachers[classYear] = {}; 
+        }
+
+        classYearTeachers[classYear][subject] = teacherId; 
+
+        await schoolRef.update({classYearTeachers});
+        return classYearTeachers;
+    }
+
+
+    static async removeTeacherFromClassSubject(schoolId, classYear, subject, teacherId){
+        const schoolRef = db.collection("schools").doc(schoolId);
+        const doc = await schoolRef.get(); 
+
+        if(!doc.exists){
+            throw new Error('school not found'); 
+        }
+
+        const schoolData = doc.data(); 
+        const classYearTeachers = schoolData.classYearTeachers || {};
+
+
+        if (classYearTeachers[classYear] && classYearTeachers[classYear][subject]){
+            delete classYearTeachers[classYear][subject];
+        }
+
+        await schoolRef.update({classYearTeachers}); 
+        return classYearTeachers;
+    }
+
+
+    static async getTeacherForClassSubject(schoolId, classYear, subject, teacherId){
+        const doc = await db.collection('schools').doc(schoolId); 
+
+        if(!doc.exists) return null;
+
+        const data = doc.data();
+        const classYearTeachers = data.classYearTeachers || {};
+
+
+        if(classYearTeachers[classYear] && classYearTeachers[classYear][subject]){
+            return classYearTeachers[classYear][subject];
+        }
+
+        return null;
     }
 }
 
