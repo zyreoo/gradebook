@@ -3,482 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Online Gradebook</title>
+    <title>Admin Panel - <%= school.name %></title>
     <link rel="stylesheet" href="/styles.css">
-    <style>
-        :root {
-            --bg: #0c0c0c;
-            --panel: #0f0f10;
-            --muted: #131313;
-            --border: #1a1a1d;
-            --text: #f5f5f5;
-            --text-dim: #9ca3af;
-            --accent: #e5e5e5;
-            --accent-hover: #d4d4d8;
-            --error: #ef4444;
-            --success: #22c55e;
-            --shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
-            --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.35);
-            --radius-lg: 18px;
-            --radius-md: 12px;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background:
-                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.05), transparent 42%),
-                radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.04), transparent 38%),
-                var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            min-height: 100vh;
-            padding: 32px 16px 60px;
-        }
-
-        .page-shell {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .top-bar {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 22px 24px;
-            box-shadow: var(--shadow-soft);
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            align-items: center;
-        }
-
-        .brand {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .brand-mark {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: linear-gradient(145deg, #1c1c1e, #2a2a2d);
-            color: #fff;
-            display: grid;
-            place-items: center;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            box-shadow: var(--shadow-soft);
-        }
-
-        .brand h1 {
-            margin: 0;
-            font-size: 22px;
-            letter-spacing: -0.02em;
-        }
-
-        .brand p {
-            margin: 2px 0 0;
-            color: var(--text-dim);
-            font-size: 14px;
-        }
-
-        .user-chip {
-            background: var(--muted);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 10px 14px;
-            font-size: 14px;
-            color: var(--text);
-            box-shadow: var(--shadow-soft);
-        }
-
-        .logout-btn {
-            text-decoration: none;
-            color: var(--text);
-            font-weight: 600;
-            padding: 10px 14px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            background: var(--muted);
-            transition: all 0.2s ease;
-        }
-
-        .logout-btn:hover {
-            background: var(--accent);
-            color: #0b0b0b;
-            border-color: var(--accent);
-            box-shadow: var(--shadow-soft);
-        }
-
-        .hero {
-            margin-top: 18px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 22px 24px;
-            box-shadow: var(--shadow-soft);
-        }
-
-        .hero p {
-            margin: 0 0 14px;
-            color: var(--text-dim);
-        }
-
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 14px;
-        }
-
-        .stat {
-            padding: 16px 18px;
-            border-radius: 14px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-soft);
-        }
-
-        .stat h3 {
-            margin: 0 0 6px;
-            font-size: 13px;
-            letter-spacing: 0.02em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-        }
-
-        .stat .number {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: -0.02em;
-        }
-
-        .section-nav {
-            margin: 22px 0;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .section-nav a {
-            text-decoration: none;
-            color: var(--text);
-            background: var(--muted);
-            padding: 10px 14px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-
-        .section-nav a:hover {
-            background: var(--panel);
-            box-shadow: var(--shadow-soft);
-            color: var(--accent);
-        }
-
-        .section {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 26px 24px;
-            box-shadow: var(--shadow);
-            margin-bottom: 18px;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-            margin-bottom: 18px;
-        }
-
-        .section-header h2 {
-            margin: 0;
-            font-size: 18px;
-            letter-spacing: -0.01em;
-        }
-
-        .section-header p {
-            margin: 6px 0 0;
-            color: var(--text-dim);
-            font-size: 14px;
-        }
-
-        .pill-rail {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 14px;
-            border: 1px dashed var(--border);
-            border-radius: 14px;
-            background: var(--muted);
-            min-height: 64px;
-        }
-
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border-radius: 999px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-soft);
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text);
-        }
-
-        .pill button {
-            border: none;
-            background: transparent;
-            color: var(--text-dim);
-            cursor: pointer;
-            font-size: 15px;
-            padding: 2px 4px;
-            border-radius: 50%;
-            transition: all 0.2s ease;
-        }
-
-        .pill button:hover {
-            background: var(--error);
-            color: #fff;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
-        }
-
-        .field {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        label {
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text);
-        }
-
-        input, select {
-            padding: 12px 14px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: var(--muted);
-            font-size: 14px;
-            color: var(--text);
-            transition: all 0.2s ease;
-            text-transform: capitalize;
-        }
-
-        input[type="email"],
-        input[type="password"] {
-            text-transform: none;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
-            background: var(--panel);
-        }
-
-        .primary-btn {
-            background: var(--accent);
-            color: #0c0c0c;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 18px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-soft);
-        }
-
-        .primary-btn:hover { background: var(--accent-hover); }
-
-        .helper {
-            color: var(--text-dim);
-            font-size: 13px;
-            margin: 0;
-        }
-
-        .grid-two {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 16px;
-        }
-
-        .people-list {
-            display: grid;
-            gap: 12px;
-        }
-
-        .person {
-            padding: 16px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: center;
-            box-shadow: var(--shadow-soft);
-        }
-
-        .person strong { display: block; }
-        .person small { color: var(--text-dim); }
-
-        .filter {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 6px 10px;
-            border-radius: 10px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            font-size: 13px;
-            color: var(--text-dim);
-        }
-
-        .muted-box {
-            padding: 18px;
-            border-radius: var(--radius-md);
-            background: var(--muted);
-            border: 1px dashed var(--border);
-            color: var(--text-dim);
-            text-align: center;
-        }
-
-        .message {
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid;
-            margin: 16px 0;
-        }
-        .message.error { border-color: rgba(217, 83, 79, 0.35); background: rgba(217, 83, 79, 0.1); color: var(--error); }
-        .message.success { border-color: rgba(47, 155, 98, 0.35); background: rgba(47, 155, 98, 0.1); color: var(--success); }
-
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            backdrop-filter: blur(3px);
-        }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            padding: 22px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow);
-            max-width: 460px;
-            width: 100%;
-        }
-        .modal h3 { margin-top: 0; margin-bottom: 10px; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-        .ghost-btn {
-            background: var(--muted);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 10px 14px;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-        .danger-btn {
-            background: var(--error);
-            color: #fff;
-            border: none;
-            padding: 10px 14px;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-
-        @media (max-width: 720px) {
-            .top-bar, .section-header { flex-direction: column; align-items: flex-start; }
-            .brand { width: 100%; }
-            .section-nav { gap: 8px; }
-        }
-    </style>
 </head>
 <body>
-    <div class="page-shell">
-        <div class="top-bar">
-            <div class="brand">
-                <div class="brand-mark">GB</div>
-                <div>
-                    <h1><%= school.name %></h1>
-                    <% if (typeof user !== 'undefined' && user) { %>
-                        <p>Welcome back, <strong><%= user.name %></strong></p>
-                    <% } %>
-                </div>
-            </div>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <div class="user-chip"><%= user && user.email ? user.email : 'Admin' %></div>
-                <a class="logout-btn" href="/auth/logout">Logout</a>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><%= school.name %></h1>
+            <div class="user-info">
+                <p><strong>Name:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Role:</strong> School Administrator</p>
             </div>
         </div>
 
-        <div class="hero">
-            <p>A calmer, clearer workspace for your school.</p>
-            <div class="stat-grid">
-                <div class="stat">
-                    <h3>Teachers</h3>
-                    <div class="number"><%= teachers.length %></div>
+        <!-- Statistics Section -->
+        <div class="section">
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-value"><%= teachers.length %></div>
+                    <div class="stat-label">Teachers</div>
                 </div>
-                <div class="stat">
-                    <h3>Students</h3>
-                    <div class="number"><%= students.length %></div>
+                <div class="stat-card">
+                    <div class="stat-value"><%= students.length %></div>
+                    <div class="stat-label">Students</div>
                 </div>
-                <div class="stat">
-                    <h3>Subjects</h3>
-                    <div class="number"><%= (school.subjects || []).length %></div>
+                <div class="stat-card">
+                    <div class="stat-value"><%= (school.subjects || []).length %></div>
+                    <div class="stat-label">Subjects</div>
                 </div>
             </div>
         </div>
 
+        <!-- Messages -->
         <% if (typeof error !== 'undefined' && error) { %>
-            <div class="message error"><%= error %></div>
+            <div class="error-message"><%= error %></div>
         <% } %>
         <% if (typeof success !== 'undefined' && success) { %>
-            <div class="message success"><%= success %></div>
+            <div class="success-message"><%= success %></div>
         <% } %>
 
-        <div class="section-nav">
+        <!-- Navigation -->
+        <div class="section-nav-admin">
             <a href="#subjects">Subjects</a>
-            <a href="#teacher-assignments">Teacher assignments</a>
-            <a href="#add-user">Add user</a>
+            <a href="#teacher-assignments">Teacher Assignments</a>
+            <a href="#add-user">Add User</a>
             <a href="#people">People</a>
         </div>
 
+        <!-- Subject Library Section -->
         <section id="subjects" class="section">
-            <div class="section-header">
-                <div>
-                    <h2>Subject library</h2>
-                    <p>Keep your catalog tidy. Remove unused subjects or add new ones.</p>
-                </div>
-            </div>
+            <h2>Subject Library</h2>
+            <p class="helper" style="margin-bottom: 16px;">Keep your catalog tidy. Remove unused subjects or add new ones.</p>
 
             <% if (school.subjects && school.subjects.length > 0) { %>
                 <div class="pill-rail">
@@ -493,35 +69,32 @@
                 <div class="muted-box">No subjects yet. Add your first one below.</div>
             <% } %>
 
-            <form action="/admin/add-subject" method="POST" onsubmit="return validateSubjectForm()" style="margin-top:18px;">
+            <form action="/admin/add-subject" method="POST" onsubmit="return validateSubjectForm()" style="margin-top: 18px;">
                 <div class="form-grid">
                     <div class="field">
                         <label for="subjectName">Add a subject</label>
                         <input id="subjectName" name="subjectName" type="text" placeholder="e.g., Mathematics, Chemistry" maxlength="50" required>
                     </div>
-                    <div class="field" style="align-self:flex-end;">
-                        <button class="primary-btn" type="submit">Add subject</button>
+                    <div class="field" style="align-self: flex-end;">
+                        <button class="btn-primary" type="submit">Add Subject</button>
                     </div>
                 </div>
             </form>
         </section>
 
+        <!-- Teacher Assignments Section -->
         <section id="teacher-assignments" class="section">
-            <div class="section-header">
-                <div>
-                    <h2>Teacher Assignments</h2>
-                    <p>Assign teachers to grade levels. Each grade's available subjects come from its assigned teachers.</p>
-                </div>
-            </div>
+            <h2>Teacher Assignments</h2>
+            <p class="helper" style="margin-bottom: 16px;">Assign teachers to grade levels. Each grade's available subjects come from its assigned teachers.</p>
 
             <% const classYears = ['9', '10', '11', '12']; %>
             <% const classYearTeachers = school.classYearTeachers || {}; %>
             
             <div class="grid-two">
                 <% classYears.forEach(function(year) { %>
-                    <div class="muted-box" style="text-align:left; padding:16px; border-style:solid; border-radius:var(--radius-md);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                            <strong>Grade <%= year %></strong>
+                    <div class="section-subsection">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <strong style="font-size: 16px;">Grade <%= year %></strong>
                             <span class="badge"><%= (classYearTeachers[year] || []).length %> teacher(s)</span>
                         </div>
 
@@ -532,13 +105,12 @@
                         %>
 
                         <% if (assignedTeachers.length > 0) { %>
-                            <div style="display: grid; gap: 10px; margin-bottom: 14px;">
+                            <div class="people-list" style="margin-bottom: 14px;">
                                 <% assignedTeachers.forEach(function(teacher) { %>
-                                    <div style="background: var(--panel); padding: 12px; border-radius: 10px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                                    <div class="person">
                                         <div>
-                                            <strong style="color: var(--text); font-size: 14px;"><%= teacher.name %></strong>
-                                            <br>
-                                            <small style="color: var(--text-dim);">
+                                            <strong><%= teacher.name %></strong>
+                                            <small>
                                                 <% if (teacher.subject) { %>
                                                     <%= teacher.subject %>
                                                 <% } else { %>
@@ -549,9 +121,7 @@
                                         <form action="/admin/remove-teacher-assignment" method="POST" style="margin: 0;">
                                             <input type="hidden" name="classYear" value="<%= year %>">
                                             <input type="hidden" name="teacherId" value="<%= teacher.uid %>">
-                                            <button type="submit" style="background: var(--error); color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                                                Remove
-                                            </button>
+                                            <button type="submit" class="btn-remove">Remove</button>
                                         </form>
                                     </div>
                                 <% }); %>
@@ -564,7 +134,7 @@
                             <form action="/admin/assign-teacher" method="POST" style="display: flex; gap: 8px; align-items: flex-end;">
                                 <input type="hidden" name="classYear" value="<%= year %>">
                                 <div class="field" style="flex: 1; margin: 0;">
-                                    <select name="teacherId" required style="padding: 8px 10px; border: 1px solid var(--border); background: var(--muted); color: var(--text); border-radius: 8px; font-size: 13px;">
+                                    <select name="teacherId" required>
                                         <option value="">Select teacher to add</option>
                                         <% availableTeachers.forEach(function(teacher) { %>
                                             <option value="<%= teacher.uid %>">
@@ -573,9 +143,7 @@
                                         <% }); %>
                                     </select>
                                 </div>
-                                <button class="primary-btn" type="submit" style="padding: 8px 14px; font-size: 13px;">
-                                    Add Teacher
-                                </button>
+                                <button class="btn-add" type="submit">Add Teacher</button>
                             </form>
                         <% } else { %>
                             <p class="helper">All teachers have been assigned to this grade.</p>
@@ -587,12 +155,10 @@
                         %>
                         <% if (derivedSubjects.length > 0) { %>
                             <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-                                <small style="color: var(--text-dim); font-weight: 600;">Available subjects:</small>
+                                <small class="helper" style="font-weight: 600;">Available subjects:</small>
                                 <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
                                     <% derivedSubjects.forEach(function(subject) { %>
-                                        <span style="display: inline-block; padding: 4px 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; font-size: 12px; color: var(--text);">
-                                            <%= subject %>
-                                        </span>
+                                        <span class="badge"><%= subject %></span>
                                     <% }); %>   
                                 </div>
                             </div>
@@ -602,13 +168,11 @@
             </div>
         </section>
 
+        <!-- Create User Section -->
         <section id="add-user" class="section">
-            <div class="section-header">
-                <div>
-                    <h2>Create a user</h2>
-                    <p>Add teachers or students and set the right fields in one pass.</p>
-                </div>
-            </div>
+            <h2>Create a User</h2>
+            <p class="helper" style="margin-bottom: 16px;">Add teachers or students and set the right fields in one pass.</p>
+            
             <form action="/admin/create-user" method="POST">
                 <div class="form-grid">
                     <div class="field">
@@ -635,7 +199,7 @@
                             <option value="teacher">Teacher</option>
                         </select>
                     </div>
-                    <div class="field" id="classYearGroup" style="display:none;">
+                    <div class="field" id="classYearGroup" style="display: none;">
                         <label for="classYear">Grade level</label>
                         <select id="classYear" name="classYear">
                             <option value="">Select grade</option>
@@ -645,7 +209,7 @@
                             <option value="12">12th Grade</option>
                         </select>
                     </div>
-                    <div class="field" id="subjectGroup" style="display:none;">
+                    <div class="field" id="subjectGroup" style="display: none;">
                         <label for="subject">Subject (optional)</label>
                         <select id="subject" name="subject">
                             <option value="">Select subject (optional)</option>
@@ -657,29 +221,27 @@
                         </select>
                     </div>
                 </div>
-                <div style="margin-top:14px;">
-                    <button class="primary-btn" type="submit">Create user</button>
+                <div style="margin-top: 14px;">
+                    <button class="btn-primary" type="submit">Create User</button>
                 </div>
             </form>
         </section>
 
+        <!-- People Section -->
         <section id="people" class="section">
-            <div class="section-header">
-                <div>
-                    <h2>People</h2>
-                    <p>Filter and skim your teachers and students.</p>
-                </div>
-            </div>
+            <h2>People</h2>
+            <p class="helper" style="margin-bottom: 16px;">Filter and view your teachers and students.</p>
 
             <div class="grid-two">
+                <!-- Teachers -->
                 <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <strong>Teachers</strong>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <strong style="font-size: 16px;">Teachers</strong>
                         <span class="badge" id="teacher-count"><%= teachers.length %></span>
                     </div>
                     <% if (teachers.length > 0) { %>
                         <div class="filter">
-                            <label for="subject-filter">Filter by subject</label>
+                            <label for="subject-filter">Filter by subject:</label>
                             <select id="subject-filter" onchange="filterTeachers()">
                                 <option value="all">All</option>
                                 <% if (school.subjects && school.subjects.length > 0) { %>
@@ -695,26 +257,27 @@
                                 <div class="person teacher-item" data-subject="<%= t.subject || 'none' %>">
                                     <div>
                                         <strong><%= t.name %></strong>
-                                        <small><%= t.email %></small><br>
-                                        <% if (t.subject) { %><small><%= t.subject %></small><% } %>
+                                        <small><%= t.email %></small>
+                                        <% if (t.subject) { %><br><small><%= t.subject %></small><% } %>
                                     </div>
                                 </div>
                             <% }); %>
                         </div>
-                        <p id="no-teachers-filtered" class="helper" style="display:none; margin-top:10px;">No teachers match this filter.</p>
+                        <p id="no-teachers-filtered" class="helper" style="display: none; margin-top: 10px;">No teachers match this filter.</p>
                     <% } else { %>
                         <div class="muted-box">No teachers yet.</div>
                     <% } %>
                 </div>
 
+                <!-- Students -->
                 <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <strong>Students</strong>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <strong style="font-size: 16px;">Students</strong>
                         <span class="badge" id="student-count"><%= students.length %></span>
                     </div>
                     <% if (students.length > 0) { %>
                         <div class="filter">
-                            <label for="class-filter">Filter by grade</label>
+                            <label for="class-filter">Filter by grade:</label>
                             <select id="class-filter" onchange="filterStudents()">
                                 <option value="all">All</option>
                                 <option value="9">9th Grade</option>
@@ -729,32 +292,41 @@
                                 <div class="person student-item" data-classyear="<%= s.classYear || 'none' %>">
                                     <div>
                                         <strong><%= s.name %></strong>
-                                        <small><%= s.email %></small><br>
-                                        <% if (s.classYear) { %><small>Grade <%= s.classYear %></small><% } %>
+                                        <small><%= s.email %></small>
+                                        <% if (s.classYear) { %><br><small>Grade <%= s.classYear %></small><% } %>
                                     </div>
                                 </div>
                             <% }); %>
                         </div>
-                        <p id="no-students-filtered" class="helper" style="display:none; margin-top:10px;">No students match this filter.</p>
+                        <p id="no-students-filtered" class="helper" style="display: none; margin-top: 10px;">No students match this filter.</p>
                     <% } else { %>
                         <div class="muted-box">No students yet.</div>
                     <% } %>
                 </div>
             </div>
         </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Logout</button>
+            </form>
+        </div>
     </div>
 
+    <!-- Delete Subject Modal -->
     <div id="deleteModal" class="modal">
         <div class="modal-content">
-            <h3>Confirm subject deletion</h3>
+            <h3>Confirm Subject Deletion</h3>
             <p id="modal-message"></p>
             <div class="modal-actions">
                 <button class="ghost-btn" type="button" onclick="closeModal()">Cancel</button>
-                <button class="danger-btn" type="button" onclick="deleteSubject()">Delete subject</button>
+                <button class="danger-btn" type="button" onclick="deleteSubject()">Delete Subject</button>
             </div>
         </div>
     </div>
 
+    <!-- JavaScript -->
     <script type="application/json" id="school-subjects-data">
         <%- JSON.stringify(school.subjects || []) %>
     </script>
@@ -764,7 +336,10 @@
 
         function validateSubjectForm() {
             const subjectName = document.getElementById('subjectName').value.trim();
-            if (!subjectName) { alert('Please enter a subject name'); return false; }
+            if (!subjectName) {
+                alert('Please enter a subject name');
+                return false;
+            }
             if (schoolSubjects.some(s => s.toLowerCase() === subjectName.toLowerCase())) {
                 alert('This subject already exists');
                 return false;

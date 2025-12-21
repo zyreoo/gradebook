@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class <%= classYear %> - Online Gradebook</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>Class <%= classYear %></h1>
+            <div class="user-info">
+                <p><strong>Name:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <% if (teacher && teacher.subject) { %>
+                    <p><strong>Subject:</strong> <%= teacher.subject %></p>
+                <% } %>
+            </div>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message">
+                <%= success %>
+            </div>
+        <% } %>
+        
+        <div class="navigation">
+            <a href="/dashboard">← Back to Dashboard</a>
+        </div>
+
+        <div class="section">
+            <% if (students.length === 0) { %>
+                <div class="empty-state">
+                    <p>No students found in this class yet.</p>
+                </div>
+            <% } else { %>
+                <div class="students-list">
+                    <h2>Students (<%= students.length %>)</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Class Year</th>
+                                <th>Add a grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% students.forEach(function(student) { %>
+                                <tr>
+                                    <td><%= student.name %></td>
+                                    <td><%= student.email %></td>
+                                    <td><%= student.classYear || 'N/A' %></td>
+                                    <td>
+                                        <form action="/add-grade" method="POST" class="grade-form">
+                                            <input type="hidden" name="studentId" value="<%= student.uid %>">
+                                            <input type="hidden" name="classYear" value="<%= classYear %>">
+                                            
+                                            <select id="grade" name="grade" class="grade-select" required>
+                                                <option value="">Select Grade</option>
+                                                <option value="10">10 - Excellent</option>
+                                                <option value="9">9 - Very Good</option>
+                                                <option value="8">8 - Good</option>
+                                                <option value="7">7 - Satisfactory</option>
+                                                <option value="6">6 - Sufficient</option>
+                                                <option value="5">5 - Insufficient</option>
+                                                <option value="4">4 - Insufficient</option>
+                                                <option value="3">3 - Insufficient</option>
+                                                <option value="2">2 - Insufficient</option>
+                                                <option value="1">1 - Insufficient</option>
+                                            </select>
+                                            <button type="submit" class="btn-add-grade">Add</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Logout</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

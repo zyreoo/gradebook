@@ -112,20 +112,23 @@ class User {
     static async getStudentGrades(studentId){
         const snapshot = await db.collection('grades')
             .where('studentId', "==", studentId)
-            .orderBy('createdAt', 'desc')
             .get()
 
         if(snapshot.empty){
             return [];
         }
 
-        return snapshot.docs.map(doc => ({
+        const grades = snapshot.docs.map(doc => ({
             id: doc.id, 
             ...doc.data()
-        })); 
-
-
+        }));
         
+        // Sort by createdAt in JavaScript (descending - newest first)
+        return grades.sort((a, b) => {
+            const dateA = a.createdAt?.toDate?.() || new Date(0);
+            const dateB = b.createdAt?.toDate?.() || new Date(0);
+            return dateB - dateA;
+        });
     }
 }
 

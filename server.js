@@ -61,20 +61,154 @@ app.get('/dashboard', async (req, res) => {
 
     if (req.session.userRole === 'teacher') {
         try {
-            const User = require('./models/User');
+            const School = require('./models/School');
             const schoolId = req.session.schoolId;
-            const students = schoolId 
-                ? await User.getUserByRoleAndSchool('student', schoolId)
-                : await User.getUserByRole('student');
-            res.render('dashboard-teacher', { user: userData, students: students });
+            const teacherId = req.session.userId;
+
+            let assignedClasses = [];
+            if (schoolId) {
+                const schoolData = await School.findById(schoolId);
+                if (schoolData && schoolData.classYearTeachers) {
+                    for (const [classYear, teacherIds] of Object.entries(schoolData.classYearTeachers)) {
+                        if (teacherIds.includes(teacherId)) {
+                            assignedClasses.push(classYear);
+                        }
+                    }
+                }
+            }
+            
+            res.render('dashboard-teacher', { 
+                user: userData,
+                assignedClasses: assignedClasses 
+            });
         } catch (error) {
-            console.error('Error fetching students:', error);
-            res.render('dashboard-teacher', { user: userData, students: [] });
+            console.error('Error fetching classes:', error);
+            res.render('dashboard-teacher', { 
+                user: userData,
+                assignedClasses: [] 
+            });
         }
     } else if (req.session.userRole === 'student') {
-        res.render('dashboard-student', { user: userData });
+        try {
+            const User = require('./models/User');
+            const studentId = req.session.userId;
+            
+            const allGrades = await User.getStudentGrades(studentId);
+            
+            const gradesBySubject = {};
+            
+            allGrades.forEach(gradeEntry => {
+                const subject = gradeEntry.subject || 'General';
+                if (!gradesBySubject[subject]) {
+                    gradesBySubject[subject] = {
+                        grades: [],
+                        teacherName: gradeEntry.teacherName
+                    };
+                }
+                gradesBySubject[subject].grades.push({
+                    value: gradeEntry.grade,
+                    date: gradeEntry.createdAt,
+                    teacherName: gradeEntry.teacherName
+                });
+            });
+            
+            // Calculate averages for each subject
+            const subjects = Object.keys(gradesBySubject).map(subjectName => {
+                const subjectData = gradesBySubject[subjectName];
+                const grades = subjectData.grades.map(g => g.value);
+                const average = grades.length > 0 
+                    ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
+                    : 0;
+                
+                return {
+                    name: subjectName,
+                    grades: subjectData.grades.sort((a, b) => b.date - a.date), // Most recent first
+                    average: parseFloat(average),
+                    teacherName: subjectData.teacherName,
+                    gradeCount: grades.length
+                };
+            });
+            
+            // Sort subjects by name
+            subjects.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Calculate overall statistics
+            const totalGrades = allGrades.length;
+            const overallAverage = totalGrades > 0
+                ? (allGrades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
+                : 0;
+            
+            res.render('dashboard-student', { 
+                user: userData,
+                subjects: subjects,
+                stats: {
+                    totalSubjects: subjects.length,
+                    totalGrades: totalGrades,
+                    overallAverage: parseFloat(overallAverage)
+                }
+            });
+        } catch (error) {
+            console.error('Error fetching student grades:', error);
+            res.render('dashboard-student', { 
+                user: userData,
+                subjects: [],
+                stats: {
+                    totalSubjects: 0,
+                    totalGrades: 0,
+                    overallAverage: 0
+                }
+            });
+        }
     } else {
         res.render('dashboard', { user: userData }); 
+    }
+});
+
+app.get('/class/:classYear', async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/auth/login');
+    }
+
+    if (req.session.userRole !== 'teacher') {
+        return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. Teachers only.'));
+    }
+
+    try {
+        const User = require('./models/User');
+        const School = require('./models/School');
+        const classYear = req.params.classYear;
+        const schoolId = req.session.schoolId;
+        const teacherId = req.session.userId;
+
+        // Verify teacher is assigned to this class
+        const schoolData = await School.findById(schoolId);
+        const classTeachers = schoolData?.classYearTeachers?.[classYear] || [];
+        
+        if (!classTeachers.includes(teacherId)) {
+            return res.redirect('/dashboard?error=' + encodeURIComponent('You are not assigned to this class'));
+        }
+
+        
+        const teacher = await User.findbyId(teacherId);
+        // Get all students in this class year from the same school
+        const allStudents = await User.getUserByRoleAndSchool('student', schoolId);
+        const studentsInClass = allStudents.filter(student => student.classYear === classYear);
+
+        res.render('class-detail', {
+            user: {
+                name: req.session.userName,
+                email: req.session.userEmail,
+                role: req.session.userRole
+            },
+            teacher: teacher, 
+            classYear: classYear,
+            students: studentsInClass,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Error fetching class data:', error);
+        res.redirect('/dashboard?error=' + encodeURIComponent('Failed to load class data'));
     }
 });
 
@@ -120,51 +254,70 @@ app.get('/students', (req, res) =>{
 
 app.post('/add-grade', async (req, res) =>{
 
-
     try{
         if(!req.session.userId){
-
             return res.redirect("/auth/login")
         }
 
         if(req.session.userRole !== 'teacher'){
-
             return res.redirect('/students?error=' + encodeURIComponent('Access denied. Teachers only.'));
         }
 
-        const { studentId, grade, subject } = req.body; 
-
+        const { studentId, grade, classYear } = req.body; 
 
         if (!studentId || !grade){
-            return res.redirect('/students?error='+encodeURIComponent('Student and grade are required'));
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student and grade are required'));
         }
 
         const gradeNum = parseInt(grade);
 
         if(isNaN(gradeNum)|| gradeNum < 1 || gradeNum > 10){
-            return res.redirect('/students?error=' + encodeURIComponent('Invalid grade. Must be between 1-10.'));
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid grade. Must be between 1-10.'));
         }
-
 
         const User = require('./models/User'); 
+        
+        // Get teacher's subject
+        const teacher = await User.findbyId(req.session.userId); 
+
+        if(!teacher || !teacher.subject){
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Teacher subject not assigned. Contact your administrator.'));
+        }
+
+        // Verify student exists and is in the same school
         const student = await User.findbyId(studentId); 
 
-        if (!student){
-            return res.redirect('/students?error='+encodeURIComponent('Student not found')); 
+        if(!student){
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student not found'));
         }
+
+        if (student.schoolId !== req.session.schoolId) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Cannot add grade for student from different school'));
+        }
+
+        // Add grade with teacher's subject
         await User.addGrade({
             studentId: studentId,
             studentName: student.name, 
             grade: gradeNum, 
             teacherId: req.session.userId, 
             teacherName: req.session.userName, 
-            subject: subject || 'General'
+            subject: teacher.subject  // Use teacher's assigned subject
         });
 
-        res.redirect('/students?success=' + encodeURIComponent(`Grade ${gradeNum} added for ${student.name}`));
+        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Grade ${gradeNum} added for ${student.name} in ${teacher.subject}`));
 
     } catch(error){
-        res.redirect('/students?error=' + encodeURIComponent('Failed to add grade. Please try again.'));
+        console.error('Error adding grade:', error);
+        const classYear = req.body.classYear;
+        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to add grade. Please try again.'));
     }
 }); 
 
