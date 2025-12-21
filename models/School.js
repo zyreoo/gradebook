@@ -238,64 +238,58 @@ class School {
     }
 
 
-    static async assignTeacherToClassSubject(schoolId, classYear, subject, teacherId){
-        const schoolRef = db.collection("schools").doc(schoolId); 
-        const doc = await schoolRef.get(); 
+    // Teacher Assignment Methods - Simplified
+    static async assignTeacherToClass(schoolId, classYear, teacherId) {
+        const schoolRef = db.collection("schools").doc(schoolId);
+        const doc = await schoolRef.get();
 
-        if(!doc.exists){
+        if (!doc.exists) {
             throw new Error('School not found');
         }
 
-
-        const schoolData = doc.data(); 
-        const classYearTeachers = schoolData.classYearTeachers || {}; 
-
-        if(!classYearTeachers[classYear]){
-            classYearTeachers[classYear] = {}; 
+        const schoolData = doc.data();
+        const classYearTeachers = schoolData.classYearTeachers || {};
+        
+        if (!classYearTeachers[classYear]) {
+            classYearTeachers[classYear] = [];
         }
-
-        classYearTeachers[classYear][subject] = teacherId; 
-
-        await schoolRef.update({classYearTeachers});
+        
+        // Check if teacher is already assigned to this class
+        if (!classYearTeachers[classYear].includes(teacherId)) {
+            classYearTeachers[classYear].push(teacherId);
+        }
+        
+        await schoolRef.update({ classYearTeachers });
         return classYearTeachers;
     }
 
-
-    static async removeTeacherFromClassSubject(schoolId, classYear, subject, teacherId){
+    static async removeTeacherFromClass(schoolId, classYear, teacherId) {
         const schoolRef = db.collection("schools").doc(schoolId);
-        const doc = await schoolRef.get(); 
+        const doc = await schoolRef.get();
 
-        if(!doc.exists){
-            throw new Error('school not found'); 
+        if (!doc.exists) {
+            throw new Error('School not found');
         }
 
-        const schoolData = doc.data(); 
+        const schoolData = doc.data();
         const classYearTeachers = schoolData.classYearTeachers || {};
 
-
-        if (classYearTeachers[classYear] && classYearTeachers[classYear][subject]){
-            delete classYearTeachers[classYear][subject];
+        if (classYearTeachers[classYear]) {
+            classYearTeachers[classYear] = classYearTeachers[classYear].filter(id => id !== teacherId);
         }
 
-        await schoolRef.update({classYearTeachers}); 
+        await schoolRef.update({ classYearTeachers });
         return classYearTeachers;
     }
 
-
-    static async getTeacherForClassSubject(schoolId, classYear, subject, teacherId){
-        const doc = await db.collection('schools').doc(schoolId); 
-
-        if(!doc.exists) return null;
-
+    static async getTeachersForClass(schoolId, classYear) {
+        const doc = await db.collection('schools').doc(schoolId).get();
+        if (!doc.exists) return [];
+        
         const data = doc.data();
         const classYearTeachers = data.classYearTeachers || {};
-
-
-        if(classYearTeachers[classYear] && classYearTeachers[classYear][subject]){
-            return classYearTeachers[classYear][subject];
-        }
-
-        return null;
+        
+        return classYearTeachers[classYear] || [];
     }
 }
 

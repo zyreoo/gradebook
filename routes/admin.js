@@ -211,5 +211,46 @@ router.post('/check-subject-usage', async (req, res) => {
     }
 });
 
+
+
+router.post('/assign-teacher', async (req, res) => {
+    try {
+        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+            return res.redirect('/auth/login');
+        }
+
+        const { classYear, teacherId } = req.body;
+        const schoolId = req.session.schoolId;
+
+        if (!classYear || !teacherId) {
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('All fields are required'));
+        }
+
+        await School.assignTeacherToClass(schoolId, classYear, teacherId);
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent('Teacher assigned successfully!'));
+    } catch (error) {
+        console.error('Assign teacher error:', error);
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message));
+    }
+});
+
+// Remove teacher from class
+router.post('/remove-teacher-assignment', async (req, res) => {
+    try {
+        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+            return res.redirect('/auth/login');
+        }
+
+        const { classYear, teacherId } = req.body;
+        const schoolId = req.session.schoolId;
+
+        await School.removeTeacherFromClass(schoolId, classYear, teacherId);
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent('Teacher assignment removed!'));
+    } catch (error) {
+        console.error('Remove teacher assignment error:', error);
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message));
+    }
+});
+
 module.exports = router;
 
