@@ -6,13 +6,16 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Firebase with error handling
+// Initialize Firebase - fail fast if it doesn't work
 try {
     require('./config/firebase');
+    console.log('Firebase initialized successfully');
 } catch (error) {
-    console.error('Failed to initialize Firebase:', error);
-    console.error('Error details:', error.message);
-    // Log for debugging - let Vercel handle the error
+    console.error('CRITICAL: Failed to initialize Firebase');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    // In serverless, we want to fail fast - the app won't work without Firebase
+    throw error;
 }
 
 // Middleware
