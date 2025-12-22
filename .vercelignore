@@ -1,0 +1,8 @@
+node_modules
+firebase-service-account.json
+.env
+.env.local
+*.log
+seed.js
+seed-full.js
+

@@ -6,8 +6,14 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-
-require('./config/firebase')
+// Initialize Firebase with error handling
+try {
+    require('./config/firebase');
+} catch (error) {
+    console.error('Failed to initialize Firebase:', error);
+    console.error('Error details:', error.message);
+    // Log for debugging - let Vercel handle the error
+}
 
 // Middleware
 app.use(express.json());
@@ -554,7 +560,12 @@ app.post('/api/reset-database', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    // Running directly (local development)
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
 
