@@ -632,6 +632,60 @@ body:has(.dashboard-container) {
     box-shadow: 0 1px 3px rgba(255, 255, 255, 0.1);
 }
 
+/* Absence Form in Table */
+.absence-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.absence-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 140px;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.absence-select:hover {
+    border-color: #3a3a3a;
+}
+
+.absence-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #141414;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.absence-date {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    min-width: 140px;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.absence-date:hover {
+    border-color: #3a3a3a;
+}
+
+.absence-date:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #141414;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
 /* Wider container for students page */
 body:has(.students-list) .container {
     max-width: 950px;

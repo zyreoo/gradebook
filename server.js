@@ -96,6 +96,7 @@ app.get('/dashboard', async (req, res) => {
             const schoolId = req.session.schoolId;
             
             const allGrades = await User.getStudentGrades(studentId);
+            const allAbsences = await User.getStudentAbsences(studentId);
             
             const gradesBySubject = {};
             
@@ -178,6 +179,30 @@ app.get('/dashboard', async (req, res) => {
             // Sort subjects by name
             subjects.sort((a, b) => a.name.localeCompare(b.name));
             
+            // Process absences by subject
+            const absencesBySubject = {};
+            allAbsences.forEach(absence => {
+                const subject = absence.subject || 'General';
+                if (!absencesBySubject[subject]) {
+                    absencesBySubject[subject] = {
+                        motivated: [],
+                        unmotivated: []
+                    };
+                }
+                if (absence.type === 'motivated') {
+                    absencesBySubject[subject].motivated.push({
+                        date: absence.date,
+                        reason: absence.reason,
+                        teacherName: absence.teacherName
+                    });
+                } else {
+                    absencesBySubject[subject].unmotivated.push({
+                        date: absence.date,
+                        teacherName: absence.teacherName
+                    });
+                }
+            });
+            
             // Calculate overall statistics (only from subjects with grades)
             const totalGrades = allGrades.length;
             const overallAverage = totalGrades > 0
@@ -187,10 +212,14 @@ app.get('/dashboard', async (req, res) => {
             res.render('dashboard-student', { 
                 user: userData,
                 subjects: subjects,
+                absencesBySubject: absencesBySubject,
                 stats: {
                     totalSubjects: subjects.filter(s => s.hasGrades).length,
                     totalGrades: totalGrades,
-                    overallAverage: parseFloat(overallAverage)
+                    overallAverage: parseFloat(overallAverage),
+                    totalAbsences: allAbsences.length,
+                    motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
+                    unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
                 }
             });
         } catch (error) {
@@ -198,10 +227,14 @@ app.get('/dashboard', async (req, res) => {
             res.render('dashboard-student', { 
                 user: userData,
                 subjects: [],
+                absencesBySubject: {},
                 stats: {
                     totalSubjects: 0,
                     totalGrades: 0,
-                    overallAverage: 0
+                    overallAverage: 0,
+                    totalAbsences: 0,
+                    motivatedAbsences: 0,
+                    unmotivatedAbsences: 0
                 }
             });
         }
@@ -376,6 +409,89 @@ app.post('/add-grade', async (req, res) =>{
     }
 }); 
 
+app.post('/add-absence', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.redirect("/auth/login");
+        }
+
+        if (req.session.userRole !== 'teacher') {
+            return res.redirect('/students?error=' + encodeURIComponent('Access denied. Teachers only.'));
+        }
+
+        const { studentId, date, type, reason, classYear, subject } = req.body; 
+
+        if (!studentId || !date || !type || !subject) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student, date, type, and subject are required'));
+        }
+
+        if (type !== 'motivated' && type !== 'unmotivated') {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid absence type'));
+        }
+
+        const User = require('./models/User'); 
+        
+        // Get teacher's subjects
+        const teacher = await User.findbyId(req.session.userId); 
+        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+
+        if (!teacher || teacherSubjects.length === 0) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('No subjects assigned. Contact your administrator.'));
+        }
+
+        // Verify teacher teaches this subject
+        if (!teacherSubjects.includes(subject)) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not assigned to teach this subject.'));
+        }
+
+        // Verify student exists and is in the same school
+        const student = await User.findbyId(studentId); 
+
+        if (!student) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student not found'));
+        }
+
+        if (student.schoolId !== req.session.schoolId) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Cannot add absence for student from different school'));
+        }
+
+        // Parse date
+        const absenceDate = new Date(date);
+        if (isNaN(absenceDate.getTime())) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid date format'));
+        }
+
+        // Add absence
+        await User.addAbsence({
+            studentId: studentId,
+            studentName: student.name, 
+            teacherId: req.session.userId, 
+            teacherName: req.session.userName, 
+            subject: subject,
+            date: absenceDate,
+            type: type,
+            reason: reason || ''
+        });
+
+        const typeLabel = type === 'motivated' ? 'Motivated' : 'Unmotivated';
+        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`${typeLabel} absence recorded for ${student.name} on ${date} in ${subject}`));
+
+    } catch(error) {
+        console.error('Error adding absence:', error);
+        const classYear = req.body.classYear;
+        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to add absence. Please try again.'));
+    }
+});
+
 
 
 app.post('/api/reset-database', async (req, res) => {
@@ -406,6 +522,10 @@ app.post('/api/reset-database', async (req, res) => {
         const gradeDeletePromises = gradesSnapshot.docs.map(doc => doc.ref.delete());
         await Promise.all(gradeDeletePromises);
 
+        const absencesSnapshot = await db.collection('absences').get();
+        const absenceDeletePromises = absencesSnapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(absenceDeletePromises);
+
         const { auth } = require('./config/firebase');
         const listUsersResult = await auth.listUsers();
         const authDeletePromises = listUsersResult.users.map(user => 
@@ -420,6 +540,7 @@ app.post('/api/reset-database', async (req, res) => {
                 users: usersSnapshot.size,
                 schools: schoolsSnapshot.size,
                 grades: gradesSnapshot.size,
+                absences: absencesSnapshot.size,
                 authUsers: listUsersResult.users.length
             }
         });

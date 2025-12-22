@@ -141,6 +141,48 @@ class User {
             return dateB - dateA;
         });
     }
+
+    static async addAbsence({studentId, studentName, teacherId, teacherName, subject, date, type = 'unmotivated', reason = ''}){
+        
+        const absenceData = {
+            studentId, 
+            studentName, 
+            teacherId, 
+            teacherName, 
+            subject: subject || 'General', 
+            date: date || new Date(), // Date of absence
+            type: type, 
+            reason: reason || '',
+            createdAt: new Date(),
+            timestamp: Date.now()
+        }; 
+
+        const absenceRef = await db.collection('absences').add(absenceData);
+
+        return { id: absenceRef.id, ...absenceData}
+    }
+
+    static async getStudentAbsences(studentId){
+        const snapshot = await db.collection('absences')
+            .where('studentId', "==", studentId)
+            .get()
+
+        if(snapshot.empty){
+            return [];
+        }
+
+        const absences = snapshot.docs.map(doc => ({
+            id: doc.id, 
+            ...doc.data()
+        })); 
+
+        // Sort by date in descending order (newest first)
+        return absences.sort((a, b) => {
+            const dateA = a.date?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
+            const dateB = b.date?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+            return dateB - dateA;
+        });
+    }
 }
 
 module.exports = User;

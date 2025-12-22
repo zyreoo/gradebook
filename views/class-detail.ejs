@@ -50,10 +50,14 @@
                                 <th>Email</th>
                                 <th>Class Year</th>
                                 <th>Add a grade</th>
+                                <th>Record absence</th>
                             </tr>
                         </thead>
                         <tbody>
                             <% students.forEach(function(student) { %>
+                                <% 
+                                    const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                                %>
                                 <tr>
                                     <td><%= student.name %></td>
                                     <td><%= student.email %></td>
@@ -63,9 +67,6 @@
                                             <input type="hidden" name="studentId" value="<%= student.uid %>">
                                             <input type="hidden" name="classYear" value="<%= classYear %>">
                                             
-                                            <% 
-                                                const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-                                            %>
                                             <% if (teacherSubjects.length > 0) { %>
                                                 <select name="subject" class="grade-select" required style="min-width: 140px;">
                                                     <option value="">Select Subject</option>
@@ -88,6 +89,24 @@
                                                 <option value="2">2 - Insufficient</option>
                                                 <option value="1">1 - Insufficient</option>
                                             </select>
+                                            <button type="submit" class="btn-add-grade">Add</button>
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <form action="/add-absence" method="POST" class="absence-form">
+                                            <input type="hidden" name="studentId" value="<%= student.uid %>">
+                                            <input type="hidden" name="classYear" value="<%= classYear %>">
+                                            
+                                            <% if (teacherSubjects.length > 0) { %>
+                                                <select name="subject" class="absence-select" required>
+                                                    <option value="">Select Subject</option>
+                                                    <% teacherSubjects.forEach(function(subj) { %>
+                                                        <option value="<%= subj %>"><%= subj %></option>
+                                                    <% }); %>
+                                                </select>
+                                            <% } %>
+
+                                            <input type="date" name="date" class="absence-date" required value="<%= new Date().toISOString().split('T')[0] %>">
                                             <button type="submit" class="btn-add-grade">Add</button>
                                         </form>
                                     </td>

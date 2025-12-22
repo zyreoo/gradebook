@@ -33,6 +33,16 @@
                         <div class="stat-value"><%= stats.totalGrades %></div>
                         <div class="stat-label">Total Grades</div>
                     </div>
+                    <% if (stats.totalAbsences !== undefined && stats.totalAbsences > 0) { %>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color: #dc3545;"><%= stats.unmotivatedAbsences %></div>
+                            <div class="stat-label">Unmotivated Absences</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color: #28a745;"><%= stats.motivatedAbsences %></div>
+                            <div class="stat-label">Motivated Absences</div>
+                        </div>
+                    <% } %>
                 </div>
             </div>
 
@@ -84,6 +94,97 @@
                                     <% } else { %>
                                         <div class="muted-box" style="margin: 10px 0; padding: 12px;">
                                             No grades recorded yet
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+
+            <!-- Absences Section -->
+            <div class="section">
+                <h2>My Absences</h2>
+                
+                <% 
+                    const hasAbsences = absencesBySubject && Object.keys(absencesBySubject).length > 0;
+                %>
+                
+                <% if (!hasAbsences) { %>
+                    <div class="empty-state">
+                        <p>No absences recorded.</p>
+                    </div>
+                <% } else { %>
+                    <div class="grades-grid">
+                        <% Object.keys(absencesBySubject).forEach(function(subject) { 
+                            const subjectAbsences = absencesBySubject[subject];
+                            const totalMotivated = subjectAbsences.motivated.length;
+                            const totalUnmotivated = subjectAbsences.unmotivated.length;
+                        %>
+                            <div class="subject-card">
+                                <div class="subject-header">
+                                    <h3><%= subject %></h3>
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                        <% if (totalUnmotivated > 0) { %>
+                                            <span class="badge" style="background: #dc3545; color: white;">
+                                                <%= totalUnmotivated %> Unmotivated
+                                            </span>
+                                        <% } %>
+                                        <% if (totalMotivated > 0) { %>
+                                            <span class="badge" style="background: #28a745; color: white;">
+                                                <%= totalMotivated %> Motivated
+                                            </span>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <div class="subject-details">
+                                    <% if (subjectAbsences.unmotivated.length > 0) { %>
+                                        <div style="margin-bottom: 12px;">
+                                            <strong style="color: #dc3545;">Unmotivated Absences:</strong>
+                                            <ul style="margin: 8px 0; padding-left: 20px;">
+                                                <% subjectAbsences.unmotivated.forEach(function(absence) { %>
+                                                    <li style="margin-bottom: 4px;">
+                                                        <% 
+                                                            let dateStr = '';
+                                                            if (absence.date && absence.date.toDate) {
+                                                                dateStr = absence.date.toDate().toLocaleDateString();
+                                                            } else if (absence.date) {
+                                                                dateStr = new Date(absence.date).toLocaleDateString();
+                                                            } else {
+                                                                dateStr = 'N/A';
+                                                            }
+                                                        %>
+                                                        <%= dateStr %> 
+                                                        <% if (absence.teacherName) { %>(<%= absence.teacherName %>)<% } %>
+                                                    </li>
+                                                <% }); %>
+                                            </ul>
+                                        </div>
+                                    <% } %>
+                                    
+                                    <% if (subjectAbsences.motivated.length > 0) { %>
+                                        <div>
+                                            <strong style="color: #28a745;">Motivated Absences:</strong>
+                                            <ul style="margin: 8px 0; padding-left: 20px;">
+                                                <% subjectAbsences.motivated.forEach(function(absence) { %>
+                                                    <li style="margin-bottom: 4px;">
+                                                        <% 
+                                                            let dateStr = '';
+                                                            if (absence.date && absence.date.toDate) {
+                                                                dateStr = absence.date.toDate().toLocaleDateString();
+                                                            } else if (absence.date) {
+                                                                dateStr = new Date(absence.date).toLocaleDateString();
+                                                            } else {
+                                                                dateStr = 'N/A';
+                                                            }
+                                                        %>
+                                                        <%= dateStr %>
+                                                        <% if (absence.reason) { %> - <%= absence.reason %><% } %>
+                                                        <% if (absence.teacherName) { %>(<%= absence.teacherName %>)<% } %>
+                                                    </li>
+                                                <% }); %>
+                                            </ul>
                                         </div>
                                     <% } %>
                                 </div>
