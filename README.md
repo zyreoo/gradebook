@@ -158,17 +158,6 @@ This uses the Romanian grading system (1-10):
 - **6** - Sufficient (barely passing)
 - **5 and below** - Insufficient (failing)
 
-## 🚧 What's Next?
-
-This is still a work in progress. Here's what I'm thinking about adding:
-
-- [ ] Actually implement the class management
-- [ ] Add grade input for teachers
-- [ ] Build the reports section
-- [ ] Add more stats and analytics
-- [ ] Maybe add notifications?
-- [ ] Export grades to PDF
-
 ## 🤝 Contributing
 
 If you want to contribute, feel free to fork it and send a PR. I'm open to suggestions and improvements!
