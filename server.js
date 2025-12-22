@@ -91,7 +91,9 @@ app.get('/dashboard', async (req, res) => {
     } else if (req.session.userRole === 'student') {
         try {
             const User = require('./models/User');
+            const School = require('./models/School');
             const studentId = req.session.userId;
+            const schoolId = req.session.schoolId;
             
             const allGrades = await User.getStudentGrades(studentId);
             
@@ -112,27 +114,71 @@ app.get('/dashboard', async (req, res) => {
                 });
             });
             
-            // Calculate averages for each subject
-            const subjects = Object.keys(gradesBySubject).map(subjectName => {
-                const subjectData = gradesBySubject[subjectName];
-                const grades = subjectData.grades.map(g => g.value);
-                const average = grades.length > 0 
-                    ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-                    : 0;
+            
+            // Get student's class year
+            const studentInfo = await User.findbyId(studentId);
+            const studentClassYear = studentInfo?.classYear;
+            
+            // Get subjects taught by teachers assigned to student's class
+            let availableSubjects = [];
+            
+            if (schoolId && studentClassYear) {
+                // Get school data to find teachers assigned to this class
+                const schoolData = await School.findById(schoolId);
+                const classTeachers = schoolData?.classYearTeachers?.[studentClassYear] || [];
                 
-                return {
-                    name: subjectName,
-                    grades: subjectData.grades.sort((a, b) => b.date - a.date), // Most recent first
-                    average: parseFloat(average),
-                    teacherName: subjectData.teacherName,
-                    gradeCount: grades.length
-                };
+                // Collect subjects from all teachers assigned to this class
+                const teacherSubjectsSet = new Set();
+                for (const teacherId of classTeachers) {
+                    const teacher = await User.findbyId(teacherId);
+                    if (teacher) {
+                        // Support both old single subject and new multiple subjects
+                        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                        teacherSubjects.forEach(subj => teacherSubjectsSet.add(subj));
+                    }
+                }
+                availableSubjects = Array.from(teacherSubjectsSet);
+            } else {
+                // Fallback: if no class year, show all school subjects
+                availableSubjects = schoolId ? await School.getSubjects(schoolId) : [];
+            }
+            
+            // Create subject list with only subjects taught in this class
+            const subjects = availableSubjects.map(subjectName => {
+                const subjectData = gradesBySubject[subjectName];
+                
+                if (subjectData) {
+                    // Subject has grades
+                    const grades = subjectData.grades.map(g => g.value);
+                    const average = grades.length > 0 
+                        ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
+                        : 0;
+                    
+                    return {
+                        name: subjectName,
+                        grades: subjectData.grades.sort((a, b) => b.date - a.date),
+                        average: parseFloat(average),
+                        teacherName: subjectData.teacherName,
+                        gradeCount: grades.length,
+                        hasGrades: true
+                    };
+                } else {
+                    // Subject has no grades yet but is taught in this class
+                    return {
+                        name: subjectName,
+                        grades: [],
+                        average: 0,
+                        teacherName: null,
+                        gradeCount: 0,
+                        hasGrades: false
+                    };
+                }
             });
             
             // Sort subjects by name
             subjects.sort((a, b) => a.name.localeCompare(b.name));
             
-            // Calculate overall statistics
+            // Calculate overall statistics (only from subjects with grades)
             const totalGrades = allGrades.length;
             const overallAverage = totalGrades > 0
                 ? (allGrades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
@@ -142,7 +188,7 @@ app.get('/dashboard', async (req, res) => {
                 user: userData,
                 subjects: subjects,
                 stats: {
-                    totalSubjects: subjects.length,
+                    totalSubjects: subjects.filter(s => s.hasGrades).length,
                     totalGrades: totalGrades,
                     overallAverage: parseFloat(overallAverage)
                 }
@@ -263,11 +309,11 @@ app.post('/add-grade', async (req, res) =>{
             return res.redirect('/students?error=' + encodeURIComponent('Access denied. Teachers only.'));
         }
 
-        const { studentId, grade, classYear } = req.body; 
+        const { studentId, grade, classYear, subject } = req.body; 
 
-        if (!studentId || !grade){
+        if (!studentId || !grade || !subject){
             const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student and grade are required'));
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student, grade, and subject are required'));
         }
 
         const gradeNum = parseInt(grade);
@@ -279,12 +325,21 @@ app.post('/add-grade', async (req, res) =>{
 
         const User = require('./models/User'); 
         
-        // Get teacher's subject
+        // Get teacher's subjects
         const teacher = await User.findbyId(req.session.userId); 
 
-        if(!teacher || !teacher.subject){
+        // Support both old single subject and new multiple subjects
+        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+
+        if(!teacher || teacherSubjects.length === 0){
             const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Teacher subject not assigned. Contact your administrator.'));
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('No subjects assigned. Contact your administrator.'));
+        }
+
+        // Verify teacher teaches this subject
+        if (!teacherSubjects.includes(subject)) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not assigned to teach this subject.'));
         }
 
         // Verify student exists and is in the same school
@@ -300,18 +355,18 @@ app.post('/add-grade', async (req, res) =>{
             return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Cannot add grade for student from different school'));
         }
 
-        // Add grade with teacher's subject
+        // Add grade with selected subject
         await User.addGrade({
             studentId: studentId,
             studentName: student.name, 
             grade: gradeNum, 
             teacherId: req.session.userId, 
             teacherName: req.session.userName, 
-            subject: teacher.subject  // Use teacher's assigned subject
+            subject: subject
         });
 
         const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Grade ${gradeNum} added for ${student.name} in ${teacher.subject}`));
+        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Grade ${gradeNum} added for ${student.name} in ${subject}`));
 
     } catch(error){
         console.error('Error adding grade:', error);

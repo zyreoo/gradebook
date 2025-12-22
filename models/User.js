@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 
 class User {
 
-    static async create({name, email, password, role = "student",subject, schoolId, classYear}){
+    static async create({name, email, password, role = "student", subject, subjects, schoolId, classYear}){
 
 
         const hashedpassword = await bcrypt.hash(password, 10); 
@@ -14,6 +14,17 @@ class User {
             email, password, displayName: name
         });
 
+        // Handle both old 'subject' and new 'subjects' formats
+        let subjectArray = null;
+        if (role === 'teacher') {
+            if (subjects && Array.isArray(subjects)) {
+                subjectArray = subjects;
+            } else if (subject) {
+                subjectArray = [subject]; // Convert single subject to array
+            } else {
+                subjectArray = [];
+            }
+        }
 
         const userData = {
             uid: userRecord.uid, 
@@ -23,7 +34,7 @@ class User {
             role,
             schoolId: schoolId || null, 
             classYear: role === 'student'? (classYear || null) : null,
-            subject: role === 'teacher'? (subject || null): null, 
+            subjects: role === 'teacher'? subjectArray : null, // Changed to array
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -121,8 +132,8 @@ class User {
         const grades = snapshot.docs.map(doc => ({
             id: doc.id, 
             ...doc.data()
-        }));
-        
+        })); 
+
         // Sort by createdAt in JavaScript (descending - newest first)
         return grades.sort((a, b) => {
             const dateA = a.createdAt?.toDate?.() || new Date(0);

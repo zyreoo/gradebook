@@ -10,8 +10,24 @@ const schools = [
         schoolName: 'Lincoln High School',
         adress: '123 Main Street, Springfield, IL 62701',
         teachers: [
-            { name: 'Robert Wilson', email: 'robert.wilson@lincoln.edu', subject: 'Mathematics', classes: ['9A', '10A'] },
-            { name: 'Jennifer Martinez', email: 'jennifer.martinez@lincoln.edu', subject: 'English', classes: ['9B', '10B'] }
+            { 
+                name: 'Robert Wilson', 
+                email: 'robert.wilson@lincoln.edu', 
+                subjects: ['Mathematics', 'Physics'],
+                classAssignments: [
+                    { class: '9A', subjects: ['Mathematics'] },
+                    { class: '10A', subjects: ['Mathematics', 'Physics'] }
+                ]
+            },
+            { 
+                name: 'Jennifer Martinez', 
+                email: 'jennifer.martinez@lincoln.edu', 
+                subjects: ['English', 'History'],
+                classAssignments: [
+                    { class: '9B', subjects: ['English'] },
+                    { class: '10B', subjects: ['English', 'History'] }
+                ]
+            }
         ],
         students: [
             { name: 'Alice Thompson', email: 'alice.thompson@lincoln.edu', classYear: '9A' },
@@ -29,8 +45,24 @@ const schools = [
         schoolName: 'Washington Academy',
         adress: '456 Oak Avenue, Portland, OR 97201',
         teachers: [
-            { name: 'David Lee', email: 'david.lee@washington.edu', subject: 'Science', classes: ['11A', '12A'] },
-            { name: 'Emma White', email: 'emma.white@washington.edu', subject: 'History', classes: ['11B', '12B'] }
+            { 
+                name: 'David Lee', 
+                email: 'david.lee@washington.edu', 
+                subjects: ['Science', 'Chemistry'],
+                classAssignments: [
+                    { class: '11A', subjects: ['Science'] },
+                    { class: '12A', subjects: ['Science', 'Chemistry'] }
+                ]
+            },
+            { 
+                name: 'Emma White', 
+                email: 'emma.white@washington.edu', 
+                subjects: ['History', 'Geography'],
+                classAssignments: [
+                    { class: '11B', subjects: ['History'] },
+                    { class: '12B', subjects: ['History', 'Geography'] }
+                ]
+            }
         ],
         students: [
             { name: 'Diana Prince', email: 'diana.prince@washington.edu', classYear: '11A' },
@@ -47,8 +79,24 @@ const schools = [
         schoolName: 'Roosevelt Middle School',
         adress: '789 Pine Road, Seattle, WA 98101',
         teachers: [
-            { name: 'Grace Kim', email: 'grace.kim@roosevelt.edu', subject: 'Geography', classes: ['6A', '7A'] },
-            { name: 'Henry Adams', email: 'henry.adams@roosevelt.edu', subject: 'Physics', classes: ['6B', '8A'] }
+            { 
+                name: 'Grace Kim', 
+                email: 'grace.kim@roosevelt.edu', 
+                subjects: ['Geography', 'History'],
+                classAssignments: [
+                    { class: '6A', subjects: ['Geography'] },
+                    { class: '7A', subjects: ['Geography', 'History'] }
+                ]
+            },
+            { 
+                name: 'Henry Adams', 
+                email: 'henry.adams@roosevelt.edu', 
+                subjects: ['Physics', 'Mathematics'],
+                classAssignments: [
+                    { class: '6B', subjects: ['Physics'] },
+                    { class: '8A', subjects: ['Physics', 'Mathematics'] }
+                ]
+            }
         ],
         students: [
             { name: 'George Miller', email: 'george.miller@roosevelt.edu', classYear: '6A' },
@@ -118,22 +166,27 @@ async function seedDatabase() {
                     email: teacher.email,
                     password: 'password123',
                     role: 'teacher',
-                    subject: teacher.subject,
+                    subjects: teacher.subjects,
                     schoolId: schoolId
                 });
                 teacherMap[teacher.email] = newTeacher.uid;
                 totalTeachers++;
-                console.log(`   ✅ ${teacher.name} (${teacher.email}) - Subject: ${teacher.subject}`);
+                console.log(`   ✅ ${teacher.name} (${teacher.email}) - Subjects: ${teacher.subjects.join(', ')}`);
             }
 
-            // Assign Teachers to Classes
+            // Assign Teachers to Classes with specific subjects
             console.log(`\n📋 Assigning teachers to classes...`);
             for (const teacher of schoolData.teachers) {
                 const teacherUid = teacherMap[teacher.email];
-                if (teacherUid && teacher.classes) {
-                    for (const classYear of teacher.classes) {
-                        await School.assignTeacherToClass(schoolId, classYear, teacherUid);
-                        console.log(`   ✅ ${teacher.name} → Class ${classYear}`);
+                if (teacherUid && teacher.classAssignments) {
+                    for (const assignment of teacher.classAssignments) {
+                        await School.assignTeacherToClass(
+                            schoolId, 
+                            assignment.class, 
+                            teacherUid,
+                            assignment.subjects
+                        );
+                        console.log(`   ✅ ${teacher.name} → Class ${assignment.class} (${assignment.subjects.join(', ')})`);
                     }
                 }
             }
@@ -175,12 +228,24 @@ async function seedDatabase() {
         });
 
         console.log('\n   TEACHERS (with subjects and assigned classes):');
-        console.log('   📧 robert.wilson@lincoln.edu - Mathematics (Classes: 9A, 10A)');
-        console.log('   📧 jennifer.martinez@lincoln.edu - English (Classes: 9B, 10B)');
-        console.log('   📧 david.lee@washington.edu - Science (Classes: 11A, 12A)');
-        console.log('   📧 emma.white@washington.edu - History (Classes: 11B, 12B)');
-        console.log('   📧 grace.kim@roosevelt.edu - Geography (Classes: 6A, 7A)');
-        console.log('   📧 henry.adams@roosevelt.edu - Physics (Classes: 6B, 8A)');
+        console.log('   📧 robert.wilson@lincoln.edu - Mathematics, Physics');
+        console.log('      • Class 9A: Mathematics');
+        console.log('      • Class 10A: Mathematics, Physics');
+        console.log('   📧 jennifer.martinez@lincoln.edu - English, History');
+        console.log('      • Class 9B: English');
+        console.log('      • Class 10B: English, History');
+        console.log('   📧 david.lee@washington.edu - Science, Chemistry');
+        console.log('      • Class 11A: Science');
+        console.log('      • Class 12A: Science, Chemistry');
+        console.log('   📧 emma.white@washington.edu - History, Geography');
+        console.log('      • Class 11B: History');
+        console.log('      • Class 12B: History, Geography');
+        console.log('   📧 grace.kim@roosevelt.edu - Geography, History');
+        console.log('      • Class 6A: Geography');
+        console.log('      • Class 7A: Geography, History');
+        console.log('   📧 henry.adams@roosevelt.edu - Physics, Mathematics');
+        console.log('      • Class 6B: Physics');
+        console.log('      • Class 8A: Physics, Mathematics');
 
         console.log('\n   STUDENTS (with class years):');
         console.log('   📧 alice.thompson@lincoln.edu - Lincoln HS (Class 9A)');

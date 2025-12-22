@@ -19,21 +19,21 @@
             </div>
         </div>
 
-        <% if (typeof error !== 'undefined' && error) { %>
-            <div class="error-message">
-                <%= error %>
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div class="error-message">
+                    <%= error %>
+                </div>
+            <% } %>
+            
+            <% if (typeof success !== 'undefined' && success) { %>
+                <div class="success-message">
+                    <%= success %>
+                </div>
+            <% } %>
+            
+            <div class="navigation">
+                <a href="/dashboard">← Back to Dashboard</a>
             </div>
-        <% } %>
-        
-        <% if (typeof success !== 'undefined' && success) { %>
-            <div class="success-message">
-                <%= success %>
-            </div>
-        <% } %>
-        
-        <div class="navigation">
-            <a href="/dashboard">← Back to Dashboard</a>
-        </div>
 
         <div class="section">
             <% if (students.length === 0) { %>
@@ -63,6 +63,18 @@
                                             <input type="hidden" name="studentId" value="<%= student.uid %>">
                                             <input type="hidden" name="classYear" value="<%= classYear %>">
                                             
+                                            <% 
+                                                const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                                            %>
+                                            <% if (teacherSubjects.length > 0) { %>
+                                                <select name="subject" class="grade-select" required style="min-width: 140px;">
+                                                    <option value="">Select Subject</option>
+                                                    <% teacherSubjects.forEach(function(subj) { %>
+                                                        <option value="<%= subj %>"><%= subj %></option>
+                                                    <% }); %>
+                                                </select>
+                                            <% } %>
+
                                             <select id="grade" name="grade" class="grade-select" required>
                                                 <option value="">Select Grade</option>
                                                 <option value="10">10 - Excellent</option>
@@ -88,9 +100,9 @@
         </div>
 
         <div class="dashboard-footer">
-            <form action="/auth/logout" method="GET">
-                <button type="submit" class="btn-primary">Logout</button>
-            </form>
+                <form action="/auth/logout" method="GET">
+                    <button type="submit" class="btn-primary">Logout</button>
+                </form>
         </div>
     </div>
 </body>

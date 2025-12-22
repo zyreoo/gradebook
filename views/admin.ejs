@@ -9,7 +9,7 @@
 <body>
     <div class="dashboard-container">
         <div class="dashboard-header">
-            <h1><%= school.name %></h1>
+                    <h1><%= school.name %></h1>
             <div class="user-info">
                 <p><strong>Name:</strong> <%= user.name %></p>
                 <p><strong>Email:</strong> <%= user.email %></p>
@@ -84,7 +84,7 @@
 
         <!-- Teacher Assignments Section -->
         <section id="teacher-assignments" class="section">
-            <h2>Teacher Assignments</h2>
+                    <h2>Teacher Assignments</h2>
             <p class="helper" style="margin-bottom: 16px;">Assign teachers to grade levels. Each grade's available subjects come from its assigned teachers.</p>
 
             <% const classYears = ['9', '10', '11', '12']; %>
@@ -107,14 +107,19 @@
                         <% if (assignedTeachers.length > 0) { %>
                             <div class="people-list" style="margin-bottom: 14px;">
                                 <% assignedTeachers.forEach(function(teacher) { %>
+                                    <% 
+                                        const teacherAllSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                                        const assignment = school.teacherAssignments && school.teacherAssignments[year] && school.teacherAssignments[year][teacher.uid];
+                                        const assignedSubjects = assignment && assignment.subjects ? assignment.subjects : teacherAllSubjects;
+                                    %>
                                     <div class="person">
                                         <div>
                                             <strong><%= teacher.name %></strong>
                                             <small>
-                                                <% if (teacher.subject) { %>
-                                                    <%= teacher.subject %>
+                                                <% if (assignedSubjects.length > 0) { %>
+                                                    Teaching: <%= assignedSubjects.join(', ') %>
                                                 <% } else { %>
-                                                    No subject assigned
+                                                    No subjects for this grade
                                                 <% } %>
                                             </small>
                                         </div>
@@ -131,20 +136,66 @@
                         <% } %>
 
                         <% if (availableTeachers.length > 0) { %>
-                            <form action="/admin/assign-teacher" method="POST" style="display: flex; gap: 8px; align-items: flex-end;">
-                                <input type="hidden" name="classYear" value="<%= year %>">
-                                <div class="field" style="flex: 1; margin: 0;">
-                                    <select name="teacherId" required>
-                                        <option value="">Select teacher to add</option>
-                                        <% availableTeachers.forEach(function(teacher) { %>
-                                            <option value="<%= teacher.uid %>">
-                                                <%= teacher.name %><% if (teacher.subject) { %> - <%= teacher.subject %><% } %>
-                                            </option>
-                                        <% }); %>
-                                    </select>
+                            <div class="batch-assignment-container" id="batch-assignment-<%= year %>">
+                                <div class="teacher-selection-list">
+                                    <% availableTeachers.forEach(function(teacher) { %>
+                                        <% 
+                                            const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                                        %>
+                                        <div class="teacher-assignment-card" data-teacher-id="<%= teacher.uid %>">
+                                            <label class="teacher-card-header">
+                                                <input type="checkbox" 
+                                                       class="teacher-select-checkbox" 
+                                                       value="<%= teacher.uid %>"
+                                                       data-year="<%= year %>"
+                                                       data-subjects='<%= JSON.stringify(teacherSubjects) %>'
+                                                       onchange="toggleTeacherSubjects('<%= year %>', '<%= teacher.uid %>')">
+                                                <div class="teacher-info">
+                                                    <strong><%= teacher.name %></strong>
+                                                    <small><%= teacher.email %></small>
+                                                    <% if (teacherSubjects.length > 0) { %>
+                                                        <small style="color: var(--accent); margin-top: 2px;">
+                                                            Knows: <%= teacherSubjects.join(', ') %>
+                                                        </small>
+                                                    <% } %>
+                                                </div>
+                                            </label>
+                                            
+                                            <!-- Subject selection (shown when teacher checkbox is checked) -->
+                                            <div id="subjects-<%= year %>-<%= teacher.uid %>" 
+                                                 class="subject-selection-inline" 
+                                                 style="display: none;">
+                                                <% if (teacherSubjects.length > 0) { %>
+                                                    <div class="inline-subjects">
+                                                        <% teacherSubjects.forEach(function(subject) { %>
+                                                            <label class="subject-pill">
+                                                                <input type="checkbox" 
+                                                                       class="subject-checkbox"
+                                                                       data-teacher-id="<%= teacher.uid %>"
+                                                                       data-year="<%= year %>"
+                                                                       value="<%= subject %>" 
+                                                                       checked>
+                                                                <span><%= subject %></span>
+                                                            </label>
+                                                        <% }); %>
+                                                    </div>
+                                                <% } else { %>
+                                                    <small class="helper">No subjects assigned to this teacher</small>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    <% }); %>
                                 </div>
-                                <button class="btn-add" type="submit">Add Teacher</button>
-                            </form>
+                                
+                                <button type="button" 
+                                        class="btn-primary" 
+                                        style="margin-top: 16px; width: 100%;"
+                                        onclick="assignSelectedTeachers('<%= year %>')"
+                                        id="assign-btn-<%= year %>"
+                                        disabled>
+                                    Assign Selected Teachers
+                                </button>
+                            </div>
                         <% } else { %>
                             <p class="helper">All teachers have been assigned to this grade.</p>
                         <% } %>
@@ -210,15 +261,15 @@
                         </select>
                     </div>
                     <div class="field" id="subjectGroup" style="display: none;">
-                        <label for="subject">Subject (optional)</label>
-                        <select id="subject" name="subject">
-                            <option value="">Select subject (optional)</option>
+                        <label for="subject">Subjects</label>
+                        <select id="subject" name="subjects" multiple style="min-height: 120px;">
                             <% if (school.subjects && school.subjects.length > 0) { %>
                                 <% school.subjects.forEach(function(subject) { %>
                                     <option value="<%= subject %>"><%= subject %></option>
                                 <% }); %>
                             <% } %>
                         </select>
+                        <small class="helper">Hold Ctrl/Cmd to select multiple subjects</small>
                     </div>
                 </div>
                 <div style="margin-top: 14px;">
@@ -229,7 +280,7 @@
 
         <!-- People Section -->
         <section id="people" class="section">
-            <h2>People</h2>
+                    <h2>People</h2>
             <p class="helper" style="margin-bottom: 16px;">Filter and view your teachers and students.</p>
 
             <div class="grid-two">
@@ -254,11 +305,17 @@
                         </div>
                         <div class="people-list" id="teachers-grid">
                             <% teachers.forEach(function(t) { %>
-                                <div class="person teacher-item" data-subject="<%= t.subject || 'none' %>">
+                                <% 
+                                    const teacherSubjects = t.subjects || (t.subject ? [t.subject] : []);
+                                    const subjectStr = teacherSubjects.length > 0 ? teacherSubjects.join(',') : 'none';
+                                %>
+                                <div class="person teacher-item" data-subjects="<%= subjectStr %>">
                                     <div>
                                         <strong><%= t.name %></strong>
                                         <small><%= t.email %></small>
-                                        <% if (t.subject) { %><br><small><%= t.subject %></small><% } %>
+                                        <% if (teacherSubjects.length > 0) { %>
+                                            <br><small><%= teacherSubjects.join(', ') %></small>
+                                        <% } %>
                                     </div>
                                 </div>
                             <% }); %>
@@ -429,8 +486,9 @@
             const count = document.getElementById('teacher-count');
             let visible = 0;
             items.forEach(item => {
-                const subject = item.getAttribute('data-subject');
-                if (selected === 'all' || subject === selected) {
+                const subjects = item.getAttribute('data-subjects');
+                const subjectArray = subjects.split(',');
+                if (selected === 'all' || subjectArray.includes(selected)) {
                     item.style.display = 'flex';
                     visible++;
                 } else {
@@ -460,12 +518,144 @@
             msg.style.display = visible === 0 ? 'block' : 'none';
         }
 
+        // Batch Assignment Functions
+        function toggleTeacherSubjects(year, teacherId) {
+            const checkbox = document.querySelector(
+                `input.teacher-select-checkbox[value="${teacherId}"][data-year="${year}"]`
+            );
+            const subjectsDiv = document.getElementById(`subjects-${year}-${teacherId}`);
+            
+            if (checkbox && checkbox.checked) {
+                subjectsDiv.style.display = 'block';
+                // Check all subject checkboxes by default
+                subjectsDiv.querySelectorAll('input.subject-checkbox').forEach(cb => {
+                    cb.checked = true;
+                });
+            } else if (subjectsDiv) {
+                subjectsDiv.style.display = 'none';
+            }
+            
+            updateAssignButton(year);
+        }
+
+
+        async function assignSelectedTeachers(year) {
+            const checkboxes = document.querySelectorAll(
+                `input.teacher-select-checkbox[data-year="${year}"]:checked`
+            );
+            
+            if (checkboxes.length === 0) {
+                showToast('⚠️ Please select at least one teacher', 'warning');
+                return;
+            }
+            
+            const assignBtn = document.getElementById(`assign-btn-${year}`);
+            const originalText = assignBtn.textContent;
+            assignBtn.disabled = true;
+            assignBtn.textContent = 'Assigning...';
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const checkbox of checkboxes) {
+                const teacherId = checkbox.value;
+                const selectedSubjects = Array.from(
+                    document.querySelectorAll(
+                        `#subjects-${year}-${teacherId} input.subject-checkbox:checked`
+                    )
+                ).map(cb => cb.value);
+                
+                if (selectedSubjects.length === 0) {
+                    errorCount++;
+                    continue;
+                }
+                
+                try {
+                    const response = await fetch('/admin/assign-teacher-ajax', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            classYear: year, 
+                            teacherId: teacherId, 
+                            subjects: selectedSubjects 
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error('Error assigning teacher:', error);
+                    errorCount++;
+                }
+            }
+            
+            assignBtn.disabled = false;
+            assignBtn.textContent = originalText;
+            
+            if (successCount > 0) {
+                showToast(`✅ ${successCount} teacher(s) assigned successfully!`, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800);
+            } else if (errorCount > 0) {
+                showToast(`❌ Failed to assign ${errorCount} teacher(s)`, 'error');
+            }
+        }
+
+        function updateAssignButton(year) {
+            const checkboxes = document.querySelectorAll(
+                `input.teacher-select-checkbox[data-year="${year}"]:checked`
+            );
+            const assignBtn = document.getElementById(`assign-btn-${year}`);
+            
+            if (assignBtn) {
+                if (checkboxes.length > 0) {
+                    assignBtn.disabled = false;
+                    assignBtn.textContent = `Assign ${checkboxes.length} Selected Teacher(s)`;
+                } else {
+                    assignBtn.disabled = true;
+                    assignBtn.textContent = 'Assign Selected Teachers';
+                }
+            }
+        }
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            // Remove existing toasts
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach(toast => toast.remove());
+            
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Hide and remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const roleSelect = document.getElementById('role');
             if (roleSelect) {
                 roleSelect.addEventListener('change', toggleRoleFields);
                 toggleRoleFields();
             }
+            
+            // Initialize assign buttons state for all grades
+            ['9', '10', '11', '12'].forEach(year => {
+                updateAssignButton(year);
+            });
         });
     </script>
 </body>

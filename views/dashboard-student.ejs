@@ -48,29 +48,43 @@
                     <div class="grades-grid">
                         <% subjects.forEach(function(subject) { 
                             let badgeClass = 'grade-1';
-                            if (subject.average >= 9.5) badgeClass = 'grade-10';
-                            else if (subject.average >= 8.5) badgeClass = 'grade-9';
-                            else if (subject.average >= 7.5) badgeClass = 'grade-8';
-                            else if (subject.average >= 6.5) badgeClass = 'grade-7';
-                            else if (subject.average >= 5.5) badgeClass = 'grade-6';
+                            if (subject.hasGrades) {
+                                if (subject.average >= 9.5) badgeClass = 'grade-10';
+                                else if (subject.average >= 8.5) badgeClass = 'grade-9';
+                                else if (subject.average >= 7.5) badgeClass = 'grade-8';
+                                else if (subject.average >= 6.5) badgeClass = 'grade-7';
+                                else if (subject.average >= 5.5) badgeClass = 'grade-6';
+                            }
                         %>
                             <div class="subject-card">
                                 <div class="subject-header">
                                     <h3><%= subject.name %></h3>
-                                    <span class="grade-badge <%= badgeClass %>">
-                                        <%= subject.average.toFixed(2) %>
-                                    </span>
+                                    <% if (subject.hasGrades) { %>
+                                        <span class="grade-badge <%= badgeClass %>">
+                                            <%= subject.average.toFixed(2) %>
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge" style="background: var(--border); color: var(--text-dim);">
+                                            No grades
+                                        </span>
+                                    <% } %>
                                 </div>
                                 <div class="subject-details">
-                                    <div class="grades-list">
-                                        <% subject.grades.forEach(function(grade) { %>
-                                            <span class="grade-item"><%= grade.value %></span>
-                                        <% }); %>
-                                    </div>
-                                    <% if (subject.teacherName) { %>
-                                        <p class="grade-comment">
-                                            Teacher: <%= subject.teacherName %>
-                                        </p>
+                                    <% if (subject.hasGrades) { %>
+                                        <div class="grades-list">
+                                            <% subject.grades.forEach(function(grade) { %>
+                                                <span class="grade-item"><%= grade.value %></span>
+                                            <% }); %>
+                                        </div>
+                                        <% if (subject.teacherName) { %>
+                                            <p class="grade-comment">
+                                                Teacher: <%= subject.teacherName %>
+                                            </p>
+                                        <% } %>
+                                    <% } else { %>
+                                        <div class="muted-box" style="margin: 10px 0; padding: 12px;">
+                                            No grades recorded yet
+                                        </div>
                                     <% } %>
                                 </div>
                             </div>

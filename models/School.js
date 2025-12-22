@@ -238,8 +238,8 @@ class School {
     }
 
 
-    // Teacher Assignment Methods - Simplified
-    static async assignTeacherToClass(schoolId, classYear, teacherId) {
+    // Teacher Assignment Methods with Subject Support
+    static async assignTeacherToClass(schoolId, classYear, teacherId, subjects = []) {
         const schoolRef = db.collection("schools").doc(schoolId);
         const doc = await schoolRef.get();
 
@@ -249,9 +249,14 @@ class School {
 
         const schoolData = doc.data();
         const classYearTeachers = schoolData.classYearTeachers || {};
+        const teacherAssignments = schoolData.teacherAssignments || {};
         
+        // Initialize class year arrays if they don't exist
         if (!classYearTeachers[classYear]) {
             classYearTeachers[classYear] = [];
+        }
+        if (!teacherAssignments[classYear]) {
+            teacherAssignments[classYear] = {};
         }
         
         // Check if teacher is already assigned to this class
@@ -259,8 +264,17 @@ class School {
             classYearTeachers[classYear].push(teacherId);
         }
         
-        await schoolRef.update({ classYearTeachers });
-        return classYearTeachers;
+        // Store subject-specific assignment
+        teacherAssignments[classYear][teacherId] = {
+            subjects: subjects || []
+        };
+        
+        await schoolRef.update({ 
+            classYearTeachers,
+            teacherAssignments
+        });
+        
+        return { classYearTeachers, teacherAssignments };
     }
 
     static async removeTeacherFromClass(schoolId, classYear, teacherId) {
@@ -273,13 +287,24 @@ class School {
 
         const schoolData = doc.data();
         const classYearTeachers = schoolData.classYearTeachers || {};
+        const teacherAssignments = schoolData.teacherAssignments || {};
 
+        // Remove from classYearTeachers array
         if (classYearTeachers[classYear]) {
             classYearTeachers[classYear] = classYearTeachers[classYear].filter(id => id !== teacherId);
         }
 
-        await schoolRef.update({ classYearTeachers });
-        return classYearTeachers;
+        // Remove from teacherAssignments
+        if (teacherAssignments[classYear] && teacherAssignments[classYear][teacherId]) {
+            delete teacherAssignments[classYear][teacherId];
+        }
+
+        await schoolRef.update({ 
+            classYearTeachers,
+            teacherAssignments
+        });
+        
+        return { classYearTeachers, teacherAssignments };
     }
 
     static async getTeachersForClass(schoolId, classYear) {
@@ -290,6 +315,20 @@ class School {
         const classYearTeachers = data.classYearTeachers || {};
         
         return classYearTeachers[classYear] || [];
+    }
+
+    static async getTeacherAssignmentSubjects(schoolId, classYear, teacherId) {
+        const doc = await db.collection('schools').doc(schoolId).get();
+        if (!doc.exists) return [];
+        
+        const data = doc.data();
+        const teacherAssignments = data.teacherAssignments || {};
+        
+        if (teacherAssignments[classYear] && teacherAssignments[classYear][teacherId]) {
+            return teacherAssignments[classYear][teacherId].subjects || [];
+        }
+        
+        return [];
     }
 }
 

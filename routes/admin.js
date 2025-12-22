@@ -90,7 +90,9 @@ router.post('/create-user', async (req, res) => {
             return res.redirect('/auth/login');
         }
 
-        const { name, email, password, confirmPassword, role, classYear, subject } = req.body;
+        const { name, email, password, confirmPassword, role, classYear } = req.body;
+        // subjects will be an array if multiple selected
+        const subjects = Array.isArray(req.body.subjects) ? req.body.subjects : (req.body.subjects ? [req.body.subjects] : []);
         const schoolId = req.session.schoolId;
 
         if (!name || !email || !password || !confirmPassword || !role) {
@@ -109,11 +111,12 @@ router.post('/create-user', async (req, res) => {
             return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Please select a grade level for the student'));
         }
 
-
-        if (role === 'teacher' && subject) {
+        // Validate subjects for teachers
+        if (role === 'teacher' && subjects.length > 0) {
             const schoolSubjects = await School.getSubjects(schoolId);
-            if (!schoolSubjects.includes(subject)) {
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Selected subject does not exist in your school. Please add it first.'));
+            const invalidSubjects = subjects.filter(s => !schoolSubjects.includes(s));
+            if (invalidSubjects.length > 0) {
+                return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Some selected subjects do not exist in your school.'));
             }
         }
 
@@ -133,7 +136,7 @@ router.post('/create-user', async (req, res) => {
             role,
             schoolId,
             classYear: role === 'student' ? classYear : null,
-            subject: role === 'teacher' ? subject : null
+            subjects: role === 'teacher' ? subjects : null
         });
 
         res.redirect('/admin/dashboard?success=' + encodeURIComponent(`${role.charAt(0).toUpperCase() + role.slice(1)} ${name} created successfully!`));
@@ -221,13 +224,24 @@ router.post('/assign-teacher', async (req, res) => {
 
         const { classYear, teacherId } = req.body;
         const schoolId = req.session.schoolId;
+        
+        // Handle subjects - can be an array or a single value
+        let subjects = req.body.subjects || [];
+        if (!Array.isArray(subjects)) {
+            subjects = subjects ? [subjects] : [];
+        }
 
         if (!classYear || !teacherId) {
             return res.redirect('/admin/dashboard?error=' + encodeURIComponent('All fields are required'));
         }
 
-        await School.assignTeacherToClass(schoolId, classYear, teacherId);
-        res.redirect('/admin/dashboard?success=' + encodeURIComponent('Teacher assigned successfully!'));
+        await School.assignTeacherToClass(schoolId, classYear, teacherId, subjects);
+        
+        const successMsg = subjects.length > 0 
+            ? `Teacher assigned successfully to teach: ${subjects.join(', ')}`
+            : 'Teacher assigned successfully!';
+        
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(successMsg));
     } catch (error) {
         console.error('Assign teacher error:', error);
         res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message));
@@ -249,6 +263,44 @@ router.post('/remove-teacher-assignment', async (req, res) => {
     } catch (error) {
         console.error('Remove teacher assignment error:', error);
         res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message));
+    }
+});
+
+// AJAX endpoint for instant teacher assignment
+router.post('/assign-teacher-ajax', async (req, res) => {
+    try {
+        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const { classYear, teacherId, subjects } = req.body;
+        const schoolId = req.session.schoolId;
+        
+        if (!classYear || !teacherId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Class year and teacher ID are required' 
+            });
+        }
+
+        // Handle subjects - can be an array or a single value
+        let subjectArray = subjects || [];
+        if (!Array.isArray(subjectArray)) {
+            subjectArray = subjectArray ? [subjectArray] : [];
+        }
+
+        await School.assignTeacherToClass(schoolId, classYear, teacherId, subjectArray);
+        
+        res.json({ 
+            success: true, 
+            message: `Teacher assigned successfully${subjectArray.length > 0 ? ` to teach: ${subjectArray.join(', ')}` : ''}` 
+        });
+    } catch (error) {
+        console.error('AJAX assign teacher error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Failed to assign teacher' 
+        });
     }
 });
 
