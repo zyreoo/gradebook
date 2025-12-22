@@ -106,7 +106,16 @@
                                                 </select>
                                             <% } %>
 
+                                            <select name="type" class="absence-select" required>
+                                                <option value="">Select Type</option>
+                                                <option value="motivated">Motivated</option>
+                                                <option value="unmotivated">Unmotivated</option>
+                                            </select>
+
                                             <input type="date" name="date" class="absence-date" required value="<%= new Date().toISOString().split('T')[0] %>">
+                                            
+                                            <input type="text" name="reason" class="absence-reason" placeholder="Reason (optional)" style="display: none;">
+                                            
                                             <button type="submit" class="btn-add-grade">Add</button>
                                         </form>
                                     </td>
@@ -124,5 +133,27 @@
                 </form>
         </div>
     </div>
+    <script>
+        // Show/hide reason field based on absence type
+        document.addEventListener('DOMContentLoaded', function() {
+            const absenceForms = document.querySelectorAll('.absence-form');
+            absenceForms.forEach(form => {
+                const typeSelect = form.querySelector('select[name="type"]');
+                const reasonInput = form.querySelector('input[name="reason"]');
+                
+                if (typeSelect && reasonInput) {
+                    typeSelect.addEventListener('change', function() {
+                        if (this.value === 'motivated') {
+                            reasonInput.style.display = 'block';
+                            reasonInput.required = false; // Optional but visible
+                        } else {
+                            reasonInput.style.display = 'none';
+                            reasonInput.value = ''; // Clear when hidden
+                        }
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>

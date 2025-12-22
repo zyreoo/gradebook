@@ -51,15 +51,47 @@ npm start
 
 Then open your browser and go to `http://localhost:3000`
 
+## 🌐 Deploying to Vercel
+
+This app is configured to work on Vercel. Here's how it's set up:
+
+### Project Structure for Vercel
+
+- **Local Development**: `server.js` runs directly as an Express server
+- **Vercel Deployment**: `/api/index.js` serves as the serverless function entry point
+
+The `vercel.json` configuration:
+- Serves static files (CSS, images) from the `public` directory automatically
+- Routes all other requests to `/api/index.js`, which imports your Express app
+
+### Deployment Steps
+
+1. Push your code to GitHub
+2. Import your repository in [Vercel](https://vercel.com)
+3. Add your environment variables:
+   - `SESSION_SECRET` - A random secret for session encryption
+   - Any Firebase environment variables you need
+4. Deploy!
+
+The app will automatically:
+- Serve static files from `public/` (like `styles.css`)
+- Run your Express app as a serverless function
+- Handle all routes through your Express application
+
+**Note**: Make sure your `firebase-service-account.json` is either:
+- Added as environment variables in Vercel, OR
+- Included in your deployment (not recommended for security)
+
 ## 🎨 The Vibe
 
 I went with a Vercel-inspired dark theme because, honestly, dark mode just hits different. It's easy on the eyes and looks super clean. The design is minimal and modern - no unnecessary stuff, just what you need.
 
 ## 🛠️ Tech Stack
 
-- **Node.js** + **Express** - Backend stuff
+- **Node.js** + **Express** - Backend framework
+- **Vercel** - Hosting and serverless deployment
 - **Firebase Firestore** - Database (because it's easy and scales)
-- **EJS** - Templating (old school but it works)
+- **EJS** - Templating engine
 - **bcryptjs** - Password hashing (security matters!)
 - **express-session** - User sessions
 
@@ -67,13 +99,16 @@ I went with a Vercel-inspired dark theme because, honestly, dark mode just hits 
 
 ```
 online-gradebook/
+├── api/                 # Vercel serverless functions
+│   └── index.js        # Entry point for Vercel deployment
 ├── config/              # Firebase config
 ├── middleware/          # Auth middleware
-├── models/             # User model
-├── routes/             # Auth routes
+├── models/             # User and School models
+├── routes/             # Auth and admin routes
 ├── views/              # EJS templates
 ├── public/             # CSS and static files
-└── server.js           # Main server file
+├── server.js           # Main Express server (runs locally)
+└── vercel.json         # Vercel configuration
 ```
 
 ## 🔐 Authentication
