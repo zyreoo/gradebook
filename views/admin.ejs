@@ -137,10 +137,57 @@
                                 <strong style="font-size: 16px;">Class <%= cls %></strong>
                                 <span class="badge"><%= (classYearTeachers[cls] || []).length %> teacher(s)</span>
                             </div>
-
+                            
                             <% 
                                 const assignedTeacherIds = classYearTeachers[cls] || [];
                                 const assignedTeachers = teachers.filter(t => assignedTeacherIds.includes(t.uid));
+                            %>
+                            
+                            <!-- Classmaster Assignment -->
+                            <% 
+                                const classMasters = school.classMasters || {};
+                                // Try both exact match and uppercase match for class name
+                                const currentClassmasterId = classMasters[cls] || classMasters[cls.toUpperCase()];
+                                const currentClassmaster = currentClassmasterId ? teachers.find(t => t.uid === currentClassmasterId) : null;
+                            %>
+                            <div class="person" style="margin-bottom: 14px;">
+                                <div>
+                                    <strong style="font-size: 14px; display: block; margin-bottom: 8px;">Classmaster:</strong>
+                                    <% if (currentClassmaster) { %>
+                                        <div>
+                                            <strong><%= currentClassmaster.name %></strong>
+                                            <small><%= currentClassmaster.email %></small>
+                                        </div>
+                                    <% } else { %>
+                                        <small class="helper">No classmaster assigned</small>
+                                    <% } %>
+                                </div>
+                                <% if (currentClassmaster) { %>
+                                    <form action="/admin/remove-classmaster" method="POST" style="margin: 0;">
+                                        <input type="hidden" name="className" value="<%= cls %>">
+                                        <button type="submit" class="btn-remove">Remove</button>
+                                    </form>
+                                <% } else { %>
+                                    <form action="/admin/assign-classmaster" method="POST" style="display: flex; gap: 8px; align-items: center; margin: 0;">
+                                        <input type="hidden" name="className" value="<%= cls %>">
+                                        <select name="teacherId" required style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 14px;">
+                                            <option value="">Select Teacher</option>
+                                            <% if (assignedTeachers.length > 0) { %>
+                                                <% assignedTeachers.forEach(function(t) { %>
+                                                    <option value="<%= t.uid %>"><%= t.name %></option>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <% teachers.forEach(function(t) { %>
+                                                    <option value="<%= t.uid %>"><%= t.name %></option>
+                                                <% }); %>
+                                            <% } %>
+                                        </select>
+                                        <button type="submit" class="btn-primary">Assign</button>
+                                    </form>
+                                <% } %>
+                            </div>
+
+                            <% 
                                 const availableTeachers = teachers.filter(t => !assignedTeacherIds.includes(t.uid));
                             %>
 

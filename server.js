@@ -76,6 +76,8 @@ app.get('/dashboard', async (req, res) => {
             const teacherId = req.session.userId;
 
             let assignedClasses = [];
+            let classmasterClasses = [];
+            
             if (schoolId) {
                 const schoolData = await School.findById(schoolId);
                 if (schoolData && schoolData.classYearTeachers) {
@@ -85,17 +87,22 @@ app.get('/dashboard', async (req, res) => {
                         }
                     }
                 }
+                
+
+                classmasterClasses = await School.getClassesByClassmaster(schoolId, teacherId);
             }
             
             res.render('dashboard-teacher', { 
                 user: userData,
-                assignedClasses: assignedClasses 
+                assignedClasses: assignedClasses,
+                classmasterClasses: classmasterClasses
             });
         } catch (error) {
             console.error('Error fetching classes:', error);
             res.render('dashboard-teacher', { 
                 user: userData,
-                assignedClasses: [] 
+                assignedClasses: [],
+                classmasterClasses: []
             });
         }
     } else if (req.session.userRole === 'student') {
@@ -419,11 +426,28 @@ app.get('/class/:classYear', async (req, res) => {
             return res.redirect('/dashboard?error=' + encodeURIComponent('You are not assigned to this class'));
         }
 
+        // Check if teacher is classmaster
+        const classmasterId = await School.getClassmaster(schoolId, classYear);
+        const isClassmaster = classmasterId === teacherId;
         
         const teacher = await User.findbyId(teacherId);
         // Get all students in this class year from the same school
         const allStudents = await User.getUserByRoleAndSchool('student', schoolId);
         const studentsInClass = allStudents.filter(student => student.classYear === classYear);
+
+        // If classmaster, get all grades and absences for all students
+        let studentsWithData = studentsInClass;
+        if (isClassmaster) {
+            studentsWithData = await Promise.all(studentsInClass.map(async (student) => {
+                const allGrades = await User.getStudentGrades(student.uid);
+                const allAbsences = await User.getStudentAbsences(student.uid);
+                return {
+                    ...student,
+                    allGrades: allGrades,
+                    allAbsences: allAbsences
+                };
+            }));
+        }
 
         res.render('class-detail', {
             user: {
@@ -433,7 +457,8 @@ app.get('/class/:classYear', async (req, res) => {
             },
             teacher: teacher, 
             classYear: classYear,
-            students: studentsInClass,
+            students: studentsWithData,
+            isClassmaster: isClassmaster,
             error: req.query.error || null,
             success: req.query.success || null
         });
@@ -641,6 +666,71 @@ app.post('/add-absence', async (req, res) => {
         const classYear = req.body.classYear;
         const redirectUrl = classYear ? `/class/${classYear}` : '/students';
         res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to add absence. Please try again.'));
+    }
+});
+
+app.post('/motivate-absence', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.redirect("/auth/login");
+        }
+
+        if (req.session.userRole !== 'teacher') {
+            return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. Teachers only.'));
+        }
+
+        const { absenceId, classYear } = req.body;
+        const schoolId = req.session.schoolId;
+        const teacherId = req.session.userId;
+
+        if (!absenceId) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Absence ID is required'));
+        }
+
+        const School = require('./models/School');
+        const User = require('./models/User');
+        const { db } = require('./config/firebase');
+
+        // Get the absence
+        const absenceRef = db.collection('absences').doc(absenceId);
+        const absenceDoc = await absenceRef.get();
+
+        if (!absenceDoc.exists) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Absence not found'));
+        }
+
+        const absence = absenceDoc.data();
+        const student = await User.findbyId(absence.studentId);
+
+        if (!student || student.schoolId !== schoolId) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid absence'));
+        }
+
+        // Check if teacher is classmaster of this student's class
+        const classmasterId = await School.getClassmaster(schoolId, student.classYear);
+        if (classmasterId !== teacherId) {
+            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Only the classmaster can motivate absences'));
+        }
+
+        // Update absence to motivated
+        await absenceRef.update({
+            type: 'motivated',
+            motivatedBy: teacherId,
+            motivatedAt: new Date()
+        });
+
+        const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
+        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Absence motivated for ${absence.studentName}`));
+
+    } catch (error) {
+        console.error('Error motivating absence:', error);
+        const classYear = req.body.classYear;
+        const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
+        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to motivate absence. Please try again.'));
     }
 });
 

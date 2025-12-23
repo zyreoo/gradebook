@@ -5,15 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Class <%= classYear %> - Online Gradebook</title>
     <link rel="stylesheet" href="/styles.css">
+    <style>
+        .absence-unmotivated { background-color: #ffe0e0; }
+        .absence-motivated { background-color: #e0ffe0; }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <div class="dashboard-header">
+        <div class="dashboard-header">  
             <h1>Class <%= classYear %></h1>
             <div class="user-info">
                 <p><strong>Name:</strong> <%= user.name %></p>
                 <p><strong>Email:</strong> <%= user.email %></p>
-                <% if (teacher && teacher.subject) { %>
+                <% if (isClassmaster) { %>
+                    <p><strong style="color: var(--accent);">Classmaster</strong></p>
+                <% } else if (teacher && teacher.subject) { %>
                     <p><strong>Subject:</strong> <%= teacher.subject %></p>
                 <% } %>
             </div>
@@ -49,6 +55,10 @@
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Class Year</th>
+                                <% if (isClassmaster) { %>
+                                    <th>All Grades</th>
+                                    <th>Absences</th>
+                                <% } %>
                                 <th>Add a grade</th>
                                 <th>Record absence</th>
                             </tr>
@@ -62,6 +72,57 @@
                                     <td><%= student.name %></td>
                                     <td><%= student.email %></td>
                                     <td><%= student.classYear || 'N/A' %></td>
+                                    <% if (isClassmaster) { %>
+                                        <td>
+                                            <% if (student.allGrades && student.allGrades.length > 0) { %>
+                                                <div class="grades-list" style="max-width: 200px;">
+                                                    <% student.allGrades.slice(0, 5).forEach(function(grade) { %>
+                                                        <span class="grade-item">
+                                                            <%= grade.subject %>: <%= grade.grade %>
+                                                        </span>
+                                                    <% }); %>
+                                                    <% if (student.allGrades.length > 5) { %>
+                                                        <span class="helper" style="font-size: 11px;">+<%= student.allGrades.length - 5 %> more</span>
+                                                    <% } %>
+                                                </div>
+                                            <% } else { %>
+                                                <span class="helper">No grades</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% if (student.allAbsences && student.allAbsences.length > 0) { %>
+                                                <div class="absences-list" style="max-width: 250px;">
+                                                    <% student.allAbsences.slice(0, 3).forEach(function(absence) { %>
+                                                        <div class="absence-item <%= absence.type === 'unmotivated' ? 'unmotivated' : 'motivated' %>">
+                                                            <% 
+                                                                let dateStr = '';
+                                                                if (absence.date && absence.date.toDate) {
+                                                                    dateStr = absence.date.toDate().toLocaleDateString();
+                                                                } else if (absence.date) {
+                                                                    dateStr = new Date(absence.date).toLocaleDateString();
+                                                                }
+                                                            %>
+                                                            <span class="absence-date"><%= absence.subject %> - <%= dateStr %></span>
+                                                            <% if (absence.type === 'unmotivated') { %>
+                                                                <form action="/motivate-absence" method="POST" style="display: inline; margin-left: 8px;">
+                                                                    <input type="hidden" name="absenceId" value="<%= absence.id %>">
+                                                                    <input type="hidden" name="classYear" value="<%= classYear %>">
+                                                                    <button type="submit" class="btn-add-grade" style="padding: 2px 6px; font-size: 10px;">Motivate</button>
+                                                                </form>
+                                                            <% } else { %>
+                                                                <span class="absence-status" style="background: var(--success); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">✓ Motivated</span>
+                                                            <% } %>
+                                                        </div>
+                                                    <% }); %>
+                                                    <% if (student.allAbsences.length > 3) { %>
+                                                        <span class="helper" style="font-size: 11px;">+<%= student.allAbsences.length - 3 %> more</span>
+                                                    <% } %>
+                                                </div>
+                                            <% } else { %>
+                                                <span class="helper">No absences</span>
+                                            <% } %>
+                                        </td>
+                                    <% } %>
                                     <td>
                                         <form action="/add-grade" method="POST" class="grade-form">
                                             <input type="hidden" name="studentId" value="<%= student.uid %>">
@@ -114,7 +175,7 @@
 
                                             <input type="date" name="date" class="absence-date" required value="<%= new Date().toISOString().split('T')[0] %>">
                                             
-                                            <input type="text" name="reason" class="absence-reason" placeholder="Reason (optional)" style="display: none;">
+                                            <input type="text" name="reason" class="absence-reason" placeholder="Reason (optional)">
                                             
                                             <button type="submit" class="btn-add-grade">Add</button>
                                         </form>
@@ -144,10 +205,10 @@
                 if (typeSelect && reasonInput) {
                     typeSelect.addEventListener('change', function() {
                         if (this.value === 'motivated') {
-                            reasonInput.style.display = 'block';
+                            reasonInput.classList.add('show');
                             reasonInput.required = false; // Optional but visible
                         } else {
-                            reasonInput.style.display = 'none';
+                            reasonInput.classList.remove('show');
                             reasonInput.value = ''; // Clear when hidden
                         }
                     });

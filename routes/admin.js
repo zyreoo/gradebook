@@ -379,5 +379,55 @@ router.post('/remove-class', async (req, res) =>{
     }
 }); 
 
+
+
+router.post('/assign-classmaster' , async (req,res) => { 
+    try{
+        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+            return res.redirect('/auth/login');
+        }
+
+
+        const {className, teacherId} = req.body; 
+        const schoolId = req.session.schoolId;
+
+        if(!className || !teacherId){
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Class and teacher are required'));
+        }
+
+        // Capitalize class name to match how classes are stored
+        const capitalizedClassName = (className || '').trim().toUpperCase();
+        
+        await School.assignClassmaster(schoolId, capitalizedClassName, teacherId); 
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`Classmaster assigned successfully for ${capitalizedClassName}`));
+    } catch (error){
+        console.error('Assign classmaster error:', error);
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message || 'Failed to assign classmaster'));
+    }
+}); 
+
+
+router.post('/remove-classmaster', async (req, res) =>{
+    try{
+        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+            return res.redirect('/auth/login');
+        }
+        const { className } = req.body;
+        const schoolId = req.session.schoolId;
+
+        if (!className) {
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Class name is required'));
+        }
+
+        // Capitalize class name to match how classes are stored
+        const capitalizedClassName = (className || '').trim().toUpperCase();
+        
+        await School.removeClassmaster(schoolId, capitalizedClassName);
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`Classmaster removed successfully for ${capitalizedClassName}`));
+    } catch(error){
+        console.error('Remove classmaster error:', error);
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message || 'Failed to remove classmaster'));
+    }
+}); 
 module.exports = router;
 

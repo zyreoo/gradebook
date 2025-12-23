@@ -36,6 +36,22 @@
             <% } %>
         </div>
 
+        <% if (classmasterClasses && classmasterClasses.length > 0) { %>
+            <div class="section" style="border: 2px solid var(--accent); padding: 20px; border-radius: 8px; margin-top: 20px;">
+                <h2>My Classmaster Classes (<%= classmasterClasses.length %>)</h2>
+                <p class="helper" style="margin-bottom: 16px;">As classmaster, you can view all student grades and motivate absences.</p>
+                <div class="action-grid">
+                    <% classmasterClasses.forEach(function(className) { %>
+                        <a href="/class/<%= className %>" class="action-card" style="border: 2px solid var(--accent);">
+                            <div class="action-icon" style="background: var(--accent); color: white;">CM</div>
+                            <h3>Class <%= className %></h3>
+                            <p>Classmaster View - All grades & absences</p>
+                        </a>
+                    <% }); %>
+                </div>
+            </div>
+        <% } %>
+
         <div class="dashboard-footer">
             <form action="/auth/logout" method="GET">
                 <button type="submit" class="btn-primary">Logout</button>

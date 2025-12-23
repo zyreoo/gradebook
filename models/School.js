@@ -405,9 +405,9 @@ class School {
         return classMasters; 
     }
 
-    static async removeClassmaster(schoolId, className, teacherId){
+    static async removeClassmaster(schoolId, className){
         const schoolRef = db.collection('schools').doc(schoolId); 
-        const doc = await schoolRef. get(); 
+        const doc = await schoolRef.get(); 
 
 
         if(!doc.exists){
