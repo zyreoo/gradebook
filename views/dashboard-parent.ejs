@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Dashboard - Online Gradebook</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>Welcome, <%= user.name %>!</h1>
+            <div class="user-info">
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Role:</strong> Parent</p>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <% if (students.length === 0) { %>
+                <div class="empty-state">
+                    <p>No students linked to your account yet.</p>
+                </div>
+            <% } else { %>
+                <% students.forEach(function(student) { %>
+                    <div class="section" style="margin-bottom: 30px; border: 2px solid var(--border); padding: 20px; border-radius: 8px;">
+                        <h2 style="margin-bottom: 15px; color: var(--accent);">
+                            <%= student.name %>
+                            <% if (student.classYear) { %>
+                                <span style="font-size: 14px; font-weight: normal; color: var(--text-dim);">
+                                    - Grade <%= student.classYear %>
+                                </span>
+                            <% } %>
+                        </h2>
+
+                        <!-- Statistics for this student -->
+                        <div class="summary-stats" style="margin-bottom: 20px;">
+                            <div class="stat-card">
+                                <div class="stat-value"><%= student.stats.overallAverage || '0.00' %></div>
+                                <div class="stat-label">Overall Average</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value"><%= student.stats.totalSubjects %></div>
+                                <div class="stat-label">Total Subjects</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value"><%= student.stats.totalGrades %></div>
+                                <div class="stat-label">Total Grades</div>
+                            </div>
+                            <% if (student.stats.totalAbsences > 0) { %>
+                                <div class="stat-card">
+                                    <div class="stat-value" style="color: #dc3545;"><%= student.stats.unmotivatedAbsences %></div>
+                                    <div class="stat-label">Unmotivated Absences</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" style="color: #28a745;"><%= student.stats.motivatedAbsences %></div>
+                                    <div class="stat-label">Motivated Absences</div>
+                                </div>
+                            <% } %>
+                        </div>
+
+                        <!-- Grades by Subject -->
+                        <div style="margin-bottom: 20px;">
+                            <h3>Grades by Subject</h3>
+                            <% if (student.subjects.length === 0) { %>
+                                <div class="empty-state">
+                                    <p>No subjects recorded yet.</p>
+                                </div>
+                            <% } else { %>
+                                <div class="grades-grid">
+                                    <% student.subjects.forEach(function(subject) { 
+                                        let badgeClass = 'grade-1';
+                                        if (subject.hasGrades) {
+                                            if (subject.average >= 9.5) badgeClass = 'grade-10';
+                                            else if (subject.average >= 8.5) badgeClass = 'grade-9';
+                                            else if (subject.average >= 7.5) badgeClass = 'grade-8';
+                                            else if (subject.average >= 6.5) badgeClass = 'grade-7';
+                                            else if (subject.average >= 5.5) badgeClass = 'grade-6';
+                                        }
+                                    %>
+                                        <div class="subject-card">
+                                            <div class="subject-header">
+                                                <h4><%= subject.name %></h4>
+                                                <% if (subject.hasGrades) { %>
+                                                    <span class="grade-badge <%= badgeClass %>">
+                                                        <%= subject.average.toFixed(2) %>
+                                                    </span>
+                                                <% } else { %>
+                                                    <span class="badge" style="background: var(--border); color: var(--text-dim);">
+                                                        No grades
+                                                    </span>
+                                                <% } %>
+                                            </div>
+                                            <div class="subject-details">
+                                                <% if (subject.hasGrades) { %>
+                                                    <div class="grades-list">
+                                                        <% subject.grades.forEach(function(grade) { %>
+                                                            <span class="grade-item"><%= grade.value %></span>
+                                                        <% }); %>
+                                                    </div>
+                                                    <% if (subject.teacherName) { %>
+                                                        <p class="grade-comment">
+                                                            Teacher: <%= subject.teacherName %>
+                                                        </p>
+                                                    <% } %>
+                                                <% } else { %>
+                                                    <div class="muted-box" style="margin: 10px 0; padding: 12px;">
+                                                        No grades recorded yet
+                                                    </div>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                            <% } %>
+                        </div>
+
+                        <!-- Absences -->
+                        <div>
+                            <h3>Absences</h3>
+                            <% 
+                                const hasAbsences = student.absencesBySubject && Object.keys(student.absencesBySubject).length > 0;
+                            %>
+                            <% if (!hasAbsences) { %>
+                                <div class="empty-state">
+                                    <p>No absences recorded.</p>
+                                </div>
+                            <% } else { %>
+                                <div class="grades-grid">
+                                    <% Object.keys(student.absencesBySubject).forEach(function(subject) { 
+                                        const subjectAbsences = student.absencesBySubject[subject];
+                                        const totalMotivated = subjectAbsences.motivated.length;
+                                        const totalUnmotivated = subjectAbsences.unmotivated.length;
+                                    %>
+                                        <div class="subject-card">
+                                            <div class="subject-header">
+                                                <h4><%= subject %></h4>
+                                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                                    <% if (totalUnmotivated > 0) { %>
+                                                        <span class="badge" style="background: #dc3545; color: white;">
+                                                            <%= totalUnmotivated %> Unmotivated
+                                                        </span>
+                                                    <% } %>
+                                                    <% if (totalMotivated > 0) { %>
+                                                        <span class="badge" style="background: #28a745; color: white;">
+                                                            <%= totalMotivated %> Motivated
+                                                        </span>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                            <div class="subject-details">
+                                                <% if (subjectAbsences.unmotivated.length > 0) { %>
+                                                    <div style="margin-bottom: 12px;">
+                                                        <strong style="color: #dc3545;">Unmotivated Absences:</strong>
+                                                        <ul style="margin: 8px 0; padding-left: 20px;">
+                                                            <% subjectAbsences.unmotivated.forEach(function(absence) { %>
+                                                                <li style="margin-bottom: 4px;">
+                                                                    <% 
+                                                                        let dateStr = '';
+                                                                        if (absence.date && absence.date.toDate) {
+                                                                            dateStr = absence.date.toDate().toLocaleDateString();
+                                                                        } else if (absence.date) {
+                                                                            dateStr = new Date(absence.date).toLocaleDateString();
+                                                                        } else {
+                                                                            dateStr = 'N/A';
+                                                                        }
+                                                                    %>
+                                                                    <%= dateStr %> 
+                                                                    <% if (absence.teacherName) { %>(<%= absence.teacherName %>)<% } %>
+                                                                </li>
+                                                            <% }); %>
+                                                        </ul>
+                                                    </div>
+                                                <% } %>
+                                                
+                                                <% if (subjectAbsences.motivated.length > 0) { %>
+                                                    <div>
+                                                        <strong style="color: #28a745;">Motivated Absences:</strong>
+                                                        <ul style="margin: 8px 0; padding-left: 20px;">
+                                                            <% subjectAbsences.motivated.forEach(function(absence) { %>
+                                                                <li style="margin-bottom: 4px;">
+                                                                    <% 
+                                                                        let dateStr = '';
+                                                                        if (absence.date && absence.date.toDate) {
+                                                                            dateStr = absence.date.toDate().toLocaleDateString();
+                                                                        } else if (absence.date) {
+                                                                            dateStr = new Date(absence.date).toLocaleDateString();
+                                                                        } else {
+                                                                            dateStr = 'N/A';
+                                                                        }
+                                                                    %>
+                                                                    <%= dateStr %>
+                                                                    <% if (absence.reason) { %> - <%= absence.reason %><% } %>
+                                                                    <% if (absence.teacherName) { %>(<%= absence.teacherName %>)<% } %>
+                                                                </li>
+                                                            <% }); %>
+                                                        </ul>
+                                                    </div>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } %>
+        </div>
+
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Logout</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+

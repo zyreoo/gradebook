@@ -140,6 +140,10 @@ router.post('/login', async (req, res) => {
             return res.redirect('/admin/dashboard');
         }
 
+        if (user.role === 'parent') {
+            return res.redirect('/dashboard');
+        }
+
         res.redirect('/dashboard');
 
     }catch (error){

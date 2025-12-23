@@ -90,7 +90,7 @@ router.post('/create-user', async (req, res) => {
             return res.redirect('/auth/login');
         }
 
-        const { name, email, password, confirmPassword, role, classYear } = req.body;
+        const { name, email, password, confirmPassword, role, classYear, parentEmail, parentPassword} = req.body;
         // subjects will be an array if multiple selected
         const subjects = Array.isArray(req.body.subjects) ? req.body.subjects : (req.body.subjects ? [req.body.subjects] : []);
         const schoolId = req.session.schoolId;
@@ -110,6 +110,27 @@ router.post('/create-user', async (req, res) => {
         if (role === 'student' && !classYear) {
             return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Please select a grade level for the student'));
         }
+
+        if (role === 'student') {
+            if (parentEmail && !parentPassword) {
+                return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Parent password is required if parent email is provided'));
+            }
+            if (parentPassword && !parentEmail) {
+                return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Parent email is required if parent password is provided'));
+            }
+            if (parentEmail && parentPassword && parentPassword.length < 6) {
+                return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Parent password must be at least 6 characters'));
+            }
+            // Check if parent email already exists
+            if (parentEmail) {
+                const existingParent = await User.findbyEmail(parentEmail);
+                if (existingParent) {
+                    return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Parent email already exists'));
+                }
+            }
+        }
+
+
 
         // Validate subjects for teachers
         if (role === 'teacher' && subjects.length > 0) {
@@ -136,10 +157,17 @@ router.post('/create-user', async (req, res) => {
             role,
             schoolId,
             classYear: role === 'student' ? classYear : null,
-            subjects: role === 'teacher' ? subjects : null
+            subjects: role === 'teacher' ? subjects : null, 
+            parentEmail: role === 'student'? (parentEmail || null) : null,
+            parentPassword: role === 'student' ? (parentPassword || null) : null
         });
 
-        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`${role.charAt(0).toUpperCase() + role.slice(1)} ${name} created successfully!`));
+
+        const successMsg = role === 'student' && parentEmail
+            ? `${role.charAt(0).toUpperCase() + role.slice(1)} ${name} and parent account created successfully!`
+            : `${role.charAt(0).toUpperCase() + role.slice(1)} ${name} created successfully!`;
+
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(successMsg));
     } catch (error) {
         console.error('Create user error:', error);
         res.redirect('/admin/dashboard?error=' + encodeURIComponent('Failed to create user. Please try again.'));
@@ -266,7 +294,7 @@ router.post('/remove-teacher-assignment', async (req, res) => {
     }
 });
 
-// AJAX endpoint for instant teacher assignment
+
 router.post('/assign-teacher-ajax', async (req, res) => {
     try {
         if (!req.session.userId || req.session.userRole !== 'school_admin') {

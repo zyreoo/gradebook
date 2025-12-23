@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 
 class User {
 
-    static async create({name, email, password, role = "student", subject, subjects, schoolId, classYear}){
+    static async create({name, email, password, role = "student", subject, subjects, schoolId, classYear, parentEmail, parentPassword}){
 
 
         const hashedpassword = await bcrypt.hash(password, 10); 
@@ -14,7 +14,6 @@ class User {
             email, password, displayName: name
         });
 
-        // Handle both old 'subject' and new 'subjects' formats
         let subjectArray = null;
         if (role === 'teacher') {
             if (subjects && Array.isArray(subjects)) {
@@ -39,11 +38,63 @@ class User {
             updatedAt: new Date()
         };
 
+
+        let parentId = null; 
+        if(role === 'student' && parentEmail && parentPassword){
+            const parentHashedPassword = await bcrypt.hash(parentPassword, 10); 
+            const parentRecord = await auth.createUser({
+                email: parentEmail, 
+                password: parentPassword, 
+                displayName:`${name}'s Parent`
+            }); 
+
+            const parentData = {
+                uid: parentRecord.uid, 
+                name: `${name}'s Parent`, 
+                email:parentEmail, 
+                password: parentHashedPassword, 
+                role: 'parent', 
+                schoolId: schoolId || null, 
+                createdAt: new Date(), 
+                updatedAt: new Date()
+            }; 
+
+            await db.collection('users').doc(parentRecord.uid).set(parentData); 
+            parentId = parentRecord.uid; 
+
+            userData.parentId = parentId; 
+            userData.parentEmail = parentEmail; 
+
+
+         }; 
+
         await db.collection('users').doc(userRecord.uid).set(userData); 
 
         return userData
     }
+    
+    static async getStudentByParentId(parentId){
+        const snapshot = await db.collection('users')
+        .where('parentId', '==', parentId)
+        .get(); 
 
+
+        if (snapshot.empty){
+            return []; 
+        }
+
+
+        return snapshot.docs.map(doc => doc.data()); 
+    }
+
+
+    static async getParentByStudentId(studentId){
+        const student  = await this.findbyId(studentId); 
+        if(!student || !student.parentId){
+            return null; 
+        }
+        return await this.findbyId(student.parentId); 
+    }
 
 
     static async findbyEmail(email){

@@ -260,6 +260,16 @@
                             <option value="12">12th Grade</option>
                         </select>
                     </div>
+                    <div class="field" id="parentEmailGroup" style="display: none;">
+                        <label for="parentEmail">Parent Email (Optional)</label>
+                        <input id="parentEmail" name="parentEmail" type="email" placeholder="parent@example.com" autocomplete="email">
+                        <small class="helper">Parent account will be created automatically</small>
+                    </div>
+                    <div class="field" id="parentPasswordGroup" style="display: none;">
+                        <label for="parentPassword">Parent Password (Optional)</label>
+                        <input id="parentPassword" name="parentPassword" type="password" minlength="6" placeholder="Minimum 6 characters" autocomplete="new-password">
+                        <small class="helper">Required if parent email is provided</small>
+                    </div>
                     <div class="field" id="subjectGroup" style="display: none;">
                         <label for="subject">Subjects</label>
                         <select id="subject" name="subjects" multiple style="min-height: 120px;">
@@ -456,6 +466,8 @@
             const classYearSelect = document.getElementById('classYear');
             const subjectGroup = document.getElementById('subjectGroup');
             const subjectSelect = document.getElementById('subject');
+            const parentEmailGroup = document.getElementById('parentEmailGroup');
+            const parentPasswordGroup = document.getElementById('parentPasswordGroup');
 
             if (role === 'student') {
                 classYearGroup.style.display = 'block';
@@ -463,12 +475,18 @@
                 subjectGroup.style.display = 'none';
                 subjectSelect.required = false;
                 subjectSelect.value = '';
+                parentEmailGroup.style.display = 'block';
+                parentPasswordGroup.style.display = 'block';
             } else if (role === 'teacher') {
                 classYearGroup.style.display = 'none';
                 classYearSelect.required = false;
                 classYearSelect.value = '';
                 subjectGroup.style.display = 'block';
                 subjectSelect.required = false;
+                parentEmailGroup.style.display = 'none';
+                parentPasswordGroup.style.display = 'none';
+                document.getElementById('parentEmail').value = '';
+                document.getElementById('parentPassword').value = '';
             } else {
                 classYearGroup.style.display = 'none';
                 classYearSelect.required = false;
@@ -476,6 +494,10 @@
                 subjectGroup.style.display = 'none';
                 subjectSelect.required = false;
                 subjectSelect.value = '';
+                parentEmailGroup.style.display = 'none';
+                parentPasswordGroup.style.display = 'none';
+                document.getElementById('parentEmail').value = '';
+                document.getElementById('parentPassword').value = '';
             }
         }
 
