@@ -36,6 +36,7 @@ class School {
             adminEmail: email, 
             adress: adress || '', 
             subjects: defaultSubjects,
+            classes: [], 
             createdAt: new Date()
         }; 
 
@@ -115,6 +116,12 @@ class School {
             throw new Error('Subject name cannot be empty');
         }
 
+        // Capitalize first letter of each word (e.g., "mathematics" -> "Mathematics", "physical education" -> "Physical Education")
+        const capitalized = trimmedSubject
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+
         const schoolRef = db.collection('schools').doc(schoolId);
         const doc = await schoolRef.get();
         
@@ -126,11 +133,11 @@ class School {
         const subjects = schoolData.subjects || [];
         
         // Check for duplicates (case-insensitive)
-        if (subjects.some(s => s.toLowerCase() === trimmedSubject.toLowerCase())) {
+        if (subjects.some(s => s.toLowerCase() === capitalized.toLowerCase())) {
             throw new Error('Subject already exists');
         }
 
-        subjects.push(trimmedSubject);
+        subjects.push(capitalized);
         await schoolRef.update({ subjects });
         
         return { id: schoolId, ...schoolData, subjects };
@@ -329,6 +336,123 @@ class School {
         }
         
         return [];
+    }
+
+
+    static async addClass(schoolId, className){
+        const trimmed = (className || '').trim(); 
+        if (!trimmed) throw new Error('Class name cannot be empty');
+
+        // Capitalize the class name (e.g., "9a" -> "9A", "10b" -> "10B")
+        const capitalized = trimmed.toUpperCase();
+
+        const schoolRef = db.collection('schools').doc(schoolId); 
+        const doc = await schoolRef.get(); 
+
+        if(!doc.exists) throw new Error('School not found');
+
+        const data = doc.data();
+        const classes = data.classes || []; 
+
+        if(classes.some(c => c.toLowerCase() === capitalized.toLowerCase())){
+            throw new Error('Class already exists');
+        }
+
+        classes.push(capitalized);
+        await schoolRef.update({ classes });
+
+    return classes;
+    }
+
+
+
+    static async removeClass(schoolId, className){
+        const schoolRef = db.collection('schools').doc(schoolId); 
+        const doc = await schoolRef.get();
+
+        if (!doc.exists) throw new Error('School not found');
+
+        const data = doc.data(); 
+        const classes = data.classes || []; 
+        const updated = classes.filter(c => c !== className); 
+
+        await schoolRef.update({classes: updated}); 
+        return updated; 
+    }
+
+
+    static async getClasses(schoolId){
+        const doc = await db.collection('schools').doc(schoolId).get(); 
+        if(!doc.exists) return []; 
+        const data = doc.data(); 
+        return data.classes || []; 
+    }
+
+    static async assignClassmaster(schoolId, className, teacherId){
+        const schoolRef = db.collection('schools').doc(schoolId); 
+        const doc = await schoolRef.get();
+
+        if(!doc.exists){
+            throw new Error('School not found');
+        }
+
+        const schoolData = doc.data(); 
+        const classMasters = schoolData.classMasters || {}; 
+
+        classMasters[className] = teacherId; 
+        await schoolRef.update({classMasters}); 
+        
+        return classMasters; 
+    }
+
+    static async removeClassmaster(schoolId, className, teacherId){
+        const schoolRef = db.collection('schools').doc(schoolId); 
+        const doc = await schoolRef. get(); 
+
+
+        if(!doc.exists){
+            throw new Error('School not found');
+        }
+
+
+        const schoolData = doc.data(); 
+        const classMasters = schoolData.classMasters || {}; 
+
+        delete classMasters[className]; 
+        await schoolRef.update({classMasters}); 
+        
+        return classMasters; 
+    }
+
+
+    static async getClassmaster(schoolId, className){
+        const doc = await db.collection('schools').doc(schoolId).get(); 
+
+        if(!doc.exists) return null; 
+
+        const data = doc.data(); 
+        const classMasters = data.classMasters || {}; 
+        return classMasters[className] || null ; 
+    }
+
+
+    static async getClassesByClassmaster(schoolId, teacherId){
+        const doc = await db.collection('schools').doc(schoolId).get(); 
+
+        if (!doc.exists) return []; 
+
+
+        const data = doc.data(); 
+        const classMasters = data.classMasters || {}; 
+        const classes = []; 
+
+        for (const [className, masterId] of Object.entries(classMasters)){
+            if(masterId === teacherId){
+                classes.push(className); 
+            }
+        }
+
+        return classes; 
     }
 }
 

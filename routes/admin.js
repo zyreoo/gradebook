@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const School = require('../models/School');
 const User = require('../models/User');
-const { route } = require('./auth');
 
 
 router.get('/dashboard', async (req, res) => {
@@ -188,8 +187,9 @@ router.post('/add-subject', async (req, res) => {
             return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Subject name is required'));
         }
 
-        await School.addSubject(schoolId, subjectName);
-        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`Subject "${subjectName.trim()}" added successfully!`));
+        const result = await School.addSubject(schoolId, subjectName);
+        const subjectDisplay = result.subjects[result.subjects.length - 1]; // Get the last added subject (capitalized)
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`Subject "${subjectDisplay}" added successfully!`));
     } catch (error) {
         console.error('Add subject error:', error);
         const errorMessage = error.message || 'Failed to add subject. Please try again.';
@@ -331,6 +331,53 @@ router.post('/assign-teacher-ajax', async (req, res) => {
         });
     }
 });
+
+
+
+router.post('/add-class', async (req, res) =>{
+    try{
+
+        if(!req.session.userId || req.session.userRole !== 'school_admin'){
+            return res.redirect('/auth/login');
+        }
+
+        const {className} = req.body; 
+        const schoolId = req.session.schoolId; 
+
+        if(!className || !className.trim()){
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Class name is required'));
+        }
+
+        const addedClass = await School.addClass(schoolId, className);
+        const classNameDisplay = addedClass[addedClass.length - 1]; // Get the last added class (capitalized)
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`Class "${classNameDisplay}" added successfully!`));
+    }catch(error){
+        console.error('Add class error:', error);
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message || 'Failed to add class'));
+    }
+}); 
+
+
+router.post('/remove-class', async (req, res) =>{
+    try{
+        if(!req.session.userId || req.session.userRole !== 'school_admin'){
+            return res.redirect('/auth/login');
+        }
+
+        const {className} = req.body; 
+        const schoolId = req.session.schoolId; 
+
+        if (!className) {
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Class name is required'));
+        }
+
+        await School.removeClass(schoolId, className);
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`Class "${className}" removed successfully!`));
+    } catch (error){
+        console.error('Remove class error:', error);
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(error.message || 'Failed to remove class'));
+    }
+}); 
 
 module.exports = router;
 

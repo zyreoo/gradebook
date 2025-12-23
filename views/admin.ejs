@@ -46,6 +46,7 @@
         <!-- Navigation -->
         <div class="section-nav-admin">
             <a href="#subjects">Subjects</a>
+            <a href="#classes">Classes</a>
             <a href="#teacher-assignments">Teacher Assignments</a>
             <a href="#add-user">Add User</a>
             <a href="#people">People</a>
@@ -82,36 +83,75 @@
             </form>
         </section>
 
+        <!-- Classes Section -->
+        <section id="classes" class="section">
+            <h2>Classes</h2>
+            <p class="helper" style="margin-bottom: 16px;">Define your classes like 9A, 9B, 10C, etc. These will be used for student assignments and teacher assignments.</p>
+
+            <% const classes = (school.classes || []); %>
+
+            <% if (classes.length > 0) { %>
+                <div class="pill-rail">
+                    <% classes.forEach(function(cls) { %>
+                        <div class="pill"> 
+                            <span><%= cls %></span>
+                            <form action="/admin/remove-class" method="POST" style="display:inline; margin:0;">
+                                <input type="hidden" name="className" value="<%= cls %>">
+                                <button type="submit" aria-label="Remove <%= cls %>" style="background:none; border:none; color:inherit; cursor:pointer; padding:0; margin-left:8px;">×</button>
+                            </form>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="muted-box">No classes yet. Add your first one below.</div>
+            <% } %>
+
+            <form action="/admin/add-class" method="POST" style="margin-top: 18px;">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="className">Add a class</label>
+                        <input id="className" name="className" type="text" placeholder="e.g., 9A, 9B, 10C" maxlength="20" required>
+                    </div>
+                    <div class="field" style="align-self: flex-end;">
+                        <button class="btn-primary" type="submit">Add Class</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
         <!-- Teacher Assignments Section -->
         <section id="teacher-assignments" class="section">
                     <h2>Teacher Assignments</h2>
-            <p class="helper" style="margin-bottom: 16px;">Assign teachers to grade levels. Each grade's available subjects come from its assigned teachers.</p>
+            <p class="helper" style="margin-bottom: 16px;">Assign teachers to classes. Each class's available subjects come from its assigned teachers.</p>
 
-            <% const classYears = ['9', '10', '11', '12']; %>
+            <% const teacherClasses = (school.classes || []); %>
             <% const classYearTeachers = school.classYearTeachers || {}; %>
             
-            <div class="grid-two">
-                <% classYears.forEach(function(year) { %>
-                    <div class="section-subsection">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                            <strong style="font-size: 16px;">Grade <%= year %></strong>
-                            <span class="badge"><%= (classYearTeachers[year] || []).length %> teacher(s)</span>
-                        </div>
+            <% if (teacherClasses.length === 0) { %>
+                <div class="muted-box">No classes defined yet. Please add classes in the Classes section above.</div>
+            <% } else { %>
+                <div class="grid-two">
+                    <% teacherClasses.forEach(function(cls) { %>
+                        <div class="section-subsection">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <strong style="font-size: 16px;">Class <%= cls %></strong>
+                                <span class="badge"><%= (classYearTeachers[cls] || []).length %> teacher(s)</span>
+                            </div>
 
-                        <% 
-                            const assignedTeacherIds = classYearTeachers[year] || [];
-                            const assignedTeachers = teachers.filter(t => assignedTeacherIds.includes(t.uid));
-                            const availableTeachers = teachers.filter(t => !assignedTeacherIds.includes(t.uid));
-                        %>
+                            <% 
+                                const assignedTeacherIds = classYearTeachers[cls] || [];
+                                const assignedTeachers = teachers.filter(t => assignedTeacherIds.includes(t.uid));
+                                const availableTeachers = teachers.filter(t => !assignedTeacherIds.includes(t.uid));
+                            %>
 
                         <% if (assignedTeachers.length > 0) { %>
                             <div class="people-list" style="margin-bottom: 14px;">
                                 <% assignedTeachers.forEach(function(teacher) { %>
-                                    <% 
-                                        const teacherAllSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-                                        const assignment = school.teacherAssignments && school.teacherAssignments[year] && school.teacherAssignments[year][teacher.uid];
-                                        const assignedSubjects = assignment && assignment.subjects ? assignment.subjects : teacherAllSubjects;
-                                    %>
+                                        <% 
+                                            const teacherAllSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                                            const assignment = school.teacherAssignments && school.teacherAssignments[cls] && school.teacherAssignments[cls][teacher.uid];
+                                            const assignedSubjects = assignment && assignment.subjects ? assignment.subjects : teacherAllSubjects;
+                                        %>
                                     <div class="person">
                                         <div>
                                             <strong><%= teacher.name %></strong>
@@ -123,11 +163,11 @@
                                                 <% } %>
                                             </small>
                                         </div>
-                                        <form action="/admin/remove-teacher-assignment" method="POST" style="margin: 0;">
-                                            <input type="hidden" name="classYear" value="<%= year %>">
-                                            <input type="hidden" name="teacherId" value="<%= teacher.uid %>">
-                                            <button type="submit" class="btn-remove">Remove</button>
-                                        </form>
+                                            <form action="/admin/remove-teacher-assignment" method="POST" style="margin: 0;">
+                                                <input type="hidden" name="classYear" value="<%= cls %>">
+                                                <input type="hidden" name="teacherId" value="<%= teacher.uid %>">
+                                                <button type="submit" class="btn-remove">Remove</button>
+                                            </form>
                                     </div>
                                 <% }); %>
                             </div>
@@ -135,21 +175,21 @@
                             <p class="helper" style="margin-bottom: 14px;">No teachers assigned yet.</p>
                         <% } %>
 
-                        <% if (availableTeachers.length > 0) { %>
-                            <div class="batch-assignment-container" id="batch-assignment-<%= year %>">
-                                <div class="teacher-selection-list">
-                                    <% availableTeachers.forEach(function(teacher) { %>
-                                        <% 
-                                            const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-                                        %>
-                                        <div class="teacher-assignment-card" data-teacher-id="<%= teacher.uid %>">
-                                            <label class="teacher-card-header">
-                                                <input type="checkbox" 
-                                                       class="teacher-select-checkbox" 
-                                                       value="<%= teacher.uid %>"
-                                                       data-year="<%= year %>"
-                                                       data-subjects='<%= JSON.stringify(teacherSubjects) %>'
-                                                       onchange="toggleTeacherSubjects('<%= year %>', '<%= teacher.uid %>')">
+                            <% if (availableTeachers.length > 0) { %>
+                                <div class="batch-assignment-container" id="batch-assignment-<%= cls %>">
+                                    <div class="teacher-selection-list">
+                                        <% availableTeachers.forEach(function(teacher) { %>
+                                            <% 
+                                                const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                                            %>
+                                            <div class="teacher-assignment-card" data-teacher-id="<%= teacher.uid %>">
+                                                <label class="teacher-card-header">
+                                                    <input type="checkbox" 
+                                                           class="teacher-select-checkbox" 
+                                                           value="<%= teacher.uid %>"
+                                                           data-year="<%= cls %>"
+                                                           data-subjects='<%= JSON.stringify(teacherSubjects) %>'
+                                                           onchange="toggleTeacherSubjects('<%= cls %>', '<%= teacher.uid %>')">
                                                 <div class="teacher-info">
                                                     <strong><%= teacher.name %></strong>
                                                     <small><%= teacher.email %></small>
@@ -161,62 +201,66 @@
                                                 </div>
                                             </label>
                                             
-                                            <!-- Subject selection (shown when teacher checkbox is checked) -->
-                                            <div id="subjects-<%= year %>-<%= teacher.uid %>" 
-                                                 class="subject-selection-inline" 
-                                                 style="display: none;">
-                                                <% if (teacherSubjects.length > 0) { %>
-                                                    <div class="inline-subjects">
-                                                        <% teacherSubjects.forEach(function(subject) { %>
-                                                            <label class="subject-pill">
-                                                                <input type="checkbox" 
-                                                                       class="subject-checkbox"
-                                                                       data-teacher-id="<%= teacher.uid %>"
-                                                                       data-year="<%= year %>"
-                                                                       value="<%= subject %>" 
-                                                                       checked>
-                                                                <span><%= subject %></span>
-                                                            </label>
-                                                        <% }); %>
+                                                    <!-- Subject selection (shown when teacher checkbox is checked) -->
+                                                    <div id="subjects-<%= cls %>-<%= teacher.uid %>" 
+                                                         class="subject-selection-inline" 
+                                                         style="display: none;">
+                                                        <% if (teacherSubjects.length > 0) { %>
+                                                            <div class="inline-subjects">
+                                                                <% teacherSubjects.forEach(function(subject) { %>
+                                                                    <label class="subject-pill">
+                                                                        <input type="checkbox" 
+                                                                               class="subject-checkbox"
+                                                                               data-teacher-id="<%= teacher.uid %>"
+                                                                               data-year="<%= cls %>"
+                                                                               value="<%= subject %>" 
+                                                                               checked>
+                                                                        <span><%= subject %></span>
+                                                                    </label>
+                                                                <% }); %>
+                                                            </div>
+                                                        <% } else { %>
+                                                            <small class="helper">No subjects assigned to this teacher</small>
+                                                        <% } %>
                                                     </div>
-                                                <% } else { %>
-                                                    <small class="helper">No subjects assigned to this teacher</small>
-                                                <% } %>
-                                            </div>
+                                                </div>
+                                            <% }); %>
                                         </div>
-                                    <% }); %>
-                                </div>
-                                
-                                <button type="button" 
-                                        class="btn-primary" 
-                                        style="margin-top: 16px; width: 100%;"
-                                        onclick="assignSelectedTeachers('<%= year %>')"
-                                        id="assign-btn-<%= year %>"
-                                        disabled>
-                                    Assign Selected Teachers
-                                </button>
-                            </div>
-                        <% } else { %>
-                            <p class="helper">All teachers have been assigned to this grade.</p>
-                        <% } %>
+                                        
+                                        <button type="button" 
+                                                class="btn-primary" 
+                                                style="margin-top: 16px; width: 100%;"
+                                                onclick="assignSelectedTeachers('<%= cls %>')"
+                                                id="assign-btn-<%= cls %>"
+                                                disabled>
+                                            Assign Selected Teachers
+                                        </button>
+                                    </div>
+                                <% } else { %>
+                                    <p class="helper">All teachers have been assigned to this class.</p>
+                                <% } %>
 
-                        <!-- Show derived subjects -->
-                        <% 
-                            const derivedSubjects = [...new Set(assignedTeachers.filter(t => t.subject).map(t => t.subject))];
-                        %>
-                        <% if (derivedSubjects.length > 0) { %>
-                            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-                                <small class="helper" style="font-weight: 600;">Available subjects:</small>
-                                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
-                                    <% derivedSubjects.forEach(function(subject) { %>
-                                        <span class="badge"><%= subject %></span>
-                                    <% }); %>   
+                            <!-- Show derived subjects -->
+                            <% 
+                                const derivedSubjects = [...new Set(assignedTeachers.flatMap(t => {
+                                    const subjects = t.subjects || (t.subject ? [t.subject] : []);
+                                    return subjects;
+                                }))];
+                            %>
+                            <% if (derivedSubjects.length > 0) { %>
+                                <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                                    <small class="helper" style="font-weight: 600;">Available subjects:</small>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                                        <% derivedSubjects.forEach(function(subject) { %>
+                                            <span class="badge"><%= subject %></span>
+                                        <% }); %>   
+                                    </div>
                                 </div>
-                            </div>
-                        <% } %>
-                    </div>
-                <% }); %>
-            </div>
+                            <% } %>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
         </section>
 
         <!-- Create User Section -->
@@ -251,14 +295,16 @@
                         </select>
                     </div>
                     <div class="field" id="classYearGroup" style="display: none;">
-                        <label for="classYear">Grade level</label>
+                        <label for="classYear">Class</label>
                         <select id="classYear" name="classYear">
-                            <option value="">Select grade</option>
-                            <option value="9">9th Grade</option>
-                            <option value="10">10th Grade</option>
-                            <option value="11">11th Grade</option>
-                            <option value="12">12th Grade</option>
+                            <option value="">Select class</option>
+                            <% (school.classes || []).forEach(function(cls) { %>
+                                <option value="<%= cls %>"><%= cls %></option>
+                            <% }); %>
                         </select>
+                        <% if (!school.classes || school.classes.length === 0) { %>
+                            <small class="helper" style="color: #dc3545;">No classes defined. Please add classes in the Classes section first.</small>
+                        <% } %>
                     </div>
                     <div class="field" id="parentEmailGroup" style="display: none;">
                         <label for="parentEmail">Parent Email (Optional)</label>
@@ -344,14 +390,13 @@
                     </div>
                     <% if (students.length > 0) { %>
                         <div class="filter">
-                            <label for="class-filter">Filter by grade:</label>
+                            <label for="class-filter">Filter by class:</label>
                             <select id="class-filter" onchange="filterStudents()">
                                 <option value="all">All</option>
-                                <option value="9">9th Grade</option>
-                                <option value="10">10th Grade</option>
-                                <option value="11">11th Grade</option>
-                                <option value="12">12th Grade</option>
-                                <option value="none">No grade</option>
+                                <% (school.classes || []).forEach(function(cls) { %>
+                                    <option value="<%= cls %>"><%= cls %></option>
+                                <% }); %>
+                                <option value="none">No class</option>
                             </select>
                         </div>
                         <div class="people-list" id="students-grid">
