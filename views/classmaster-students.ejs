@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class <%= classYear %> - Classmaster View</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>Class <%= classYear %> - Classmaster View</h1>
+            <div class="user-info">
+                <p><strong>Name:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong style="color: var(--accent);">Classmaster</strong></p>
+            </div>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message">
+                <%= success %>
+            </div>
+        <% } %>
+
+        <div class="navigation">
+            <a href="/dashboard">← Back to Dashboard</a>
+        </div>
+
+        <div class="section">
+            <h2>Students (<%= students.length %>)</h2>
+            <% if (students.length === 0) { %>
+                <div class="empty-state">
+                    <p>No students found in this class yet.</p>
+                </div>
+            <% } else { %>
+                <div class="students-grid">
+                    <% students.forEach(function(student) { 
+                        let badgeClass = 'grade-1';
+                        if (student.stats && student.stats.overallAverage > 0) {
+                            if (student.stats.overallAverage >= 9.5) badgeClass = 'grade-10';
+                            else if (student.stats.overallAverage >= 8.5) badgeClass = 'grade-9';
+                            else if (student.stats.overallAverage >= 7.5) badgeClass = 'grade-8';
+                            else if (student.stats.overallAverage >= 6.5) badgeClass = 'grade-7';
+                            else if (student.stats.overallAverage >= 5.5) badgeClass = 'grade-6';
+                        }
+                    %>
+                        <a href="/student/<%= student.uid %>" class="student-card-link">
+                            <div class="student-card classmaster-student-card">
+                                <div class="student-avatar">
+                                    <%= student.name.charAt(0).toUpperCase() %>
+                                </div>
+                                <div class="student-info">
+                                    <h3><%= student.name %></h3>
+                                    <p class="student-email"><%= student.email %></p>
+                                    <div class="student-stats">
+                                        <% if (student.stats && student.stats.overallAverage > 0) { %>
+                                            <div class="stat-mini">
+                                                <span class="stat-label-mini">Average</span>
+                                                <span class="grade-badge <%= badgeClass %>">
+                                                    <%= student.stats.overallAverage.toFixed(2) %>
+                                                </span>
+                                            </div>
+                                        <% } %>
+                                        <% if (student.stats && student.stats.totalGrades > 0) { %>
+                                            <div class="stat-mini">
+                                                <span class="stat-label-mini">Grades</span>
+                                                <span class="stat-value-mini"><%= student.stats.totalGrades %></span>
+                                            </div>
+                                        <% } %>
+                                        <% if (student.stats && student.stats.totalAbsences > 0) { %>
+                                            <div class="stat-mini">
+                                                <span class="stat-label-mini">Absences</span>
+                                                <span class="stat-value-mini" style="color: <%= student.stats.unmotivatedAbsences > 2 ? 'var(--error)' : 'var(--text-dim)' %>;">
+                                                    <%= student.stats.totalAbsences %>
+                                                </span>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    <% }); %>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Logout</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+

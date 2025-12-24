@@ -2,281 +2,482 @@ const School = require('./models/School');
 const User = require('./models/User');
 require('./config/firebase');
 
+// Single school with 10 teachers all teaching the same class (10A)
 const schools = [
     {
-        name: 'John Admin',
-        email: 'admin@lincoln.edu',
+        name: 'Principal Smith',
+        email: 'admin@highschool.edu',
         password: 'password123',
-        schoolName: 'Lincoln High School',
-        adress: '123 Main Street, Springfield, IL 62701',
+        schoolName: 'Central High School',
+        adress: '123 Education Street, Springfield, IL 62701',
         classMasters: [
-            { class: '9A', teacherEmail: 'robert.wilson@lincoln.edu' },
-            { class: '10A', teacherEmail: 'robert.wilson@lincoln.edu' },
-            { class: '9B', teacherEmail: 'jennifer.martinez@lincoln.edu' },
-            { class: '10B', teacherEmail: 'jennifer.martinez@lincoln.edu' }
+            { class: '10A', teacherEmail: 'maria.popescu@highschool.edu' } // Mathematics teacher is classmaster
         ],
         teachers: [
             { 
-                name: 'Robert Wilson', 
-                email: 'robert.wilson@lincoln.edu', 
-                subjects: ['Mathematics', 'Physics'],
+                name: 'Maria Popescu', 
+                email: 'maria.popescu@highschool.edu', 
+                subjects: ['Mathematics'],
                 classAssignments: [
-                    { class: '9A', subjects: ['Mathematics'] },
-                    { class: '10A', subjects: ['Mathematics', 'Physics'] }
+                    { class: '10A', subjects: ['Mathematics'] }
                 ]
             },
             { 
-                name: 'Jennifer Martinez', 
-                email: 'jennifer.martinez@lincoln.edu', 
-                subjects: ['English', 'History'],
+                name: 'Ion Ionescu', 
+                email: 'ion.ionescu@highschool.edu', 
+                subjects: ['Physics'],
                 classAssignments: [
-                    { class: '9B', subjects: ['English'] },
-                    { class: '10B', subjects: ['English', 'History'] }
+                    { class: '10A', subjects: ['Physics'] }
+                ]
+            },
+            { 
+                name: 'Elena Georgescu', 
+                email: 'elena.georgescu@highschool.edu', 
+                subjects: ['Chemistry'],
+                classAssignments: [
+                    { class: '10A', subjects: ['Chemistry'] }
+                ]
+            },
+            { 
+                name: 'Alexandru Radu', 
+                email: 'alexandru.radu@highschool.edu', 
+                subjects: ['Biology'],
+                classAssignments: [
+                    { class: '10A', subjects: ['Biology'] }
+                ]
+            },
+            { 
+                name: 'Ana Dumitrescu', 
+                email: 'ana.dumitrescu@highschool.edu', 
+                subjects: ['English'],
+                classAssignments: [
+                    { class: '10A', subjects: ['English'] }
+                ]
+            },
+            { 
+                name: 'Mihai Constantinescu', 
+                email: 'mihai.constantinescu@highschool.edu', 
+                subjects: ['History'],
+                classAssignments: [
+                    { class: '10A', subjects: ['History'] }
+                ]
+            },
+            { 
+                name: 'Andreea Stan', 
+                email: 'andreea.stan@highschool.edu', 
+                subjects: ['Geography'],
+                classAssignments: [
+                    { class: '10A', subjects: ['Geography'] }
+                ]
+            },
+            { 
+                name: 'Cristian Nistor', 
+                email: 'cristian.nistor@highschool.edu', 
+                subjects: ['Romanian'],
+                classAssignments: [
+                    { class: '10A', subjects: ['Romanian'] }
+                ]
+            },
+            { 
+                name: 'Laura Marin', 
+                email: 'laura.marin@highschool.edu', 
+                subjects: ['French'],
+                classAssignments: [
+                    { class: '10A', subjects: ['French'] }
+                ]
+            },
+            { 
+                name: 'Dragos Petrescu', 
+                email: 'dragos.petrescu@highschool.edu', 
+                subjects: ['Physical Education'],
+                classAssignments: [
+                    { class: '10A', subjects: ['Physical Education'] }
                 ]
             }
         ],
         students: [
             { 
-                name: 'Alice Thompson', 
-                email: 'alice.thompson@lincoln.edu', 
-                classYear: '9A',
+                name: 'Alexandru Popescu', 
+                email: 'alexandru.popescu@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Mathematics', grades: [9, 10, 9, 9] }
+                    { subject: 'Mathematics', grades: [9, 10, 9, 9, 10] },
+                    { subject: 'Physics', grades: [8, 9, 8, 9] },
+                    { subject: 'Chemistry', grades: [9, 9, 10, 9] },
+                    { subject: 'Biology', grades: [8, 9, 8] },
+                    { subject: 'English', grades: [9, 10, 9, 9] },
+                    { subject: 'History', grades: [8, 8, 9] },
+                    { subject: 'Geography', grades: [9, 9, 8] },
+                    { subject: 'Romanian', grades: [10, 9, 10, 9] },
+                    { subject: 'French', grades: [8, 8, 9] },
+                    { subject: 'Physical Education', grades: [10, 10, 9] }
                 ],
                 absences: [
                     { subject: 'Mathematics', type: 'motivated', reason: 'Medical appointment', date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
                 ]
             },
             { 
-                name: 'Bob Anderson', 
-                email: 'bob.anderson@lincoln.edu', 
-                classYear: '9A',
+                name: 'Maria Ionescu', 
+                email: 'maria.ionescu@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Mathematics', grades: [7, 8, 7, 8] }
+                    { subject: 'Mathematics', grades: [7, 8, 7, 8, 7] },
+                    { subject: 'Physics', grades: [6, 7, 6, 7] },
+                    { subject: 'Chemistry', grades: [7, 8, 7, 8] },
+                    { subject: 'Biology', grades: [8, 8, 9] },
+                    { subject: 'English', grades: [9, 9, 10, 9] },
+                    { subject: 'History', grades: [9, 10, 9] },
+                    { subject: 'Geography', grades: [8, 9, 9] },
+                    { subject: 'Romanian', grades: [9, 10, 9, 10] },
+                    { subject: 'French', grades: [9, 9, 10] },
+                    { subject: 'Physical Education', grades: [8, 8, 9] }
                 ],
                 absences: [
-                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
-                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) }
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Chemistry', type: 'unmotivated', date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000) }
                 ]
             },
             { 
-                name: 'Charlie Davis', 
-                email: 'charlie.davis@lincoln.edu', 
+                name: 'Andrei Georgescu', 
+                email: 'andrei.georgescu@highschool.edu', 
                 classYear: '10A',
                 grades: [
-                    { subject: 'Mathematics', grades: [8, 9, 8] },
-                    { subject: 'Physics', grades: [9, 10, 9] }
+                    { subject: 'Mathematics', grades: [10, 10, 9, 10, 9] },
+                    { subject: 'Physics', grades: [10, 9, 10, 9] },
+                    { subject: 'Chemistry', grades: [9, 10, 9, 10] },
+                    { subject: 'Biology', grades: [9, 9, 10] },
+                    { subject: 'English', grades: [8, 8, 9, 8] },
+                    { subject: 'History', grades: [7, 8, 7] },
+                    { subject: 'Geography', grades: [8, 8, 9] },
+                    { subject: 'Romanian', grades: [8, 9, 8, 9] },
+                    { subject: 'French', grades: [7, 8, 7] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
                 ]
             },
             { 
-                name: 'David Smith', 
-                email: 'david.smith@lincoln.edu', 
+                name: 'Elena Radu', 
+                email: 'elena.radu@highschool.edu', 
                 classYear: '10A',
                 grades: [
-                    { subject: 'Mathematics', grades: [6, 5, 6] },
-                    { subject: 'Physics', grades: [5, 6, 5] }
+                    { subject: 'Mathematics', grades: [6, 5, 6, 5, 6] },
+                    { subject: 'Physics', grades: [5, 6, 5, 6] },
+                    { subject: 'Chemistry', grades: [6, 5, 6, 5] },
+                    { subject: 'Biology', grades: [7, 6, 7] },
+                    { subject: 'English', grades: [8, 9, 8, 9] },
+                    { subject: 'History', grades: [9, 9, 10] },
+                    { subject: 'Geography', grades: [8, 9, 8] },
+                    { subject: 'Romanian', grades: [9, 10, 9, 10] },
+                    { subject: 'French', grades: [8, 9, 8] },
+                    { subject: 'Physical Education', grades: [7, 7, 8] }
                 ],
                 absences: [
                     { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
                     { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) },
-                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000) }
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }
                 ]
             },
             { 
-                name: 'Emma Johnson', 
-                email: 'emma.johnson@lincoln.edu', 
-                classYear: '9B',
+                name: 'David Dumitrescu', 
+                email: 'david.dumitrescu@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'English', grades: [10, 9, 10, 9] }
-                ]
-            },
-            { 
-                name: 'Frank Wilson', 
-                email: 'frank.wilson@lincoln.edu', 
-                classYear: '10B',
-                grades: [
-                    { subject: 'English', grades: [7, 8, 7] },
-                    { subject: 'History', grades: [8, 9, 8] }
+                    { subject: 'Mathematics', grades: [8, 9, 8, 9, 8] },
+                    { subject: 'Physics', grades: [9, 8, 9, 8] },
+                    { subject: 'Chemistry', grades: [8, 9, 8, 9] },
+                    { subject: 'Biology', grades: [9, 9, 8] },
+                    { subject: 'English', grades: [7, 8, 7, 8] },
+                    { subject: 'History', grades: [8, 8, 9] },
+                    { subject: 'Geography', grades: [9, 8, 9] },
+                    { subject: 'Romanian', grades: [8, 9, 8, 9] },
+                    { subject: 'French', grades: [9, 8, 9] },
+                    { subject: 'Physical Education', grades: [10, 9, 10] }
                 ],
                 absences: [
                     { subject: 'English', type: 'motivated', reason: 'Family emergency', date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) }
                 ]
-            }
-        ]
-    },
-    {
-        name: 'Sarah Johnson',
-        email: 'admin@washington.edu',
-        password: 'password123',
-        schoolName: 'Washington Academy',
-        adress: '456 Oak Avenue, Portland, OR 97201',
-        classMasters: [
-            { class: '11A', teacherEmail: 'david.lee@washington.edu' },
-            { class: '12A', teacherEmail: 'david.lee@washington.edu' },
-            { class: '11B', teacherEmail: 'emma.white@washington.edu' },
-            { class: '12B', teacherEmail: 'emma.white@washington.edu' }
-        ],
-        teachers: [
+            },
             { 
-                name: 'David Lee', 
-                email: 'david.lee@washington.edu', 
-                subjects: ['Science', 'Chemistry'],
-                classAssignments: [
-                    { class: '11A', subjects: ['Science'] },
-                    { class: '12A', subjects: ['Science', 'Chemistry'] }
+                name: 'Ioana Constantinescu', 
+                email: 'ioana.constantinescu@highschool.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [9, 9, 10, 9, 9] },
+                    { subject: 'Physics', grades: [8, 9, 8, 9] },
+                    { subject: 'Chemistry', grades: [9, 9, 10, 9] },
+                    { subject: 'Biology', grades: [10, 9, 10] },
+                    { subject: 'English', grades: [10, 9, 10, 9] },
+                    { subject: 'History', grades: [9, 10, 9] },
+                    { subject: 'Geography', grades: [9, 9, 10] },
+                    { subject: 'Romanian', grades: [10, 9, 10, 9] },
+                    { subject: 'French', grades: [10, 9, 10] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
                 ]
             },
             { 
-                name: 'Emma White', 
-                email: 'emma.white@washington.edu', 
-                subjects: ['History', 'Geography'],
-                classAssignments: [
-                    { class: '11B', subjects: ['History'] },
-                    { class: '12B', subjects: ['History', 'Geography'] }
-                ]
-            }
-        ],
-        students: [
-            { 
-                name: 'Diana Prince', 
-                email: 'diana.prince@washington.edu', 
-                classYear: '11A',
+                name: 'Stefan Stan', 
+                email: 'stefan.stan@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Science', grades: [9, 10, 9, 10] }
-                ]
-            },
-            { 
-                name: 'Ethan Hunt', 
-                email: 'ethan.hunt@washington.edu', 
-                classYear: '11A',
-                grades: [
-                    { subject: 'Science', grades: [8, 7, 8, 7] }
+                    { subject: 'Mathematics', grades: [7, 7, 8, 7, 7] },
+                    { subject: 'Physics', grades: [7, 8, 7, 8] },
+                    { subject: 'Chemistry', grades: [8, 7, 8, 7] },
+                    { subject: 'Biology', grades: [7, 8, 7] },
+                    { subject: 'English', grades: [6, 7, 6, 7] },
+                    { subject: 'History', grades: [8, 8, 9] },
+                    { subject: 'Geography', grades: [9, 8, 9] },
+                    { subject: 'Romanian', grades: [7, 8, 7, 8] },
+                    { subject: 'French', grades: [6, 7, 6] },
+                    { subject: 'Physical Education', grades: [8, 8, 9] }
                 ],
                 absences: [
-                    { subject: 'Science', type: 'unmotivated', date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) }
+                    { subject: 'English', type: 'unmotivated', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+                    { subject: 'French', type: 'unmotivated', date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) }
                 ]
             },
             { 
-                name: 'Fiona Clark', 
-                email: 'fiona.clark@washington.edu', 
-                classYear: '12A',
+                name: 'Ana Nistor', 
+                email: 'ana.nistor@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Science', grades: [9, 9, 10] },
-                    { subject: 'Chemistry', grades: [10, 9, 10] }
-                ]
-            },
-            { 
-                name: 'George Brown', 
-                email: 'george.brown@washington.edu', 
-                classYear: '11B',
-                grades: [
-                    { subject: 'History', grades: [6, 7, 6] }
+                    { subject: 'Mathematics', grades: [8, 8, 9, 8, 8] },
+                    { subject: 'Physics', grades: [9, 8, 9, 8] },
+                    { subject: 'Chemistry', grades: [8, 9, 8, 9] },
+                    { subject: 'Biology', grades: [9, 8, 9] },
+                    { subject: 'English', grades: [9, 9, 10, 9] },
+                    { subject: 'History', grades: [10, 9, 10] },
+                    { subject: 'Geography', grades: [9, 10, 9] },
+                    { subject: 'Romanian', grades: [9, 10, 9, 10] },
+                    { subject: 'French', grades: [9, 9, 10] },
+                    { subject: 'Physical Education', grades: [8, 9, 8] }
                 ],
                 absences: [
-                    { subject: 'History', type: 'unmotivated', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
-                    { subject: 'History', type: 'unmotivated', date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) },
-                    { subject: 'History', type: 'unmotivated', date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }
+                    { subject: 'Biology', type: 'motivated', reason: 'Medical appointment', date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) }
                 ]
             },
             { 
-                name: 'Helen Davis', 
-                email: 'helen.davis@washington.edu', 
-                classYear: '12B',
+                name: 'Mihai Marin', 
+                email: 'mihai.marin@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'History', grades: [8, 9, 8] },
-                    { subject: 'Geography', grades: [9, 8, 9] }
+                    { subject: 'Mathematics', grades: [5, 6, 5, 6, 5] },
+                    { subject: 'Physics', grades: [6, 5, 6, 5] },
+                    { subject: 'Chemistry', grades: [5, 6, 5, 6] },
+                    { subject: 'Biology', grades: [6, 5, 6] },
+                    { subject: 'English', grades: [7, 7, 8, 7] },
+                    { subject: 'History', grades: [8, 7, 8] },
+                    { subject: 'Geography', grades: [7, 8, 7] },
+                    { subject: 'Romanian', grades: [7, 8, 7, 8] },
+                    { subject: 'French', grades: [6, 7, 6] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
+                ],
+                absences: [
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Chemistry', type: 'unmotivated', date: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Cristina Petrescu', 
+                email: 'cristina.petrescu@highschool.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [10, 9, 10, 9, 10] },
+                    { subject: 'Physics', grades: [9, 10, 9, 10] },
+                    { subject: 'Chemistry', grades: [10, 9, 10, 9] },
+                    { subject: 'Biology', grades: [9, 10, 9] },
+                    { subject: 'English', grades: [8, 9, 8, 9] },
+                    { subject: 'History', grades: [9, 9, 10] },
+                    { subject: 'Geography', grades: [9, 9, 10] },
+                    { subject: 'Romanian', grades: [9, 10, 9, 10] },
+                    { subject: 'French', grades: [9, 9, 10] },
+                    { subject: 'Physical Education', grades: [8, 9, 8] }
+                ]
+            },
+            { 
+                name: 'Bogdan Popescu', 
+                email: 'bogdan.popescu@highschool.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [6, 7, 6, 7, 6] },
+                    { subject: 'Physics', grades: [7, 6, 7, 6] },
+                    { subject: 'Chemistry', grades: [6, 7, 6, 7] },
+                    { subject: 'Biology', grades: [7, 6, 7] },
+                    { subject: 'English', grades: [8, 8, 9, 8] },
+                    { subject: 'History', grades: [7, 8, 7] },
+                    { subject: 'Geography', grades: [8, 7, 8] },
+                    { subject: 'Romanian', grades: [8, 8, 9, 8] },
+                    { subject: 'French', grades: [7, 8, 7] },
+                    { subject: 'Physical Education', grades: [10, 10, 9] }
+                ],
+                absences: [
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Raluca Ionescu', 
+                email: 'raluca.ionescu@highschool.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [9, 8, 9, 8, 9] },
+                    { subject: 'Physics', grades: [8, 9, 8, 9] },
+                    { subject: 'Chemistry', grades: [9, 8, 9, 8] },
+                    { subject: 'Biology', grades: [8, 9, 8] },
+                    { subject: 'English', grades: [10, 9, 10, 9] },
+                    { subject: 'History', grades: [9, 10, 9] },
+                    { subject: 'Geography', grades: [9, 9, 10] },
+                    { subject: 'Romanian', grades: [10, 9, 10, 9] },
+                    { subject: 'French', grades: [10, 9, 10] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
+                ]
+            },
+            { 
+                name: 'Adrian Georgescu', 
+                email: 'adrian.georgescu@highschool.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [8, 9, 8, 9, 8] },
+                    { subject: 'Physics', grades: [9, 8, 9, 8] },
+                    { subject: 'Chemistry', grades: [8, 9, 8, 9] },
+                    { subject: 'Biology', grades: [9, 8, 9] },
+                    { subject: 'English', grades: [7, 8, 7, 8] },
+                    { subject: 'History', grades: [8, 8, 9] },
+                    { subject: 'Geography', grades: [8, 9, 8] },
+                    { subject: 'Romanian', grades: [8, 9, 8, 9] },
+                    { subject: 'French', grades: [8, 8, 9] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
                 ],
                 absences: [
                     { subject: 'History', type: 'motivated', reason: 'School trip', date: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000) }
                 ]
-            }
-        ]
-    },
-    {
-        name: 'Michael Brown',
-        email: 'admin@roosevelt.edu',
-        password: 'password123',
-        schoolName: 'Roosevelt Middle School',
-        adress: '789 Pine Road, Seattle, WA 98101',
-        classMasters: [
-            { class: '6A', teacherEmail: 'grace.kim@roosevelt.edu' },
-            { class: '7A', teacherEmail: 'grace.kim@roosevelt.edu' },
-            { class: '6B', teacherEmail: 'henry.adams@roosevelt.edu' },
-            { class: '8A', teacherEmail: 'henry.adams@roosevelt.edu' }
-        ],
-        teachers: [
+            },
             { 
-                name: 'Grace Kim', 
-                email: 'grace.kim@roosevelt.edu', 
-                subjects: ['Geography', 'History'],
-                classAssignments: [
-                    { class: '6A', subjects: ['Geography'] },
-                    { class: '7A', subjects: ['Geography', 'History'] }
+                name: 'Diana Radu', 
+                email: 'diana.radu@highschool.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [7, 8, 7, 8, 7] },
+                    { subject: 'Physics', grades: [8, 7, 8, 7] },
+                    { subject: 'Chemistry', grades: [7, 8, 7, 8] },
+                    { subject: 'Biology', grades: [8, 7, 8] },
+                    { subject: 'English', grades: [9, 9, 10, 9] },
+                    { subject: 'History', grades: [10, 9, 10] },
+                    { subject: 'Geography', grades: [9, 10, 9] },
+                    { subject: 'Romanian', grades: [9, 10, 9, 10] },
+                    { subject: 'French', grades: [9, 9, 10] },
+                    { subject: 'Physical Education', grades: [8, 9, 8] }
                 ]
             },
             { 
-                name: 'Henry Adams', 
-                email: 'henry.adams@roosevelt.edu', 
-                subjects: ['Physics', 'Mathematics'],
-                classAssignments: [
-                    { class: '6B', subjects: ['Physics'] },
-                    { class: '8A', subjects: ['Physics', 'Mathematics'] }
-                ]
-            }
-        ],
-        students: [
-            { 
-                name: 'George Miller', 
-                email: 'george.miller@roosevelt.edu', 
-                classYear: '6A',
+                name: 'Radu Dumitrescu', 
+                email: 'radu.dumitrescu@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Geography', grades: [8, 9, 8] }
+                    { subject: 'Mathematics', grades: [10, 10, 9, 10, 9] },
+                    { subject: 'Physics', grades: [10, 9, 10, 9] },
+                    { subject: 'Chemistry', grades: [9, 10, 9, 10] },
+                    { subject: 'Biology', grades: [10, 9, 10] },
+                    { subject: 'English', grades: [8, 9, 8, 9] },
+                    { subject: 'History', grades: [9, 9, 10] },
+                    { subject: 'Geography', grades: [9, 9, 10] },
+                    { subject: 'Romanian', grades: [9, 10, 9, 10] },
+                    { subject: 'French', grades: [9, 9, 10] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
                 ]
             },
             { 
-                name: 'Hannah Scott', 
-                email: 'hannah.scott@roosevelt.edu', 
-                classYear: '6A',
+                name: 'Andreea Constantinescu', 
+                email: 'andreea.constantinescu@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Geography', grades: [7, 7, 8] }
+                    { subject: 'Mathematics', grades: [6, 6, 7, 6, 6] },
+                    { subject: 'Physics', grades: [6, 7, 6, 7] },
+                    { subject: 'Chemistry', grades: [7, 6, 7, 6] },
+                    { subject: 'Biology', grades: [6, 7, 6] },
+                    { subject: 'English', grades: [8, 8, 9, 8] },
+                    { subject: 'History', grades: [9, 8, 9] },
+                    { subject: 'Geography', grades: [8, 9, 8] },
+                    { subject: 'Romanian', grades: [8, 9, 8, 9] },
+                    { subject: 'French', grades: [8, 8, 9] },
+                    { subject: 'Physical Education', grades: [7, 8, 7] }
                 ],
                 absences: [
-                    { subject: 'Geography', type: 'motivated', reason: 'Dental appointment', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) }
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) }
                 ]
             },
             { 
-                name: 'Isaac Newton', 
-                email: 'isaac.newton@roosevelt.edu', 
-                classYear: '7A',
+                name: 'Vlad Stan', 
+                email: 'vlad.stan@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Geography', grades: [10, 10, 9] },
-                    { subject: 'History', grades: [9, 10, 10] }
+                    { subject: 'Mathematics', grades: [9, 9, 10, 9, 9] },
+                    { subject: 'Physics', grades: [9, 10, 9, 10] },
+                    { subject: 'Chemistry', grades: [10, 9, 10, 9] },
+                    { subject: 'Biology', grades: [9, 10, 9] },
+                    { subject: 'English', grades: [7, 8, 7, 8] },
+                    { subject: 'History', grades: [8, 8, 9] },
+                    { subject: 'Geography', grades: [8, 9, 8] },
+                    { subject: 'Romanian', grades: [8, 9, 8, 9] },
+                    { subject: 'French', grades: [7, 8, 7] },
+                    { subject: 'Physical Education', grades: [10, 9, 10] }
                 ]
             },
             { 
-                name: 'Julia Roberts', 
-                email: 'julia.roberts@roosevelt.edu', 
-                classYear: '6B',
+                name: 'Gabriela Nistor', 
+                email: 'gabriela.nistor@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Physics', grades: [5, 4, 5] }
+                    { subject: 'Mathematics', grades: [8, 8, 9, 8, 8] },
+                    { subject: 'Physics', grades: [8, 9, 8, 9] },
+                    { subject: 'Chemistry', grades: [9, 8, 9, 8] },
+                    { subject: 'Biology', grades: [8, 9, 8] },
+                    { subject: 'English', grades: [10, 9, 10, 9] },
+                    { subject: 'History', grades: [9, 10, 9] },
+                    { subject: 'Geography', grades: [9, 9, 10] },
+                    { subject: 'Romanian', grades: [10, 9, 10, 9] },
+                    { subject: 'French', grades: [10, 9, 10] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
                 ],
                 absences: [
-                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
-                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
-                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000) },
-                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) }
+                    { subject: 'Chemistry', type: 'motivated', reason: 'Dental appointment', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) }
                 ]
             },
             { 
-                name: 'Kevin Hart', 
-                email: 'kevin.hart@roosevelt.edu', 
-                classYear: '8A',
+                name: 'Florin Marin', 
+                email: 'florin.marin@highschool.edu', 
+                classYear: '10A',
                 grades: [
-                    { subject: 'Physics', grades: [9, 8, 9] },
-                    { subject: 'Mathematics', grades: [8, 9, 8] }
+                    { subject: 'Mathematics', grades: [5, 6, 5, 6, 5] },
+                    { subject: 'Physics', grades: [6, 5, 6, 5] },
+                    { subject: 'Chemistry', grades: [5, 6, 5, 6] },
+                    { subject: 'Biology', grades: [6, 5, 6] },
+                    { subject: 'English', grades: [7, 7, 8, 7] },
+                    { subject: 'History', grades: [8, 7, 8] },
+                    { subject: 'Geography', grades: [7, 8, 7] },
+                    { subject: 'Romanian', grades: [7, 8, 7, 8] },
+                    { subject: 'French', grades: [6, 7, 6] },
+                    { subject: 'Physical Education', grades: [8, 8, 9] }
                 ],
                 absences: [
-                    { subject: 'Physics', type: 'motivated', reason: 'Medical appointment', date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) }
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Monica Petrescu', 
+                email: 'monica.petrescu@highschool.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [9, 10, 9, 10, 9] },
+                    { subject: 'Physics', grades: [10, 9, 10, 9] },
+                    { subject: 'Chemistry', grades: [9, 10, 9, 10] },
+                    { subject: 'Biology', grades: [10, 9, 10] },
+                    { subject: 'English', grades: [9, 9, 10, 9] },
+                    { subject: 'History', grades: [10, 9, 10] },
+                    { subject: 'Geography', grades: [9, 10, 9] },
+                    { subject: 'Romanian', grades: [10, 9, 10, 9] },
+                    { subject: 'French', grades: [9, 10, 9] },
+                    { subject: 'Physical Education', grades: [9, 9, 10] }
                 ]
             }
         ]
@@ -284,7 +485,7 @@ const schools = [
 ];
 
 async function seedDatabase() {
-    console.log('🌱 Starting FULL database seed (Schools + Teachers + Students + Grades + Absences)...\n');
+    console.log('🌱 Starting FULL database seed (One School + 10 Teachers + Students + Grades + Absences)...\n');
 
     let totalSchools = 0;
     let totalTeachers = 0;
@@ -296,7 +497,7 @@ async function seedDatabase() {
     try {
         for (let i = 0; i < schools.length; i++) {
             const schoolData = schools[i];
-            console.log(`\n📚 School ${i + 1}/${schools.length}: ${schoolData.schoolName}`);
+            console.log(`\n📚 School: ${schoolData.schoolName}`);
             console.log('━'.repeat(60));
             
             // Check if school admin already exists
@@ -327,6 +528,22 @@ async function seedDatabase() {
                 console.log(`✅ Admin created: ${result.admin.name} (${result.admin.email})`);
             }
 
+            // Add all subjects to school
+            console.log(`\n📚 Adding subjects to school...`);
+            const allSubjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'History', 'Geography', 'Romanian', 'French', 'Physical Education'];
+            for (const subject of allSubjects) {
+                try {
+                    await School.addSubject(schoolId, subject);
+                    console.log(`   ✅ Subject added: ${subject}`);
+                } catch (error) {
+                    if (error.message.includes('already exists')) {
+                        console.log(`   ⚠️  Subject ${subject} already exists`);
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+
             // Add Teachers
             console.log(`\n👨‍🏫 Adding ${schoolData.teachers.length} teachers...`);
             const teacherMap = {}; // Store teacher UIDs for class assignment
@@ -353,7 +570,7 @@ async function seedDatabase() {
             }
 
             // Assign Teachers to Classes with specific subjects
-            console.log(`\n📋 Assigning teachers to classes...`);
+            console.log(`\n📋 Assigning all teachers to Class 10A...`);
             for (const teacher of schoolData.teachers) {
                 const teacherUid = teacherMap[teacher.email];
                 if (teacherUid && teacher.classAssignments) {
@@ -369,9 +586,9 @@ async function seedDatabase() {
                 }
             }
 
-            // Assign Classmasters
+            // Assign Classmaster
             if (schoolData.classMasters && schoolData.classMasters.length > 0) {
-                console.log(`\n👔 Assigning classmasters...`);
+                console.log(`\n👔 Assigning classmaster...`);
                 for (const classMaster of schoolData.classMasters) {
                     const teacherUid = teacherMap[classMaster.teacherEmail];
                     if (teacherUid) {
@@ -420,7 +637,7 @@ async function seedDatabase() {
                 if (!studentUid) continue;
 
                 if (student.grades || student.absences) {
-                console.log(`\n📝 Adding grades and absences for ${student.name}...`);
+                    console.log(`\n📝 Adding grades and absences for ${student.name}...`);
                 
                     // Add grades
                     if (student.grades && student.grades.length > 0) {
@@ -493,43 +710,42 @@ async function seedDatabase() {
         console.log(`   Total users: ${totalSchools + totalTeachers + totalStudents}`);
         
         console.log('\n🔑 Login Credentials (all passwords: "password123"):');
-        console.log('\n   ADMINS:');
-        schools.forEach(school => {
-            console.log(`   📧 ${school.email} - ${school.schoolName}`);
-        });
+        console.log('\n   ADMIN:');
+        console.log(`   📧 admin@highschool.edu - Central High School`);
+        console.log(`      Password: password123`);
 
-        console.log('\n   TEACHERS (with subjects and assigned classes):');
-        console.log('   📧 robert.wilson@lincoln.edu - Mathematics, Physics');
-        console.log('      • Class 9A: Mathematics');
-        console.log('      • Class 10A: Mathematics, Physics');
-        console.log('   📧 jennifer.martinez@lincoln.edu - English, History');
-        console.log('      • Class 9B: English');
-        console.log('      • Class 10B: English, History');
-        console.log('   📧 david.lee@washington.edu - Science, Chemistry');
-        console.log('      • Class 11A: Science');
-        console.log('      • Class 12A: Science, Chemistry');
-        console.log('   📧 emma.white@washington.edu - History, Geography');
-        console.log('      • Class 11B: History');
-        console.log('      • Class 12B: History, Geography');
-        console.log('   📧 grace.kim@roosevelt.edu - Geography, History');
-        console.log('      • Class 6A: Geography');
-        console.log('      • Class 7A: Geography, History');
-        console.log('   📧 henry.adams@roosevelt.edu - Physics, Mathematics');
-        console.log('      • Class 6B: Physics');
-        console.log('      • Class 8A: Physics, Mathematics');
+        console.log('\n   TEACHERS (all teaching Class 10A):');
+        console.log('   📧 maria.popescu@highschool.edu - Mathematics (Classmaster)');
+        console.log('   📧 ion.ionescu@highschool.edu - Physics');
+        console.log('   📧 elena.georgescu@highschool.edu - Chemistry');
+        console.log('   📧 alexandru.radu@highschool.edu - Biology');
+        console.log('   📧 ana.dumitrescu@highschool.edu - English');
+        console.log('   📧 mihai.constantinescu@highschool.edu - History');
+        console.log('   📧 andreea.stan@highschool.edu - Geography');
+        console.log('   📧 cristian.nistor@highschool.edu - Romanian');
+        console.log('   📧 laura.marin@highschool.edu - French');
+        console.log('   📧 dragos.petrescu@highschool.edu - Physical Education');
 
-        console.log('\n   STUDENTS (with class years):');
-        console.log('   📧 alice.thompson@lincoln.edu - Lincoln HS (Class 9A)');
-        console.log('   📧 diana.prince@washington.edu - Washington Academy (Class 11A)');
-        console.log('   📧 george.miller@roosevelt.edu - Roosevelt MS (Class 6A)');
+        console.log('\n   STUDENTS (all in Class 10A):');
+        console.log('   📧 alexandru.popescu@highschool.edu');
+        console.log('   📧 maria.ionescu@highschool.edu');
+        console.log('   📧 andrei.georgescu@highschool.edu');
+        console.log('   📧 elena.radu@highschool.edu');
+        console.log('   📧 david.dumitrescu@highschool.edu');
+        console.log('   ... and 15 more students');
+        console.log('   (All students have grades in all 10 subjects)');
         
         console.log('\n🚀 Access URLs:');
-        console.log('   Admin Portal: http://localhost:3000/auth/admin/login');
+        console.log('   Admin Portal: http://localhost:3000/auth/login');
         console.log('   User Login: http://localhost:3000/auth/login');
         
-        console.log('\n💡 Teacher Dashboard:');
-        console.log('   Teachers will see their assigned classes as cards');
-        console.log('   Click on a class card to view students in that class');
+        console.log('\n💡 Setup:');
+        console.log('   • 1 School: Central High School');
+        console.log('   • 10 Teachers: All teaching Class 10A');
+        console.log('   • 1 Classmaster: Maria Popescu (Mathematics teacher)');
+        console.log('   • 20 Students: All in Class 10A');
+        console.log('   • All students have grades across all 10 subjects');
+        console.log('   • Some students have absences (motivated and unmotivated)');
         
         process.exit(0);
     } catch (error) {
@@ -540,4 +756,3 @@ async function seedDatabase() {
 }
 
 seedDatabase();
-

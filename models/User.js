@@ -234,6 +234,48 @@ class User {
             return dateB - dateA;
         });
     }
+
+
+    static async updateGrade(gradeId, {grade ,subject, teacherId,teacherName}){
+
+        const { db } = require('../config/firebase')
+
+        const gradeRef = db.collection('grades').doc(gradeId); 
+        const gradeDoc = await gradeRef.get(); 
+
+        if(!gradeDoc.exists){
+            throw new Error('Grade not found');
+        }
+
+        const gradeData = {
+            grade: parseInt(grade),
+            subject: subject || gradeDoc.data().subject,
+            teacherId: teacherId || gradeDoc.data().teacherId,
+            teacherName: teacherName || gradeDoc.data().teacherName,
+            updatedAt: new Date()
+        }; 
+
+        await gradeRef.update(gradeData);
+        return { id: gradeId, ...gradeDoc.data(), ...gradeData };
+    }
+
+
+    static async deleteGrade(gradeId){
+        const { db } = require('../config/firebase')
+
+
+        const gradeRef = db.collection('grades').doc(gradeId); 
+        const gradeDoc = await gradeRef.get(); 
+
+
+        if(!gradeDoc.exists) {
+            throw new Error('Grade not found');
+        }
+
+
+        await gradeRef.delete(); 
+        return { id: gradeId, deleted: true };
+    }
 }
 
 module.exports = User;
