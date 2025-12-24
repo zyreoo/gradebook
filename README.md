@@ -10,11 +10,23 @@ You know how managing grades can be a pain? This app tries to make it easier. Te
 
 ### For Teachers
 - 👀 View all registered students
+- 📝 Add grades and absences for students
+- ✏️ Edit and delete grades (for subjects you teach)
+- 👔 Classmaster view with detailed student profiles
+- 📊 View class statistics and student performance
+- ✅ Motivate unmotivated absences (classmaster only)
 
 ### For Students
 - 📈 See your grades across all subjects
 - 📅 Track absences (motivated and unmotivated)
-- 📊 View summary stats
+- 📊 View summary stats and overall average
+- 💬 Receive personalized academic feedback
+- 📚 View grades organized by subject with averages
+
+### For Parents
+- 👨‍👩‍👧‍👦 View all your children's academic progress
+- 📊 See grades and absences for each child
+- 📈 Track performance across all subjects
 
 ## 🚀 Getting Started
 
@@ -50,6 +62,25 @@ npm start
 ```
 
 Then open your browser and go to `http://localhost:3000`
+
+### Seeding the Database
+
+To populate the database with sample data (one school, 10 teachers, 20 students):
+
+```bash
+npm run seed:full
+```
+
+This will create:
+- **1 School**: Central High School
+- **10 Teachers**: All teaching Class 10A (Mathematics, Physics, Chemistry, Biology, English, History, Geography, Romanian, French, Physical Education)
+- **1 Classmaster**: Maria Popescu (Mathematics teacher)
+- **20 Students**: All in Class 10A with grades across all subjects
+
+**Default Login Credentials** (all passwords: `password123`):
+- Admin: `admin@highschool.edu`
+- Teachers: `maria.popescu@highschool.edu`, `ion.ionescu@highschool.edu`, etc.
+- Students: `alexandru.popescu@highschool.edu`, `maria.ionescu@highschool.edu`, etc.
 
 ## 🌐 Deploying to Vercel
 
@@ -107,7 +138,9 @@ online-gradebook/
 ├── routes/             # Auth and admin routes
 ├── views/              # EJS templates
 ├── public/             # CSS and static files
+├── utils/              # Utility functions (feedback generator)
 ├── server.js           # Main Express server (runs locally)
+├── seed-full.js        # Full database seed (one school, 10 teachers, 20 students)
 └── vercel.json         # Vercel configuration
 ```
 
@@ -121,8 +154,15 @@ The app uses session-based authentication. Passwords are hashed with bcrypt, so 
 
 #### Creating Your First Admin
 
-After installing dependencies and setting up Firebase, create your first admin user:
+After installing dependencies and setting up Firebase, you can either:
 
+**Option 1: Use the seed file** (recommended for testing)
+```bash
+npm run seed:full
+```
+This creates an admin account: `admin@highschool.edu` (password: `password123`)
+
+**Option 2: Create manually**
 ```bash
 node create-admin.js
 ```
@@ -135,7 +175,7 @@ Follow the prompts to enter:
 #### Admin Features
 
 Once you have an admin account:
-1. Login at `/auth/login`
+1. Login at `/auth/login`                       
 2. You'll be automatically redirected to the admin panel
 3. From there you can:
    - Create new students, teachers, and admins
@@ -144,9 +184,10 @@ Once you have an admin account:
 
 ### User Roles
 
-- **Admin** - Can create and manage all users, has full system access
-- **Teacher** - Can view students, add grades, manage classes
-- **Student** - Can view their own grades and track their progress
+- **Admin (School Admin)** - Can create and manage all users, assign teachers to classes, set classmasters, manage subjects and classes, has full system access
+- **Teacher** - Can view students, add/edit/delete grades, record absences, view assigned classes. Classmasters can view detailed student profiles and motivate absences
+- **Student** - Can view their own grades, absences, statistics, and receive personalized feedback
+- **Parent** - Can view all their children's academic progress, grades, and absences
 
 ## 🎓 Grade System
 
@@ -158,6 +199,13 @@ This uses the Romanian grading system (1-10):
 - **6** - Sufficient (barely passing)
 - **5 and below** - Insufficient (failing)
 
+### Grade Management
+
+- **Add Grades**: Teachers can add grades for subjects they teach
+- **Edit Grades**: Teachers can edit grades they added or for subjects they teach
+- **Delete Grades**: Teachers can delete grades with proper authorization
+- **Grade Authorization**: Teachers can only edit/delete grades for subjects they teach or grades they originally added
+
 ## 🤝 Contributing
 
 If you want to contribute, feel free to fork it and send a PR. I'm open to suggestions and improvements!
@@ -165,6 +213,15 @@ If you want to contribute, feel free to fork it and send a PR. I'm open to sugge
 ## 📝 License
 
 MIT License - do whatever you want with it!
+
+## 🆕 Recent Features
+
+- ✏️ **Edit/Delete Grades**: Teachers can now edit and delete grades with proper authorization
+- 👔 **Classmaster View**: Enhanced student detail pages for classmasters
+- 📊 **Academic Feedback**: Automated feedback generation based on grades and attendance
+- 👨‍👩‍👧‍👦 **Parent Dashboard**: Parents can view all their children's academic progress
+- 🎨 **Modern UI**: Dark theme with clean, responsive design
+- 🔒 **Enhanced Security**: Proper authorization checks for grade editing/deletion
 
 ## 💬 Final Thoughts
 

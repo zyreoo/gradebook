@@ -86,24 +86,35 @@
         <!-- Classes Section -->
         <section id="classes" class="section">
             <h2>Classes</h2>
-            <p class="helper" style="margin-bottom: 16px;">Define your classes like 9A, 9B, 10C, etc. These will be used for student assignments and teacher assignments.</p>
+            <p class="helper" style="margin-bottom: 16px;">All classes in your school. Classes are automatically created when teachers are assigned, or you can add them manually below.</p>
 
-            <% const classes = (school.classes || []); %>
+            <% const allClassesList = typeof allClasses !== 'undefined' ? allClasses : []; %>
+            <% const explicitClasses = (school.classes || []); %>
 
-            <% if (classes.length > 0) { %>
+            <% if (allClassesList.length > 0) { %>
                 <div class="pill-rail">
-                    <% classes.forEach(function(cls) { %>
-                        <div class="pill"> 
+                    <% allClassesList.forEach(function(cls) { 
+                        const isExplicit = explicitClasses.includes(cls);
+                        const teacherCount = (school.classYearTeachers && school.classYearTeachers[cls]) ? school.classYearTeachers[cls].length : 0;
+                    %>
+                        <div class="pill"<% if (!isExplicit) { %> style="border-style: dashed;"<% } %>> 
                             <span><%= cls %></span>
-                            <form action="/admin/remove-class" method="POST" style="display:inline; margin:0;">
-                                <input type="hidden" name="className" value="<%= cls %>">
-                                <button type="submit" aria-label="Remove <%= cls %>" style="background:none; border:none; color:inherit; cursor:pointer; padding:0; margin-left:8px;">×</button>
-                            </form>
+                            <% if (teacherCount > 0) { %>
+                                <span style="font-size: 11px; color: var(--text-dim); margin: 0 4px;">(<%= teacherCount %> teacher<%= teacherCount !== 1 ? 's' : '' %>)</span>
+                            <% } %>
+                            <% if (isExplicit) { %>
+                                <form action="/admin/remove-class" method="POST" style="display:inline; margin:0;">
+                                    <input type="hidden" name="className" value="<%= cls %>">
+                                    <button type="submit" aria-label="Remove <%= cls %>" style="background:none; border:none; color:inherit; cursor:pointer; padding:0; margin-left:8px;">×</button>
+                                </form>
+                            <% } else { %>
+                                <span style="font-size: 11px; color: var(--text-dim); margin-left: 4px;" title="This class was created through teacher assignments">(auto)</span>
+                            <% } %>
                         </div>
                     <% }); %>
                 </div>
             <% } else { %>
-                <div class="muted-box">No classes yet. Add your first one below.</div>
+                <div class="muted-box">No classes yet. Add your first one below or assign a teacher to a class.</div>
             <% } %>
 
             <form action="/admin/add-class" method="POST" style="margin-top: 18px;">
@@ -124,11 +135,11 @@
                     <h2>Teacher Assignments</h2>
             <p class="helper" style="margin-bottom: 16px;">Assign teachers to classes. Each class's available subjects come from its assigned teachers.</p>
 
-            <% const teacherClasses = (school.classes || []); %>
+            <% const teacherClasses = typeof allClasses !== 'undefined' ? allClasses : (school.classes || []); %>
             <% const classYearTeachers = school.classYearTeachers || {}; %>
             
             <% if (teacherClasses.length === 0) { %>
-                <div class="muted-box">No classes defined yet. Please add classes in the Classes section above.</div>
+                <div class="muted-box">No classes defined yet. Please add classes in the Classes section above or assign teachers to create classes automatically.</div>
             <% } else { %>
                 <div class="grid-two">
                     <% teacherClasses.forEach(function(cls) { %>
@@ -147,7 +158,7 @@
                             <% 
                                 const classMasters = school.classMasters || {};
                                 // Try both exact match and uppercase match for class name
-                                const currentClassmasterId = classMasters[cls] || classMasters[cls.toUpperCase()];
+                                const currentClassmasterId = classMasters[cls] || classMasters[cls.toUpperCase()] || classMasters[cls.toLowerCase()];
                                 const currentClassmaster = currentClassmasterId ? teachers.find(t => t.uid === currentClassmasterId) : null;
                             %>
                             <div class="person" style="margin-bottom: 14px;">
@@ -345,12 +356,15 @@
                         <label for="classYear">Class</label>
                         <select id="classYear" name="classYear">
                             <option value="">Select class</option>
-                            <% (school.classes || []).forEach(function(cls) { %>
+                            <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
                                 <option value="<%= cls %>"><%= cls %></option>
                             <% }); %>
                         </select>
-                        <% if (!school.classes || school.classes.length === 0) { %>
-                            <small class="helper" style="color: #dc3545;">No classes defined. Please add classes in the Classes section first.</small>
+                        <% 
+                            const availableClasses = typeof allClasses !== 'undefined' ? allClasses : (school.classes || []);
+                            if (availableClasses.length === 0) { 
+                        %>
+                            <small class="helper" style="color: #dc3545;">No classes defined. Please add classes in the Classes section or assign teachers to create classes automatically.</small>
                         <% } %>
                     </div>
                     <div class="field" id="parentEmailGroup" style="display: none;">
@@ -440,7 +454,7 @@
                             <label for="class-filter">Filter by class:</label>
                             <select id="class-filter" onchange="filterStudents()">
                                 <option value="all">All</option>
-                                <% (school.classes || []).forEach(function(cls) { %>
+                                <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
                                     <option value="<%= cls %>"><%= cls %></option>
                                 <% }); %>
                                 <option value="none">No class</option>

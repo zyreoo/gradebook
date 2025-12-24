@@ -675,6 +675,10 @@ app.get('/student/:studentId', async (req, res) => {
         const { generateStudentFeedback } = require('./utils/feedbackGenerator');
         const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
 
+        // Get teacher's subjects to restrict edit/delete to their own subjects
+        const teacher = await User.findbyId(teacherId);
+        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+
         res.render('student-detail', {
             user: {
                 name: req.session.userName,
@@ -687,6 +691,7 @@ app.get('/student/:studentId', async (req, res) => {
             stats: stats,
             feedback: feedback,
             classYear: student.classYear,
+            teacherSubjects: teacherSubjects, // Pass teacher's subjects to restrict edit/delete
             error: req.query.error || null,
             success: req.query.success || null
         });
@@ -870,10 +875,11 @@ app.post('/edit-grade', async (req, res) => {
         const teacher = await User.findbyId(req.session.userId); 
         const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []); 
 
-        // Check authorization based on ORIGINAL subject (from database), not the new subject from form
-        if(!teacherSubjects.includes(existingGrade.subject) && existingGrade.teacherId !== req.session.userId){
+        // Check authorization: teacher must teach the subject (no exception for original teacher)
+        // This ensures classmasters can only edit grades for their own subject
+        if(!teacherSubjects.includes(existingGrade.subject)){
             const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not authorized to edit this grade'));
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not authorized to edit this grade. You can only edit grades for subjects you teach.'));
         }
 
         // Update the grade
@@ -944,9 +950,11 @@ app.post('/delete-grade', async (req,res) =>{
         const teacher = await User.findbyId(req.session.userId); 
         const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []); 
 
-        if (!teacherSubjects.includes(existingGrade.subject) && existingGrade.teacherId !== req.session.userId) {
+        // Check authorization: teacher must teach the subject (no exception for original teacher)
+        // This ensures classmasters can only delete grades for their own subject
+        if (!teacherSubjects.includes(existingGrade.subject)) {
             const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not authorized to delete this grade'));
+            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not authorized to delete this grade. You can only delete grades for subjects you teach.'));
         }
 
         await User.deleteGrade(gradeId); 

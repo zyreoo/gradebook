@@ -22,6 +22,13 @@ router.get('/dashboard', async (req, res) => {
         const school = await School.findById(schoolId);
         const teachers = await School.getSchoolUsers(schoolId, 'teacher');
         const students = await School.getSchoolUsers(schoolId, 'student');
+        const explicitClasses = school.classes || [];
+        const implicitClasses = school.classYearTeachers ? Object.keys(school.classYearTeachers) : [];
+        
+        const allClassesSet = new Set();
+        explicitClasses.forEach(cls => allClassesSet.add(cls));
+        implicitClasses.forEach(cls => allClassesSet.add(cls));
+        const allClasses = Array.from(allClassesSet).sort();
 
         res.render('admin', {
             user: {
@@ -32,6 +39,7 @@ router.get('/dashboard', async (req, res) => {
             school: school,
             teachers: teachers,
             students: students,
+            allClasses: allClasses, // Pass all classes to the view
             error: req.query.error || null,
             success: req.query.success || null
         });

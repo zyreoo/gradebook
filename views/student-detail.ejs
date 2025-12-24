@@ -149,8 +149,12 @@
                                                     <%= dateStr %>
                                                 </span>
                                                 
-                                                <!-- Edit/Delete buttons (only show if grade has an ID) -->
-                                                <% if (grade.id) { %>
+                                                <!-- Edit/Delete buttons (only show if grade has an ID and teacher teaches this subject) -->
+                                                <% 
+                                                    const classmasterSubjects = typeof teacherSubjects !== 'undefined' ? teacherSubjects : [];
+                                                    const canEditDelete = grade.id && classmasterSubjects.includes(subject.name);
+                                                %>
+                                                <% if (canEditDelete) { %>
                                                     <button 
                                                         class="btn-add-grade" 
                                                         onclick="openEditGradeModal('<%= grade.id %>', '<%= grade.value %>', '<%= subject.name %>', '<%= student.uid %>', '<%= classYear %>')"
