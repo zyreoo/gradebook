@@ -59,6 +59,43 @@
                             <% } %>
                         </div>
 
+                        <!-- Feedback Section -->
+                        <% if (student.feedback) { %>
+                        <div style="margin-bottom: 20px;">
+                            <h3>Academic Feedback for <%= student.name %></h3>
+                            <div class="feedback-container feedback-<%= student.feedback.tone %>">
+                                <div class="feedback-overall">
+                                    <p class="feedback-overall-text"><%= student.feedback.overall %></p>
+                                </div>
+
+                                <% if (student.feedback.recommendations && student.feedback.recommendations.length > 0) { %>
+                                    <div class="feedback-recommendations">
+                                        <h4>Recommendations:</h4>
+                                        <ul>
+                                            <% student.feedback.recommendations.forEach(function(rec) { %>
+                                                <li><%= rec %></li>
+                                            <% }); %>
+                                        </ul>
+                                    </div>
+                                <% } %>
+
+                                <% if (student.feedback.subjects && student.feedback.subjects.length > 0) { %>
+                                    <div class="feedback-subjects">
+                                        <h4>Subject-Specific Feedback:</h4>
+                                        <div class="feedback-subjects-grid">
+                                            <% student.feedback.subjects.forEach(function(subjFeedback) { %>
+                                                <div class="feedback-subject-item status-<%= subjFeedback.status %>">
+                                                    <strong><%= subjFeedback.name %>:</strong>
+                                                    <span><%= subjFeedback.message %></span>
+                                                </div>
+                                            <% }); %>
+                                        </div>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                        <% } %>
+
                         <!-- Grades by Subject -->
                         <div style="margin-bottom: 20px;">
                             <h3>Grades by Subject</h3>

@@ -226,18 +226,25 @@ app.get('/dashboard', async (req, res) => {
                 ? (allGrades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
                 : 0;
             
+            const stats = {
+                totalSubjects: subjects.filter(s => s.hasGrades).length,
+                totalGrades: totalGrades,
+                overallAverage: parseFloat(overallAverage),
+                totalAbsences: allAbsences.length,
+                motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
+                unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
+            };
+
+            // Generate feedback using decision tree
+            const { generateStudentFeedback } = require('./utils/feedbackGenerator');
+            const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
+            
             res.render('dashboard-student', { 
                 user: userData,
                 subjects: subjects,
                 absencesBySubject: absencesBySubject,
-                stats: {
-                    totalSubjects: subjects.filter(s => s.hasGrades).length,
-                    totalGrades: totalGrades,
-                    overallAverage: parseFloat(overallAverage),
-                    totalAbsences: allAbsences.length,
-                    motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
-                    unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
-                }
+                stats: stats,
+                feedback: feedback
             });
         } catch (error) {
             console.error('Error fetching student grades:', error);
@@ -369,18 +376,25 @@ app.get('/dashboard', async (req, res) => {
                 ? (allGrades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
                 : 0;
             
+            const stats = {
+                totalSubjects: subjects.filter(s => s.hasGrades).length,
+                totalGrades: totalGrades,
+                overallAverage: parseFloat(overallAverage),
+                totalAbsences: allAbsences.length,
+                motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
+                unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
+            };
+
+            // Generate feedback using decision tree
+            const { generateStudentFeedback } = require('./utils/feedbackGenerator');
+            const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
+            
             return {
                 ...student,
                 subjects: subjects,
                 absencesBySubject: absencesBySubject,
-                stats: {
-                    totalSubjects: subjects.filter(s => s.hasGrades).length,
-                    totalGrades: totalGrades,
-                    overallAverage: parseFloat(overallAverage),
-                    totalAbsences: allAbsences.length,
-                    motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
-                    unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
-                }
+                stats: stats,
+                feedback: feedback
             };
         }));
         

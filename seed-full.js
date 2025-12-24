@@ -9,6 +9,12 @@ const schools = [
         password: 'password123',
         schoolName: 'Lincoln High School',
         adress: '123 Main Street, Springfield, IL 62701',
+        classMasters: [
+            { class: '9A', teacherEmail: 'robert.wilson@lincoln.edu' },
+            { class: '10A', teacherEmail: 'robert.wilson@lincoln.edu' },
+            { class: '9B', teacherEmail: 'jennifer.martinez@lincoln.edu' },
+            { class: '10B', teacherEmail: 'jennifer.martinez@lincoln.edu' }
+        ],
         teachers: [
             { 
                 name: 'Robert Wilson', 
@@ -30,12 +36,72 @@ const schools = [
             }
         ],
         students: [
-            { name: 'Alice Thompson', email: 'alice.thompson@lincoln.edu', classYear: '9A' },
-            { name: 'Bob Anderson', email: 'bob.anderson@lincoln.edu', classYear: '9A' },
-            { name: 'Charlie Davis', email: 'charlie.davis@lincoln.edu', classYear: '10A' },
-            { name: 'David Smith', email: 'david.smith@lincoln.edu', classYear: '10A' },
-            { name: 'Emma Johnson', email: 'emma.johnson@lincoln.edu', classYear: '9B' },
-            { name: 'Frank Wilson', email: 'frank.wilson@lincoln.edu', classYear: '10B' }
+            { 
+                name: 'Alice Thompson', 
+                email: 'alice.thompson@lincoln.edu', 
+                classYear: '9A',
+                grades: [
+                    { subject: 'Mathematics', grades: [9, 10, 9, 9] }
+                ],
+                absences: [
+                    { subject: 'Mathematics', type: 'motivated', reason: 'Medical appointment', date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Bob Anderson', 
+                email: 'bob.anderson@lincoln.edu', 
+                classYear: '9A',
+                grades: [
+                    { subject: 'Mathematics', grades: [7, 8, 7, 8] }
+                ],
+                absences: [
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Charlie Davis', 
+                email: 'charlie.davis@lincoln.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [8, 9, 8] },
+                    { subject: 'Physics', grades: [9, 10, 9] }
+                ]
+            },
+            { 
+                name: 'David Smith', 
+                email: 'david.smith@lincoln.edu', 
+                classYear: '10A',
+                grades: [
+                    { subject: 'Mathematics', grades: [6, 5, 6] },
+                    { subject: 'Physics', grades: [5, 6, 5] }
+                ],
+                absences: [
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Mathematics', type: 'unmotivated', date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Emma Johnson', 
+                email: 'emma.johnson@lincoln.edu', 
+                classYear: '9B',
+                grades: [
+                    { subject: 'English', grades: [10, 9, 10, 9] }
+                ]
+            },
+            { 
+                name: 'Frank Wilson', 
+                email: 'frank.wilson@lincoln.edu', 
+                classYear: '10B',
+                grades: [
+                    { subject: 'English', grades: [7, 8, 7] },
+                    { subject: 'History', grades: [8, 9, 8] }
+                ],
+                absences: [
+                    { subject: 'English', type: 'motivated', reason: 'Family emergency', date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) }
+                ]
+            }
         ]
     },
     {
@@ -44,6 +110,12 @@ const schools = [
         password: 'password123',
         schoolName: 'Washington Academy',
         adress: '456 Oak Avenue, Portland, OR 97201',
+        classMasters: [
+            { class: '11A', teacherEmail: 'david.lee@washington.edu' },
+            { class: '12A', teacherEmail: 'david.lee@washington.edu' },
+            { class: '11B', teacherEmail: 'emma.white@washington.edu' },
+            { class: '12B', teacherEmail: 'emma.white@washington.edu' }
+        ],
         teachers: [
             { 
                 name: 'David Lee', 
@@ -65,11 +137,59 @@ const schools = [
             }
         ],
         students: [
-            { name: 'Diana Prince', email: 'diana.prince@washington.edu', classYear: '11A' },
-            { name: 'Ethan Hunt', email: 'ethan.hunt@washington.edu', classYear: '11A' },
-            { name: 'Fiona Clark', email: 'fiona.clark@washington.edu', classYear: '12A' },
-            { name: 'George Brown', email: 'george.brown@washington.edu', classYear: '11B' },
-            { name: 'Helen Davis', email: 'helen.davis@washington.edu', classYear: '12B' }
+            { 
+                name: 'Diana Prince', 
+                email: 'diana.prince@washington.edu', 
+                classYear: '11A',
+                grades: [
+                    { subject: 'Science', grades: [9, 10, 9, 10] }
+                ]
+            },
+            { 
+                name: 'Ethan Hunt', 
+                email: 'ethan.hunt@washington.edu', 
+                classYear: '11A',
+                grades: [
+                    { subject: 'Science', grades: [8, 7, 8, 7] }
+                ],
+                absences: [
+                    { subject: 'Science', type: 'unmotivated', date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Fiona Clark', 
+                email: 'fiona.clark@washington.edu', 
+                classYear: '12A',
+                grades: [
+                    { subject: 'Science', grades: [9, 9, 10] },
+                    { subject: 'Chemistry', grades: [10, 9, 10] }
+                ]
+            },
+            { 
+                name: 'George Brown', 
+                email: 'george.brown@washington.edu', 
+                classYear: '11B',
+                grades: [
+                    { subject: 'History', grades: [6, 7, 6] }
+                ],
+                absences: [
+                    { subject: 'History', type: 'unmotivated', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+                    { subject: 'History', type: 'unmotivated', date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) },
+                    { subject: 'History', type: 'unmotivated', date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Helen Davis', 
+                email: 'helen.davis@washington.edu', 
+                classYear: '12B',
+                grades: [
+                    { subject: 'History', grades: [8, 9, 8] },
+                    { subject: 'Geography', grades: [9, 8, 9] }
+                ],
+                absences: [
+                    { subject: 'History', type: 'motivated', reason: 'School trip', date: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000) }
+                ]
+            }
         ]
     },
     {
@@ -78,6 +198,12 @@ const schools = [
         password: 'password123',
         schoolName: 'Roosevelt Middle School',
         adress: '789 Pine Road, Seattle, WA 98101',
+        classMasters: [
+            { class: '6A', teacherEmail: 'grace.kim@roosevelt.edu' },
+            { class: '7A', teacherEmail: 'grace.kim@roosevelt.edu' },
+            { class: '6B', teacherEmail: 'henry.adams@roosevelt.edu' },
+            { class: '8A', teacherEmail: 'henry.adams@roosevelt.edu' }
+        ],
         teachers: [
             { 
                 name: 'Grace Kim', 
@@ -99,21 +225,73 @@ const schools = [
             }
         ],
         students: [
-            { name: 'George Miller', email: 'george.miller@roosevelt.edu', classYear: '6A' },
-            { name: 'Hannah Scott', email: 'hannah.scott@roosevelt.edu', classYear: '6A' },
-            { name: 'Isaac Newton', email: 'isaac.newton@roosevelt.edu', classYear: '7A' },
-            { name: 'Julia Roberts', email: 'julia.roberts@roosevelt.edu', classYear: '6B' },
-            { name: 'Kevin Hart', email: 'kevin.hart@roosevelt.edu', classYear: '8A' }
+            { 
+                name: 'George Miller', 
+                email: 'george.miller@roosevelt.edu', 
+                classYear: '6A',
+                grades: [
+                    { subject: 'Geography', grades: [8, 9, 8] }
+                ]
+            },
+            { 
+                name: 'Hannah Scott', 
+                email: 'hannah.scott@roosevelt.edu', 
+                classYear: '6A',
+                grades: [
+                    { subject: 'Geography', grades: [7, 7, 8] }
+                ],
+                absences: [
+                    { subject: 'Geography', type: 'motivated', reason: 'Dental appointment', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Isaac Newton', 
+                email: 'isaac.newton@roosevelt.edu', 
+                classYear: '7A',
+                grades: [
+                    { subject: 'Geography', grades: [10, 10, 9] },
+                    { subject: 'History', grades: [9, 10, 10] }
+                ]
+            },
+            { 
+                name: 'Julia Roberts', 
+                email: 'julia.roberts@roosevelt.edu', 
+                classYear: '6B',
+                grades: [
+                    { subject: 'Physics', grades: [5, 4, 5] }
+                ],
+                absences: [
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000) },
+                    { subject: 'Physics', type: 'unmotivated', date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000) }
+                ]
+            },
+            { 
+                name: 'Kevin Hart', 
+                email: 'kevin.hart@roosevelt.edu', 
+                classYear: '8A',
+                grades: [
+                    { subject: 'Physics', grades: [9, 8, 9] },
+                    { subject: 'Mathematics', grades: [8, 9, 8] }
+                ],
+                absences: [
+                    { subject: 'Physics', type: 'motivated', reason: 'Medical appointment', date: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) }
+                ]
+            }
         ]
     }
 ];
 
 async function seedDatabase() {
-    console.log('🌱 Starting FULL database seed (Schools + Teachers + Students)...\n');
+    console.log('🌱 Starting FULL database seed (Schools + Teachers + Students + Grades + Absences)...\n');
 
     let totalSchools = 0;
     let totalTeachers = 0;
     let totalStudents = 0;
+    let totalClassMasters = 0;
+    let totalGrades = 0;
+    let totalAbsences = 0;
 
     try {
         for (let i = 0; i < schools.length; i++) {
@@ -191,25 +369,115 @@ async function seedDatabase() {
                 }
             }
 
+            // Assign Classmasters
+            if (schoolData.classMasters && schoolData.classMasters.length > 0) {
+                console.log(`\n👔 Assigning classmasters...`);
+                for (const classMaster of schoolData.classMasters) {
+                    const teacherUid = teacherMap[classMaster.teacherEmail];
+                    if (teacherUid) {
+                        await School.assignClassmaster(schoolId, classMaster.class, teacherUid);
+                        totalClassMasters++;
+                        const teacher = schoolData.teachers.find(t => t.email === classMaster.teacherEmail);
+                        console.log(`   ✅ ${teacher?.name || classMaster.teacherEmail} → Classmaster of ${classMaster.class}`);
+                    } else {
+                        console.log(`   ⚠️  Teacher ${classMaster.teacherEmail} not found, skipping classmaster assignment for ${classMaster.class}`);
+                    }
+                }
+            }
+
             // Add Students
             console.log(`\n👨‍🎓 Adding ${schoolData.students.length} students...`);
+            const studentMap = {}; // Store student UIDs for adding grades/absences
+            
             for (const student of schoolData.students) {
                 const existingStudent = await User.findbyEmail(student.email);
+                let studentUid;
+                
                 if (existingStudent) {
-                    console.log(`   ⚠️  Student ${student.email} already exists, skipping`);
-                    continue;
+                    console.log(`   ⚠️  Student ${student.email} already exists, skipping creation`);
+                    studentUid = existingStudent.uid;
+                } else {
+                    const newStudent = await User.create({
+                        name: student.name,
+                        email: student.email,
+                        password: 'password123',
+                        role: 'student',
+                        schoolId: schoolId,
+                        classYear: student.classYear
+                    });
+                    totalStudents++;
+                    studentUid = newStudent.uid;
+                    console.log(`   ✅ ${student.name} (${student.email}) - Class ${student.classYear}`);
                 }
+                
+                studentMap[student.email] = studentUid;
+            }
 
-                await User.create({
-                    name: student.name,
-                    email: student.email,
-                    password: 'password123',
-                    role: 'student',
-                    schoolId: schoolId,
-                    classYear: student.classYear
-                });
-                totalStudents++;
-                console.log(`   ✅ ${student.name} (${student.email}) - Class ${student.classYear}`);
+            // Add Grades and Absences for students
+            console.log(`\n📝 Adding grades and absences...`);
+            for (const student of schoolData.students) {
+                const studentUid = studentMap[student.email];
+                if (!studentUid) continue;
+
+                if (student.grades || student.absences) {
+                console.log(`\n📝 Adding grades and absences for ${student.name}...`);
+                
+                    // Add grades
+                    if (student.grades && student.grades.length > 0) {
+                        for (const gradeData of student.grades) {
+                            // Find teacher who teaches this subject
+                            const teacherForSubject = schoolData.teachers.find(t => 
+                                t.subjects.includes(gradeData.subject)
+                            );
+                            
+                            if (teacherForSubject) {
+                                const teacherUid = teacherMap[teacherForSubject.email];
+                                if (teacherUid) {
+                                    for (const gradeValue of gradeData.grades) {
+                                        await User.addGrade({
+                                            studentId: studentUid,
+                                            studentName: student.name,
+                                            grade: gradeValue,
+                                            teacherId: teacherUid,
+                                            teacherName: teacherForSubject.name,
+                                            subject: gradeData.subject
+                                        });
+                                        totalGrades++;
+                                    }
+                                    console.log(`   ✅ ${student.name}: Added ${gradeData.grades.length} grades for ${gradeData.subject}`);
+                                }
+                            }
+                        }
+                    }
+
+                    // Add absences
+                    if (student.absences && student.absences.length > 0) {
+                        for (const absenceData of student.absences) {
+                            // Find teacher who teaches this subject
+                            const teacherForSubject = schoolData.teachers.find(t => 
+                                t.subjects.includes(absenceData.subject)
+                            );
+                            
+                            if (teacherForSubject) {
+                                const teacherUid = teacherMap[teacherForSubject.email];
+                                if (teacherUid) {
+                                    await User.addAbsence({
+                                        studentId: studentUid,
+                                        studentName: student.name,
+                                        teacherId: teacherUid,
+                                        teacherName: teacherForSubject.name,
+                                        subject: absenceData.subject,
+                                        date: absenceData.date,
+                                        type: absenceData.type || 'unmotivated',
+                                        reason: absenceData.reason || ''
+                                    });
+                                    totalAbsences++;
+                                }
+                            }
+                        }
+                        console.log(`   ✅ ${student.name}: Added ${student.absences.length} absences`);
+                    }
+                }
             }
         }
 
@@ -218,7 +486,10 @@ async function seedDatabase() {
         console.log('📊 Summary:');
         console.log(`   Schools created: ${totalSchools}`);
         console.log(`   Teachers created: ${totalTeachers}`);
+        console.log(`   Classmasters assigned: ${totalClassMasters}`);
         console.log(`   Students created: ${totalStudents}`);
+        console.log(`   Grades added: ${totalGrades}`);
+        console.log(`   Absences added: ${totalAbsences}`);
         console.log(`   Total users: ${totalSchools + totalTeachers + totalStudents}`);
         
         console.log('\n🔑 Login Credentials (all passwords: "password123"):');

@@ -46,6 +46,43 @@
                 </div>
             </div>
 
+            <!-- Feedback Section -->
+            <% if (typeof feedback !== 'undefined' && feedback) { %>
+            <div class="section">
+                <h2>Your Academic Feedback</h2>
+                <div class="feedback-container feedback-<%= feedback.tone %>">
+                    <div class="feedback-overall">
+                        <h3><%= feedback.overall %></h3>
+                    </div>
+
+                    <% if (feedback.recommendations && feedback.recommendations.length > 0) { %>
+                        <div class="feedback-recommendations">
+                            <h4>Recommendations:</h4>
+                            <ul>
+                                <% feedback.recommendations.forEach(function(rec) { %>
+                                    <li><%= rec %></li>
+                                <% }); %>
+                            </ul>
+                        </div>
+                    <% } %>
+
+                    <% if (feedback.subjects && feedback.subjects.length > 0) { %>
+                        <div class="feedback-subjects">
+                            <h4>Subject-Specific Feedback:</h4>
+                            <div class="feedback-subjects-grid">
+                                <% feedback.subjects.forEach(function(subjFeedback) { %>
+                                    <div class="feedback-subject-item status-<%= subjFeedback.status %>">
+                                        <strong><%= subjFeedback.name %>:</strong>
+                                        <span><%= subjFeedback.message %></span>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+            <% } %>
+
             <!-- Subjects & Grades Section -->
             <div class="section">
                 <h2>My Grades by Subject</h2>
@@ -55,7 +92,18 @@
                         <p>No grades recorded yet. Check back later!</p>
                     </div>
                 <% } else { %>
-                    <div class="grades-grid">
+                    <!-- Search Box -->
+                    <div class="field" style="margin-bottom: 20px; max-width: 400px;">
+                        <label for="subject-search">Search Subjects</label>
+                        <input 
+                            type="text" 
+                            id="subject-search" 
+                            placeholder="Type to search subjects..." 
+                            style="margin: 0;"
+                        >
+                    </div>
+                    
+                    <div class="grades-grid" id="subjects-grid">
                         <% subjects.forEach(function(subject) { 
                             let badgeClass = 'grade-1';
                             if (subject.hasGrades) {
@@ -66,7 +114,7 @@
                                 else if (subject.average >= 5.5) badgeClass = 'grade-6';
                             }
                         %>
-                            <div class="subject-card">
+                            <div class="subject-card" data-subject-name="<%= subject.name.toLowerCase() %>">
                                 <div class="subject-header">
                                     <h3><%= subject.name %></h3>
                                     <% if (subject.hasGrades) { %>
@@ -99,6 +147,11 @@
                                 </div>
                             </div>
                         <% }); %>
+                    </div>
+                    
+                    <!-- No results message -->
+                    <div id="no-results" class="empty-state" style="display: none;">
+                        <p>No subjects found matching your search.</p>
                     </div>
                 <% } %>
             </div>
@@ -201,5 +254,40 @@
             </form>
         </div>
     </div>
+    <script>
+        // Subject search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('subject-search');
+            const subjectsGrid = document.getElementById('subjects-grid');
+            const noResults = document.getElementById('no-results');
+            
+            if (searchInput && subjectsGrid) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    const subjectCards = subjectsGrid.querySelectorAll('.subject-card');
+                    let visibleCount = 0;
+                    
+                    subjectCards.forEach(function(card) {
+                        const subjectName = card.getAttribute('data-subject-name');
+                        if (subjectName.includes(searchTerm)) {
+                            card.style.display = '';
+                            visibleCount++;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                    
+                    // Show/hide no results message
+                    if (visibleCount === 0 && searchTerm !== '') {
+                        noResults.style.display = 'block';
+                        subjectsGrid.style.display = 'none';
+                    } else {
+                        noResults.style.display = 'none';
+                        subjectsGrid.style.display = 'grid';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
