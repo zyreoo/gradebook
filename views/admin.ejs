@@ -47,8 +47,8 @@
         <div class="section-nav-admin">
             <a href="#subjects">Subjects</a>
             <a href="#classes">Classes</a>
-            <a href="#teacher-assignments">Teacher Assignments</a>
             <a href="#add-user">Add User</a>
+            <a href="#teacher-assignments">Teacher Assignments</a>
             <a href="#people">People</a>
         </div>
 
@@ -109,6 +109,10 @@
                                 </form>
                             <% } else { %>
                                 <span style="font-size: 11px; color: var(--text-dim); margin-left: 4px;" title="This class was created through teacher assignments">(auto)</span>
+                                <form action="/admin/remove-class" method="POST" style="display:inline; margin:0;">
+                                    <input type="hidden" name="className" value="<%= cls %>">
+                                    <button type="submit" aria-label="Remove <%= cls %>" style="background:none; border:none; color:inherit; cursor:pointer; padding:0; margin-left:8px;">×</button>
+                                </form>
                             <% } %>
                         </div>
                     <% }); %>
@@ -126,6 +130,80 @@
                     <div class="field" style="align-self: flex-end;">
                         <button class="btn-primary" type="submit">Add Class</button>
                     </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Create User Section -->
+        <section id="add-user" class="section">
+            <h2>Create a User</h2>
+            <p class="helper" style="margin-bottom: 16px;">Add teachers or students and set the right fields in one pass.</p>
+            
+            <form action="/admin/create-user" method="POST">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="name">Full name</label>
+                        <input id="name" name="name" type="text" placeholder="Jane Smith" autocomplete="name" required>
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input id="email" name="email" type="email" placeholder="jane.smith@school.edu" autocomplete="email" required>
+                    </div>
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" type="password" minlength="6" placeholder="Minimum 6 characters" autocomplete="new-password" required>
+                    </div>
+                    <div class="field">
+                        <label for="confirmPassword">Confirm password</label>
+                        <input id="confirmPassword" name="confirmPassword" type="password" minlength="6" placeholder="Re-enter password" autocomplete="new-password" required>
+                    </div>
+                    <div class="field">
+                        <label for="role">Role</label>
+                        <select id="role" name="role" required>
+                            <option value="">Select role</option>
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher</option>
+                        </select>
+                    </div>
+                    <div class="field" id="classYearGroup" style="display: none;">
+                        <label for="classYear">Class</label>
+                        <select id="classYear" name="classYear">
+                            <option value="">Select class</option>
+                            <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
+                                <option value="<%= cls %>"><%= cls %></option>
+                            <% }); %>
+                        </select>
+                        <% 
+                            const availableClasses = typeof allClasses !== 'undefined' ? allClasses : (school.classes || []);
+                            if (availableClasses.length === 0) { 
+                        %>
+                            <small class="helper" style="color: #dc3545;">No classes defined. Please add classes in the Classes section or assign teachers to create classes automatically.</small>
+                        <% } %>
+                    </div>
+                    <div class="field" id="parentEmailGroup" style="display: none;">
+                        <label for="parentEmail">Parent Email (Optional)</label>
+                        <input id="parentEmail" name="parentEmail" type="email" placeholder="parent@example.com" autocomplete="email">
+                        <small class="helper">Parent account will be created automatically</small>
+                    </div>
+                    <div class="field" id="parentPasswordGroup" style="display: none;">
+                        <label for="parentPassword">Parent Password (Optional)</label>
+                        <input id="parentPassword" name="parentPassword" type="password" minlength="6" placeholder="Minimum 6 characters" autocomplete="new-password">
+                        <small class="helper">Required if parent email is provided</small>
+                    </div>
+                    <div class="field" id="subjectGroup" style="display: none;">
+                        <label for="subject">Subjects</label>
+                        <select id="subject" name="subjects" multiple style="min-height: 120px;">
+                            <% if (school.subjects && school.subjects.length > 0) { %>
+                                <% school.subjects.forEach(function(subject) { %>
+                                    <option value="<%= subject %>"><%= subject %></option>
+                                <% }); %>
+                            <% } %>
+                        </select>
+                        <small class="helper">Hold Ctrl/Cmd to select multiple subjects</small>
+                    </div>
+                </div>
+                <div style="margin-top: 14px;">
+                    <button class="btn-primary" type="submit">Create User</button>
                 </div>
             </form>
         </section>
@@ -321,80 +399,6 @@
             <% } %>
         </section>
 
-        <!-- Create User Section -->
-        <section id="add-user" class="section">
-            <h2>Create a User</h2>
-            <p class="helper" style="margin-bottom: 16px;">Add teachers or students and set the right fields in one pass.</p>
-            
-            <form action="/admin/create-user" method="POST">
-                <div class="form-grid">
-                    <div class="field">
-                        <label for="name">Full name</label>
-                        <input id="name" name="name" type="text" placeholder="Jane Smith" autocomplete="name" required>
-                    </div>
-                    <div class="field">
-                        <label for="email">Email</label>
-                        <input id="email" name="email" type="email" placeholder="jane.smith@school.edu" autocomplete="email" required>
-                    </div>
-                    <div class="field">
-                        <label for="password">Password</label>
-                        <input id="password" name="password" type="password" minlength="6" placeholder="Minimum 6 characters" autocomplete="new-password" required>
-                    </div>
-                    <div class="field">
-                        <label for="confirmPassword">Confirm password</label>
-                        <input id="confirmPassword" name="confirmPassword" type="password" minlength="6" placeholder="Re-enter password" autocomplete="new-password" required>
-                    </div>
-                    <div class="field">
-                        <label for="role">Role</label>
-                        <select id="role" name="role" required>
-                            <option value="">Select role</option>
-                            <option value="student">Student</option>
-                            <option value="teacher">Teacher</option>
-                        </select>
-                    </div>
-                    <div class="field" id="classYearGroup" style="display: none;">
-                        <label for="classYear">Class</label>
-                        <select id="classYear" name="classYear">
-                            <option value="">Select class</option>
-                            <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
-                                <option value="<%= cls %>"><%= cls %></option>
-                            <% }); %>
-                        </select>
-                        <% 
-                            const availableClasses = typeof allClasses !== 'undefined' ? allClasses : (school.classes || []);
-                            if (availableClasses.length === 0) { 
-                        %>
-                            <small class="helper" style="color: #dc3545;">No classes defined. Please add classes in the Classes section or assign teachers to create classes automatically.</small>
-                        <% } %>
-                    </div>
-                    <div class="field" id="parentEmailGroup" style="display: none;">
-                        <label for="parentEmail">Parent Email (Optional)</label>
-                        <input id="parentEmail" name="parentEmail" type="email" placeholder="parent@example.com" autocomplete="email">
-                        <small class="helper">Parent account will be created automatically</small>
-                    </div>
-                    <div class="field" id="parentPasswordGroup" style="display: none;">
-                        <label for="parentPassword">Parent Password (Optional)</label>
-                        <input id="parentPassword" name="parentPassword" type="password" minlength="6" placeholder="Minimum 6 characters" autocomplete="new-password">
-                        <small class="helper">Required if parent email is provided</small>
-                    </div>
-                    <div class="field" id="subjectGroup" style="display: none;">
-                        <label for="subject">Subjects</label>
-                        <select id="subject" name="subjects" multiple style="min-height: 120px;">
-                            <% if (school.subjects && school.subjects.length > 0) { %>
-                                <% school.subjects.forEach(function(subject) { %>
-                                    <option value="<%= subject %>"><%= subject %></option>
-                                <% }); %>
-                            <% } %>
-                        </select>
-                        <small class="helper">Hold Ctrl/Cmd to select multiple subjects</small>
-                    </div>
-                </div>
-                <div style="margin-top: 14px;">
-                    <button class="btn-primary" type="submit">Create User</button>
-                </div>
-            </form>
-        </section>
-
         <!-- People Section -->
         <section id="people" class="section">
                     <h2>People</h2>
@@ -408,6 +412,10 @@
                         <span class="badge" id="teacher-count"><%= teachers.length %></span>
                     </div>
                     <% if (teachers.length > 0) { %>
+                        <div class="filter">
+                            <label for="teacher-search">Search by name:</label>
+                            <input type="text" id="teacher-search" placeholder="Search teachers..." oninput="filterTeachers()" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 14px;">
+                        </div>
                         <div class="filter">
                             <label for="subject-filter">Filter by subject:</label>
                             <select id="subject-filter" onchange="filterTeachers()">
@@ -426,7 +434,7 @@
                                     const teacherSubjects = t.subjects || (t.subject ? [t.subject] : []);
                                     const subjectStr = teacherSubjects.length > 0 ? teacherSubjects.join(',') : 'none';
                                 %>
-                                <div class="person teacher-item" data-subjects="<%= subjectStr %>">
+                                <div class="person teacher-item" data-subjects="<%= subjectStr %>" data-name="<%= t.name.toLowerCase() %>" data-email="<%= t.email.toLowerCase() %>">
                                     <div>
                                         <strong><%= t.name %></strong>
                                         <small><%= t.email %></small>
@@ -451,6 +459,10 @@
                     </div>
                     <% if (students.length > 0) { %>
                         <div class="filter">
+                            <label for="student-search">Search by name:</label>
+                            <input type="text" id="student-search" placeholder="Search students..." oninput="filterStudents()" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 14px;">
+                        </div>
+                        <div class="filter">
                             <label for="class-filter">Filter by class:</label>
                             <select id="class-filter" onchange="filterStudents()">
                                 <option value="all">All</option>
@@ -462,7 +474,7 @@
                         </div>
                         <div class="people-list" id="students-grid">
                             <% students.forEach(function(s) { %>
-                                <div class="person student-item" data-classyear="<%= s.classYear || 'none' %>">
+                                <div class="person student-item" data-classyear="<%= s.classYear || 'none' %>" data-name="<%= s.name.toLowerCase() %>" data-email="<%= s.email.toLowerCase() %>">
                                     <div>
                                         <strong><%= s.name %></strong>
                                         <small><%= s.email %></small>
@@ -507,14 +519,69 @@
         let subjectToDelete = null;
         const schoolSubjects = JSON.parse(document.getElementById('school-subjects-data').textContent);
 
+        // Generic AJAX form handler
+        async function handleFormSubmit(event, form) {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Handle multiple values (like subjects checkboxes)
+            const multiSelects = form.querySelectorAll('select[multiple]');
+            multiSelects.forEach(select => {
+                const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+                data[select.name] = selected;
+            });
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton?.textContent;
+            const originalDisabled = submitButton?.disabled;
+            
+            if (submitButton) {
+                submitButton.disabled = true;
+                if (originalText) submitButton.textContent = 'Processing...';
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Reload page after a short delay to show updated data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    console.error('Form submission error:', result.error || 'Operation failed');
+                    if (submitButton) {
+                        submitButton.disabled = originalDisabled;
+                        if (originalText) submitButton.textContent = originalText;
+                    }
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                if (submitButton) {
+                    submitButton.disabled = originalDisabled;
+                    if (originalText) submitButton.textContent = originalText;
+                }
+            }
+        }
+
         function validateSubjectForm() {
             const subjectName = document.getElementById('subjectName').value.trim();
             if (!subjectName) {
-                alert('Please enter a subject name');
+                console.warn('Subject name is required');
                 return false;
             }
             if (schoolSubjects.some(s => s.toLowerCase() === subjectName.toLowerCase())) {
-                alert('This subject already exists');
+                console.warn('This subject already exists');
                 return false;
             }
             return true;
@@ -538,7 +605,6 @@
                 document.getElementById('deleteModal').classList.add('active');
             } catch (err) {
                 console.error('Error checking subject usage:', err);
-                alert('Error checking subject usage. Please try again.');
             }
         }
 
@@ -547,18 +613,41 @@
             subjectToDelete = null;
         }
 
-        function deleteSubject() {
+        async function deleteSubject() {
             if (!subjectToDelete) return;
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/admin/remove-subject';
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'subjectName';
-            input.value = subjectToDelete;
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
+            
+            const deleteBtn = document.querySelector('#deleteModal .danger-btn');
+            const originalText = deleteBtn.textContent;
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Deleting...';
+
+            try {
+                const response = await fetch('/admin/remove-subject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ subjectName: subjectToDelete })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeModal();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    console.error('Delete subject error:', result.error || 'Failed to delete subject');
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Delete subject error:', error);
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = originalText;
+            }
         }
 
         window.addEventListener('click', (e) => {
@@ -609,6 +698,7 @@
 
         function filterTeachers() {
             const selected = document.getElementById('subject-filter').value;
+            const searchTerm = (document.getElementById('teacher-search').value || '').toLowerCase().trim();
             const items = document.querySelectorAll('.teacher-item');
             const msg = document.getElementById('no-teachers-filtered');
             const count = document.getElementById('teacher-count');
@@ -616,7 +706,16 @@
             items.forEach(item => {
                 const subjects = item.getAttribute('data-subjects');
                 const subjectArray = subjects.split(',');
-                if (selected === 'all' || subjectArray.includes(selected)) {
+                const name = item.getAttribute('data-name') || '';
+                const email = item.getAttribute('data-email') || '';
+                
+                // Check subject filter
+                const subjectMatch = selected === 'all' || subjectArray.includes(selected);
+                
+                // Check name/email search
+                const searchMatch = searchTerm === '' || name.includes(searchTerm) || email.includes(searchTerm);
+                
+                if (subjectMatch && searchMatch) {
                     item.style.display = 'flex';
                     visible++;
                 } else {
@@ -629,13 +728,23 @@
 
         function filterStudents() {
             const selected = document.getElementById('class-filter').value;
+            const searchTerm = (document.getElementById('student-search').value || '').toLowerCase().trim();
             const items = document.querySelectorAll('.student-item');
             const msg = document.getElementById('no-students-filtered');
             const count = document.getElementById('student-count');
             let visible = 0;
             items.forEach(item => {
                 const year = item.getAttribute('data-classyear');
-                if (selected === 'all' || year === selected) {
+                const name = item.getAttribute('data-name') || '';
+                const email = item.getAttribute('data-email') || '';
+                
+                // Check class filter
+                const classMatch = selected === 'all' || year === selected;
+                
+                // Check name/email search
+                const searchMatch = searchTerm === '' || name.includes(searchTerm) || email.includes(searchTerm);
+                
+                if (classMatch && searchMatch) {
                     item.style.display = 'flex';
                     visible++;
                 } else {
@@ -673,7 +782,6 @@
             );
             
             if (checkboxes.length === 0) {
-                showToast('⚠️ Please select at least one teacher', 'warning');
                 return;
             }
             
@@ -725,12 +833,11 @@
             assignBtn.textContent = originalText;
             
             if (successCount > 0) {
-                showToast(`✅ ${successCount} teacher(s) assigned successfully!`, 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 800);
             } else if (errorCount > 0) {
-                showToast(`❌ Failed to assign ${errorCount} teacher(s)`, 'error');
+                console.error(`Failed to assign ${errorCount} teacher(s)`);
             }
         }
 
@@ -773,6 +880,58 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Attach AJAX handlers to all forms
+            const addSubjectForm = document.querySelector('form[action="/admin/add-subject"]');
+            if (addSubjectForm) {
+                addSubjectForm.addEventListener('submit', (e) => {
+                    if (!validateSubjectForm()) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    handleFormSubmit(e, addSubjectForm);
+                });
+            }
+
+            // Add class form
+            const addClassForm = document.querySelector('form[action="/admin/add-class"]');
+            if (addClassForm) {
+                addClassForm.addEventListener('submit', (e) => handleFormSubmit(e, addClassForm));
+            }
+
+            // Remove class forms (multiple)
+            document.querySelectorAll('form[action="/admin/remove-class"]').forEach(form => {
+                form.addEventListener('submit', (e) => handleFormSubmit(e, form));
+            });
+
+            // Assign classmaster forms
+            document.querySelectorAll('form[action="/admin/assign-classmaster"]').forEach(form => {
+                form.addEventListener('submit', (e) => handleFormSubmit(e, form));
+            });
+
+            // Remove classmaster forms
+            document.querySelectorAll('form[action="/admin/remove-classmaster"]').forEach(form => {
+                form.addEventListener('submit', (e) => handleFormSubmit(e, form));
+            });
+
+            // Remove teacher assignment forms
+            document.querySelectorAll('form[action="/admin/remove-teacher-assignment"]').forEach(form => {
+                form.addEventListener('submit', (e) => handleFormSubmit(e, form));
+            });
+
+            // Create user form
+            const createUserForm = document.querySelector('form[action="/admin/create-user"]');
+            if (createUserForm) {
+                createUserForm.addEventListener('submit', (e) => {
+                    handleFormSubmit(e, createUserForm).then(() => {
+                        // Reset form on success
+                        if (createUserForm) {
+                            createUserForm.reset();
+                            toggleRoleFields();
+                        }
+                    });
+                });
+            }
+
             const roleSelect = document.getElementById('role');
             if (roleSelect) {
                 roleSelect.addEventListener('change', toggleRoleFields);

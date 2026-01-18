@@ -354,6 +354,9 @@ class School {
         const data = doc.data();
         const classes = data.classes || []; 
 
+        // Check if class already exists in explicit classes
+        // If it only exists as implicit (auto-created through teacher assignments),
+        // we'll add it to explicit classes to convert it to explicit
         if(classes.some(c => c.toLowerCase() === capitalized.toLowerCase())){
             throw new Error('Class already exists');
         }
@@ -373,10 +376,48 @@ class School {
         if (!doc.exists) throw new Error('School not found');
 
         const data = doc.data(); 
-        const classes = data.classes || []; 
-        const updated = classes.filter(c => c !== className); 
+        const classes = data.classes || [];
+        const classYearTeachers = data.classYearTeachers || {};
+        const teacherAssignments = data.teacherAssignments || {};
+        const classMasters = data.classMasters || {};
+        
+        // Normalize class name for comparison (uppercase)
+        const normalizedClassName = (className || '').trim().toUpperCase();
+        
+        // Find the actual class name key (might be different case)
+        const actualClassName = Object.keys(classYearTeachers).find(
+            key => key.toUpperCase() === normalizedClassName
+        ) || normalizedClassName;
+        
+        // Remove from explicit classes array
+        const updated = classes.filter(c => c !== className && c !== actualClassName);
+        
+        // Prepare update object
+        const updateData = { classes: updated };
+        
+        // Remove from classYearTeachers if it exists
+        if (classYearTeachers[actualClassName]) {
+            delete classYearTeachers[actualClassName];
+            updateData.classYearTeachers = classYearTeachers;
+        }
+        
+        // Remove from teacherAssignments if it exists
+        if (teacherAssignments[actualClassName]) {
+            delete teacherAssignments[actualClassName];
+            updateData.teacherAssignments = teacherAssignments;
+        }
+        
+        // Remove from classMasters if it exists (check both exact and uppercase)
+        const classMasterKeys = Object.keys(classMasters);
+        const classMasterKey = classMasterKeys.find(
+            key => key.toUpperCase() === normalizedClassName
+        );
+        if (classMasterKey) {
+            delete classMasters[classMasterKey];
+            updateData.classMasters = classMasters;
+        }
 
-        await schoolRef.update({classes: updated}); 
+        await schoolRef.update(updateData); 
         return updated; 
     }
 
