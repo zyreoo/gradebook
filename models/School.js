@@ -6,6 +6,11 @@ class School {
     static async create ({name, email, password, schoolName, adress}){
         const hashedpassword = await bcrypt.hash(password, 10); 
 
+        // Capitalize each word of the school name
+        const formattedSchoolName = schoolName
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
 
         const userRecord = await auth.createUser({
             email,
@@ -31,7 +36,7 @@ class School {
         ];
 
         const schoolData = {
-            name: schoolName, 
+            name: formattedSchoolName, 
             adminName: name, 
             adminEmail: email, 
             adress: adress || '', 
@@ -417,7 +422,30 @@ class School {
             updateData.classMasters = classMasters;
         }
 
-        await schoolRef.update(updateData); 
+        await schoolRef.update(updateData);
+        
+        // Update all students who have this classYear - set it to null
+        const User = require('./User');
+        const allStudents = await User.getUserByRoleAndSchool('student', schoolId);
+        const studentsToUpdate = allStudents.filter(student => {
+            const studentClassYear = (student.classYear || '').trim().toUpperCase();
+            return studentClassYear === normalizedClassName || 
+                   studentClassYear === actualClassName.toUpperCase() ||
+                   studentClassYear === className.toUpperCase();
+        });
+        
+        if (studentsToUpdate.length > 0) {
+            const userBatch = db.batch();
+            studentsToUpdate.forEach(student => {
+                const studentRef = db.collection('users').doc(student.uid);
+                userBatch.update(studentRef, {
+                    classYear: null,
+                    updatedAt: new Date()
+                });
+            });
+            await userBatch.commit();
+        }
+        
         return updated; 
     }
 

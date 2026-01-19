@@ -26,7 +26,7 @@
             <% } else { %>
                 <div class="action-grid">
                     <% assignedClasses.forEach(function(classYear) { %>
-                        <a href="/class/<%= classYear %>" class="action-card">
+                        <a href="/class/<%= classYear %>?view=teacher" class="action-card">
                             <div class="action-icon"><%= classYear.charAt(0).toUpperCase() %></div>
                             <h3>Class <%= classYear %></h3>
                             <p>View students and manage grades</p>
@@ -42,7 +42,7 @@
                 <p class="helper">As classmaster, you can view all student grades and motivate absences.</p>
                 <div class="action-grid">
                     <% classmasterClasses.forEach(function(className) { %>
-                        <a href="/class/<%= className %>" class="action-card classmaster-card">
+                        <a href="/class/<%= className %>?view=classmaster" class="action-card classmaster-card">
                             <div class="action-icon">CM</div>
                             <h3>Class <%= className %></h3>
                             <p>Classmaster View - All grades & absences</p>

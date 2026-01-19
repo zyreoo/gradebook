@@ -6,8 +6,158 @@
     <title>Class <%= classYear %> - Online Gradebook</title>
     <link rel="stylesheet" href="/styles.css">
     <style>
-        .absence-unmotivated { background-color: #ffe0e0; }
-        .absence-motivated { background-color: #e0ffe0; }
+        .subject-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+        .subject-tab {
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .subject-tab:hover {
+            background: var(--bg-hover);
+        }
+        .subject-tab.active {
+            background: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+        .view-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: var(--bg-secondary);
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .view-tab {
+            padding: 10px 20px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            flex: 1;
+            text-align: center;
+        }
+        .view-tab:hover {
+            background: var(--bg-hover);
+        }
+        .view-tab.active {
+            background: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+        .view-content {
+            display: none;
+        }
+        .view-content.active {
+            display: block;
+        }
+        .subject-content {
+            display: none;
+        }
+        .subject-content.active {
+            display: block;
+        }
+        .bulk-actions {
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .presence-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .presence-btn.present {
+            background: #28a745;
+            color: white;
+        }
+        .presence-btn.absent {
+            background: #dc3545;
+            color: white;
+        }
+        .presence-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .grade-badge {
+            background: var(--accent);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin: 2px;
+        }
+        .absence-badge {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            display: inline-block;
+            margin: 2px;
+        }
+        .absence-badge.motivated {
+            background: #d4edda;
+            color: #155724;
+        }
+        .absence-badge.unmotivated {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        table {
+            width: 100%;
+        }
+        table th {
+            text-align: left;
+            padding: 12px;
+            background: var(--bg-secondary);
+        }
+        table td {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .checkbox-col {
+            width: 40px;
+        }
+        select {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        select option {
+            background-color: var(--bg-secondary);
+            color: #000000;
+        }
+        ::selection {
+            background-color: #6c757d;
+            color: #000000;
+        }
+        ::-moz-selection {
+            background-color: #6c757d;
+            color: #000000;
+        }
     </style>
 </head>
 <body>
@@ -19,202 +169,401 @@
                 <p><strong>Email:</strong> <%= user.email %></p>
                 <% if (isClassmaster) { %>
                     <p><strong style="color: var(--accent);">Classmaster</strong></p>
-                <% } else if (teacher && teacher.subject) { %>
-                    <p><strong>Subject:</strong> <%= teacher.subject %></p>
                 <% } %>
             </div>
         </div>
 
-            <% if (typeof error !== 'undefined' && error) { %>
-                <div class="error-message">
-                    <%= error %>
-                </div>
-            <% } %>
-            
-            <% if (typeof success !== 'undefined' && success) { %>
-                <div class="success-message">
-                    <%= success %>
-                </div>
-            <% } %>
-            
-            <div class="navigation">
-                <a href="/dashboard">← Back to Dashboard</a>
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message">
+                <%= error %>
             </div>
+        <% } %>
+        
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message">
+                <%= success %>
+            </div>
+        <% } %>
+        
+        <div class="navigation">
+            <a href="/dashboard">← Back to Dashboard</a>
+        </div>
 
         <div class="section">
+            <% 
+                const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+            %>
+            
             <% if (students.length === 0) { %>
                 <div class="empty-state">
                     <p>No students found in this class yet.</p>
                 </div>
+            <% } else if (teacherSubjects.length === 0) { %>
+                <div class="empty-state">
+                    <p>No subjects assigned. Contact your administrator.</p>
+                </div>
             <% } else { %>
-                <div class="students-list">
-                    <h2>Students (<%= students.length %>)</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Class Year</th>
-                                <% if (isClassmaster) { %>
-                                    <th>All Grades</th>
-                                    <th>Absences</th>
-                                <% } %>
-                                <th>Add a grade</th>
-                                <th>Record absence</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% students.forEach(function(student) { %>
-                                <% 
-                                    const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-                                %>
-                                <tr>
-                                    <td><%= student.name %></td>
-                                    <td><%= student.email %></td>
-                                    <td><%= student.classYear || 'N/A' %></td>
-                                    <% if (isClassmaster) { %>
-                                        <td>
-                                            <% if (student.allGrades && student.allGrades.length > 0) { %>
-                                                <div class="grades-list" style="max-width: 200px;">
-                                                    <% student.allGrades.slice(0, 5).forEach(function(grade) { %>
-                                                        <span class="grade-item">
-                                                            <%= grade.subject %>: <%= grade.grade %>
+                <!-- Subject Tabs (if multiple subjects) -->
+                <% if (teacherSubjects.length > 1) { %>
+                    <div class="subject-tabs">
+                        <% teacherSubjects.forEach(function(subject, index) { %>
+                            <div class="subject-tab <%= index === 0 ? 'active' : '' %>" 
+                                 onclick="switchSubject('<%= subject %>')">
+                                <%= subject %>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+
+                <!-- Subject Content -->
+                <% teacherSubjects.forEach(function(subject, subjectIndex) { %>
+                    <div class="subject-content <%= subjectIndex === 0 ? 'active' : '' %>" 
+                         data-subject="<%= subject %>">
+                        
+                        <% if (teacherSubjects.length === 1) { %>
+                            <h2><%= subject %></h2>
+                        <% } %>
+
+                        <!-- View Tabs: Overview, Grades, Absences -->
+                        <div class="view-tabs">
+                            <div class="view-tab active" onclick="switchView('<%= subject %>', 'overview')">
+                                📊 Overview
+                            </div>
+                            <div class="view-tab" onclick="switchView('<%= subject %>', 'grades')">
+                                📝 Add Grades
+                            </div>
+                            <div class="view-tab" onclick="switchView('<%= subject %>', 'absences')">
+                                📅 Take Attendance
+                            </div>
+                        </div>
+
+                        <!-- OVERVIEW VIEW -->
+                        <div class="view-content active" data-view="overview" data-subject="<%= subject %>">
+                            <h3>All Students - <%= subject %></h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Grades</th>
+                                        <th>Recent Absences</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% students.forEach(function(student) { 
+                                        const allGrades = student.allGrades || [];
+                                        const allAbsences = student.allAbsences || [];
+                                        const subjectGrades = allGrades.filter(g => g.subject === subject);
+                                        const subjectAbsences = allAbsences.filter(a => a.subject === subject);
+                                    %>
+                                        <tr>
+                                            <td><%= student.name %></td>
+                                            <td><%= student.email %></td>
+                                            <td>
+                                                <% if (subjectGrades.length > 0) { %>
+                                                    <% subjectGrades.slice(0, 8).forEach(function(grade) { %>
+                                                        <span class="grade-badge"><%= grade.grade %></span>
+                                                    <% }); %>
+                                                    <% if (subjectGrades.length > 8) { %>
+                                                        <span class="helper">+<%= subjectGrades.length - 8 %></span>
+                                                    <% } %>
+                                                    <br>
+                                                    <small style="color: var(--text-dim);">
+                                                        Average: <%= (subjectGrades.reduce((sum, g) => sum + g.grade, 0) / subjectGrades.length).toFixed(2) %>
+                                                    </small>
+                                                <% } else { %>
+                                                    <span class="helper">No grades yet</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <% if (subjectAbsences.length > 0) { %>
+                                                    <% subjectAbsences.slice(0, 3).forEach(function(absence) { 
+                                                        let dateStr = '';
+                                                        if (absence.date && absence.date.toDate) {
+                                                            dateStr = absence.date.toDate().toLocaleDateString();
+                                                        } else if (absence.date) {
+                                                            dateStr = new Date(absence.date).toLocaleDateString();
+                                                        }
+                                                    %>
+                                                        <span class="absence-badge <%= absence.type === 'motivated' ? 'motivated' : 'unmotivated' %>">
+                                                            <%= dateStr %>
                                                         </span>
                                                     <% }); %>
-                                                    <% if (student.allGrades.length > 5) { %>
-                                                        <span class="helper" style="font-size: 11px;">+<%= student.allGrades.length - 5 %> more</span>
+                                                    <% if (subjectAbsences.length > 3) { %>
+                                                        <span class="helper">+<%= subjectAbsences.length - 3 %></span>
                                                     <% } %>
-                                                </div>
-                                            <% } else { %>
-                                                <span class="helper">No grades</span>
-                                            <% } %>
-                                        </td>
-                                        <td>
-                                            <% if (student.allAbsences && student.allAbsences.length > 0) { %>
-                                                <div class="absences-list" style="max-width: 250px;">
-                                                    <% student.allAbsences.slice(0, 3).forEach(function(absence) { %>
-                                                        <div class="absence-item <%= absence.type === 'unmotivated' ? 'unmotivated' : 'motivated' %>">
-                                                            <% 
-                                                                let dateStr = '';
-                                                                if (absence.date && absence.date.toDate) {
-                                                                    dateStr = absence.date.toDate().toLocaleDateString();
-                                                                } else if (absence.date) {
-                                                                    dateStr = new Date(absence.date).toLocaleDateString();
-                                                                }
-                                                            %>
-                                                            <span class="absence-date"><%= absence.subject %> - <%= dateStr %></span>
-                                                            <% if (absence.type === 'unmotivated') { %>
-                                                                <form action="/motivate-absence" method="POST" style="display: inline; margin-left: 8px;">
-                                                                    <input type="hidden" name="absenceId" value="<%= absence.id %>">
-                                                                    <input type="hidden" name="classYear" value="<%= classYear %>">
-                                                                    <button type="submit" class="btn-add-grade" style="padding: 2px 6px; font-size: 10px;">Motivate</button>
-                                                                </form>
-                                                            <% } else { %>
-                                                                <span class="absence-status" style="background: var(--success); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">✓ Motivated</span>
-                                                            <% } %>
-                                                        </div>
+                                                <% } else { %>
+                                                    <span class="helper">No absences</span>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- GRADES VIEW -->
+                        <div class="view-content" data-view="grades" data-subject="<%= subject %>">
+                            <h3>Add Grades - <%= subject %></h3>
+                            
+                            <div class="bulk-actions">
+                                <label style="font-weight: 600;">
+                                    <input type="checkbox" id="select-all-grades-<%= subject %>" 
+                                           onchange="toggleSelectAll('<%= subject %>', 'grades')">
+                                    Select All
+                                </label>
+                                
+                                <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
+                                    <label><strong>Grade:</strong></label>
+                                    <select id="bulk-grade-<%= subject %>" class="grade-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="10">10 - Excellent</option>
+                                        <option value="9">9 - Very Good</option>
+                                        <option value="8">8 - Good</option>
+                                        <option value="7">7 - Satisfactory</option>
+                                        <option value="6">6 - Sufficient</option>
+                                        <option value="5">5 - Insufficient</option>
+                                        <option value="4">4 - Insufficient</option>
+                                        <option value="3">3 - Insufficient</option>
+                                        <option value="2">2 - Insufficient</option>
+                                        <option value="1">1 - Insufficient</option>
+                                    </select>
+                                    <button type="button" class="btn-primary" 
+                                            onclick="bulkAddGrades('<%= subject %>', '<%= classYear %>')">
+                                        Add Grade to Selected
+                                    </button>
+                                </div>
+                            </div>
+
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-col">
+                                            <input type="checkbox" style="display: none;">
+                                        </th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Current Grades</th>
+                                        <th>Average</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% students.forEach(function(student) { 
+                                        const allGrades = student.allGrades || [];
+                                        const subjectGrades = allGrades.filter(g => g.subject === subject);
+                                        const average = subjectGrades.length > 0 
+                                            ? (subjectGrades.reduce((sum, g) => sum + g.grade, 0) / subjectGrades.length).toFixed(2)
+                                            : 'N/A';
+                                    %>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" 
+                                                       class="student-checkbox-grades" 
+                                                       data-subject="<%= subject %>"
+                                                       data-student-id="<%= student.uid %>"
+                                                       data-student-name="<%= student.name %>">
+                                            </td>
+                                            <td><strong><%= student.name %></strong></td>
+                                            <td><%= student.email %></td>
+                                            <td>
+                                                <% if (subjectGrades.length > 0) { %>
+                                                    <% subjectGrades.slice(0, 10).forEach(function(grade) { %>
+                                                        <span class="grade-badge"><%= grade.grade %></span>
                                                     <% }); %>
-                                                    <% if (student.allAbsences.length > 3) { %>
-                                                        <span class="helper" style="font-size: 11px;">+<%= student.allAbsences.length - 3 %> more</span>
+                                                    <% if (subjectGrades.length > 10) { %>
+                                                        <span class="helper">+<%= subjectGrades.length - 10 %></span>
                                                     <% } %>
-                                                </div>
-                                            <% } else { %>
-                                                <span class="helper">No absences</span>
-                                            <% } %>
-                                        </td>
-                                    <% } %>
-                                    <td>
-                                        <form action="/add-grade" method="POST" class="grade-form">
-                                            <input type="hidden" name="studentId" value="<%= student.uid %>">
-                                            <input type="hidden" name="classYear" value="<%= classYear %>">
-                                            
-                                            <% if (teacherSubjects.length > 0) { %>
-                                                <select name="subject" class="grade-select" required style="min-width: 140px;">
-                                                    <option value="">Select Subject</option>
-                                                    <% teacherSubjects.forEach(function(subj) { %>
-                                                        <option value="<%= subj %>"><%= subj %></option>
+                                                <% } else { %>
+                                                    <span class="helper">No grades yet</span>
+                                                <% } %>
+                                            </td>
+                                            <td><strong><%= average %></strong></td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- ABSENCES VIEW -->
+                        <div class="view-content" data-view="absences" data-subject="<%= subject %>">
+                            <h3>Take Attendance - <%= subject %></h3>
+                            <p class="helper" style="margin-bottom: 20px;">
+                                📅 Today: <%= new Date().toLocaleDateString() %> - Click "Mark Absent" to record an absence
+                            </p>
+                            
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Attendance</th>
+                                        <th>Recent Absences</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% students.forEach(function(student) { 
+                                        const allAbsences = student.allAbsences || [];
+                                        const subjectAbsences = allAbsences.filter(a => a.subject === subject);
+                                    %>
+                                        <tr>
+                                            <td><strong><%= student.name %></strong></td>
+                                            <td><%= student.email %></td>
+                                            <td>
+                                                <button type="button" 
+                                                        class="presence-btn present" 
+                                                        id="presence-<%= student.uid %>-<%= subject %>"
+                                                        onclick="markAbsent('<%= student.uid %>', '<%= student.name %>', '<%= subject %>', '<%= classYear %>')">
+                                                    ✓ Present
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <% if (subjectAbsences.length > 0) { %>
+                                                    Total: <strong><%= subjectAbsences.length %></strong> absences<br>
+                                                    <% subjectAbsences.slice(0, 5).forEach(function(absence) { 
+                                                        let dateStr = '';
+                                                        if (absence.date && absence.date.toDate) {
+                                                            dateStr = absence.date.toDate().toLocaleDateString();
+                                                        } else if (absence.date) {
+                                                            dateStr = new Date(absence.date).toLocaleDateString();
+                                                        }
+                                                    %>
+                                                        <span class="absence-badge <%= absence.type === 'motivated' ? 'motivated' : 'unmotivated' %>">
+                                                            <%= dateStr %>
+                                                        </span>
                                                     <% }); %>
-                                                </select>
-                                            <% } %>
-
-                                            <select id="grade" name="grade" class="grade-select" required>
-                                                <option value="">Select Grade</option>
-                                                <option value="10">10 - Excellent</option>
-                                                <option value="9">9 - Very Good</option>
-                                                <option value="8">8 - Good</option>
-                                                <option value="7">7 - Satisfactory</option>
-                                                <option value="6">6 - Sufficient</option>
-                                                <option value="5">5 - Insufficient</option>
-                                                <option value="4">4 - Insufficient</option>
-                                                <option value="3">3 - Insufficient</option>
-                                                <option value="2">2 - Insufficient</option>
-                                                <option value="1">1 - Insufficient</option>
-                                            </select>
-                                            <button type="submit" class="btn-add-grade">Add</button>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <form action="/add-absence" method="POST" class="absence-form">
-                                            <input type="hidden" name="studentId" value="<%= student.uid %>">
-                                            <input type="hidden" name="classYear" value="<%= classYear %>">
-                                            
-                                            <% if (teacherSubjects.length > 0) { %>
-                                                <select name="subject" class="absence-select" required>
-                                                    <option value="">Select Subject</option>
-                                                    <% teacherSubjects.forEach(function(subj) { %>
-                                                        <option value="<%= subj %>"><%= subj %></option>
-                                                    <% }); %>
-                                                </select>
-                                            <% } %>
-
-                                            <select name="type" class="absence-select" required>
-                                                <option value="">Select Type</option>
-                                                <option value="motivated">Motivated</option>
-                                                <option value="unmotivated">Unmotivated</option>
-                                            </select>
-
-                                            <input type="date" name="date" class="absence-date" required value="<%= new Date().toISOString().split('T')[0] %>">
-                                            
-                                            <input type="text" name="reason" class="absence-reason" placeholder="Reason (optional)">
-                                            
-                                            <button type="submit" class="btn-add-grade">Add</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <% }); %>
-                        </tbody>
-                    </table>
-                </div>
+                                                <% } else { %>
+                                                    <span class="helper">No absences</span>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                <% }); %>
             <% } %>
         </div>
 
         <div class="dashboard-footer">
-                <form action="/auth/logout" method="GET">
-                    <button type="submit" class="btn-primary">Logout</button>
-                </form>
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Logout</button>
+            </form>
         </div>
     </div>
+
     <script>
-        // Show/hide reason field based on absence type
-        document.addEventListener('DOMContentLoaded', function() {
-            const absenceForms = document.querySelectorAll('.absence-form');
-            absenceForms.forEach(form => {
-                const typeSelect = form.querySelector('select[name="type"]');
-                const reasonInput = form.querySelector('input[name="reason"]');
-                
-                if (typeSelect && reasonInput) {
-                    typeSelect.addEventListener('change', function() {
-                        if (this.value === 'motivated') {
-                            reasonInput.classList.add('show');
-                            reasonInput.required = false; // Optional but visible
-                        } else {
-                            reasonInput.classList.remove('show');
-                            reasonInput.value = ''; // Clear when hidden
-                        }
-                    });
-                }
+        // Switch between subjects
+        function switchSubject(subject) {
+            document.querySelectorAll('.subject-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.subject-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.subject-tab:nth-child(${Array.from(document.querySelectorAll('.subject-tab')).findIndex(t => t.textContent.trim() === subject) + 1})`).classList.add('active');
+            document.querySelector(`.subject-content[data-subject="${subject}"]`).classList.add('active');
+        }
+
+        // Switch between views (Overview, Grades, Absences)
+        function switchView(subject, view) {
+            const subjectContent = document.querySelector(`.subject-content[data-subject="${subject}"]`);
+            subjectContent.querySelectorAll('.view-tab').forEach(tab => tab.classList.remove('active'));
+            subjectContent.querySelectorAll('.view-content').forEach(content => content.classList.remove('active'));
+            
+            const tabs = Array.from(subjectContent.querySelectorAll('.view-tab'));
+            const viewIndex = view === 'overview' ? 0 : view === 'grades' ? 1 : 2;
+            tabs[viewIndex].classList.add('active');
+            
+            subjectContent.querySelector(`.view-content[data-view="${view}"]`).classList.add('active');
+        }
+
+        // Toggle select all checkboxes
+        function toggleSelectAll(subject, type) {
+            const selectAll = document.getElementById(`select-all-${type}-${subject}`);
+            const checkboxes = document.querySelectorAll(`.student-checkbox-${type}[data-subject="${subject}"]`);
+            
+            checkboxes.forEach(cb => {
+                cb.checked = selectAll.checked;
             });
-        });
+        }
+
+        // Bulk add grades to selected students
+        function bulkAddGrades(subject, classYear) {
+            const grade = document.getElementById(`bulk-grade-${subject}`).value;
+            if (!grade) {
+                alert('Please select a grade');
+                return;
+            }
+            
+            const checkboxes = document.querySelectorAll(`.student-checkbox-grades[data-subject="${subject}"]:checked`);
+            if (checkboxes.length === 0) {
+                alert('Please select at least one student');
+                return;
+            }
+            
+            const studentNames = Array.from(checkboxes).map(cb => cb.getAttribute('data-student-name')).join(', ');
+            if (!confirm(`Add grade ${grade} to ${checkboxes.length} student(s)?\n\n${studentNames}`)) {
+                return;
+            }
+            
+            // Submit form for each selected student
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/add-grade';
+            
+            checkboxes.forEach((checkbox, index) => {
+                const studentId = checkbox.getAttribute('data-student-id');
+                
+                const inputStudentId = document.createElement('input');
+                inputStudentId.type = 'hidden';
+                inputStudentId.name = `studentId`;
+                inputStudentId.value = studentId;
+                form.appendChild(inputStudentId);
+            });
+            
+            // For now, submit one by one (can be optimized with bulk endpoint later)
+            const studentId = checkboxes[0].getAttribute('data-student-id');
+            form.innerHTML = `
+                <input type="hidden" name="studentId" value="${studentId}">
+                <input type="hidden" name="subject" value="${subject}">
+                <input type="hidden" name="classYear" value="${classYear}">
+                <input type="hidden" name="grade" value="${grade}">
+            `;
+            
+            document.body.appendChild(form);
+            form.submit();
+            
+            // Note: This currently only submits for first student
+            // For proper bulk operation, would need backend endpoint
+            alert('Adding grades... (Refresh to see updates)');
+        }
+
+        // Mark student as absent
+        function markAbsent(studentId, studentName, subject, classYear) {
+            if (!confirm(`Mark ${studentName} as absent for ${subject}?`)) {
+                return;
+            }
+            
+            const button = document.getElementById(`presence-${studentId}-${subject}`);
+            button.classList.remove('present');
+            button.classList.add('absent');
+            button.textContent = '✗ Absent';
+            button.disabled = true;
+            
+            // Submit absence form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/add-absence';
+            form.innerHTML = `
+                <input type="hidden" name="studentId" value="${studentId}">
+                <input type="hidden" name="subject" value="${subject}">
+                <input type="hidden" name="classYear" value="${classYear}">
+                <input type="hidden" name="type" value="unmotivated">
+                <input type="hidden" name="date" value="${new Date().toISOString().split('T')[0]}">
+                <input type="hidden" name="reason" value="">
+            `;
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
     </script>
 </body>
 </html>

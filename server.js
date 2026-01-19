@@ -433,6 +433,7 @@ app.get('/class/:classYear', async (req, res) => {
         const classYear = req.params.classYear;
         const schoolId = req.session.schoolId;
         const teacherId = req.session.userId;
+        const viewMode = req.query.view; // 'classmaster' or 'teacher'
 
         // Verify teacher is assigned to this class
         const schoolData = await School.findById(schoolId);
@@ -451,8 +452,14 @@ app.get('/class/:classYear', async (req, res) => {
         const allStudents = await User.getUserByRoleAndSchool('student', schoolId);
         const studentsInClass = allStudents.filter(student => student.classYear === classYear);
 
-        // If classmaster, show card view instead of table
-        if (isClassmaster) {
+        // Determine which view to show based on query parameter
+        // If view=classmaster is explicitly requested and teacher is classmaster, show classmaster view
+        // If view=teacher is requested, show regular teacher view (even if they're classmaster)
+        // If no view parameter, default to classmaster view if they're classmaster
+        const showClassmasterView = (viewMode === 'classmaster' && isClassmaster) || 
+                                   (viewMode !== 'teacher' && isClassmaster);
+
+        if (showClassmasterView) {
             // Get students with summary stats for card view
             const studentsWithStats = await Promise.all(studentsInClass.map(async (student) => {
                 const allGrades = await User.getStudentGrades(student.uid);
@@ -507,7 +514,7 @@ app.get('/class/:classYear', async (req, res) => {
             teacher: teacher, 
             classYear: classYear,
             students: studentsWithData,
-            isClassmaster: isClassmaster,
+            isClassmaster: false, // Set to false when viewing as regular teacher
             teacherSubjects: teacherSubjects,
             error: req.query.error || null,
             success: req.query.success || null

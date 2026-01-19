@@ -219,13 +219,21 @@
             <% if (teacherClasses.length === 0) { %>
                 <div class="muted-box">No classes defined yet. Please add classes in the Classes section above or assign teachers to create classes automatically.</div>
             <% } else { %>
-                <div class="grid-two">
+                <div class="filter" style="margin-bottom: 16px;">
+                    <label for="class-search">Search classes:</label>
+                    <input type="text" id="class-search" placeholder="Search by class name..." oninput="filterClasses()" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 14px;">
+                </div>
+                <div class="class-accordion-list" id="class-accordion-list">
                     <% teacherClasses.forEach(function(cls) { %>
-                        <div class="section-subsection">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                                <strong style="font-size: 16px;">Class <%= cls %></strong>
+                        <div class="class-accordion-card" data-class-name="<%= cls.toLowerCase() %>">
+                            <div class="class-accordion-header" onclick="toggleClassDetails('<%= cls %>')">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span class="class-accordion-icon" id="icon-<%= cls %>">▼</span>
+                                    <strong style="font-size: 16px;">Class <%= cls %></strong>
+                                </div>
                                 <span class="badge"><%= (classYearTeachers[cls] || []).length %> teacher(s)</span>
                             </div>
+                            <div class="class-accordion-details" id="details-<%= cls %>" style="display: none;">
                             
                             <% 
                                 const assignedTeacherIds = classYearTeachers[cls] || [];
@@ -309,7 +317,7 @@
                             </div>
                         <% } else { %>
                             <p class="helper" style="margin-bottom: 14px;">No teachers assigned yet.</p>
-                        <% } %>
+                        <% } %> 
 
                             <% if (availableTeachers.length > 0) { %>
                                 <div class="batch-assignment-container" id="batch-assignment-<%= cls %>">
@@ -393,6 +401,7 @@
                                     </div>
                                 </div>
                             <% } %>
+                            </div>
                         </div>
                     <% }); %>
                 </div>
@@ -442,6 +451,16 @@
                                             <br><small><%= teacherSubjects.join(', ') %></small>
                                         <% } %>
                                     </div>
+                                    <button type="button" class="btn-edit" 
+                                            data-uid="<%= t.uid %>"
+                                            data-role="teacher"
+                                            data-name="<%= t.name %>"
+                                            data-email="<%= t.email %>"
+                                            data-classyear="<%= t.classYear || "" %>"
+                                            data-subjects='<%= JSON.stringify(teacherSubjects) %>'
+                                            data-parentemail="<%= t.parentEmail || "" %>"
+                                            onclick="openEditModalFromButton(this)" 
+                                            style="padding: 6px 12px; font-size: 13px;">Edit</button>
                                 </div>
                             <% }); %>
                         </div>
@@ -480,6 +499,16 @@
                                         <small><%= s.email %></small>
                                         <% if (s.classYear) { %><br><small>Grade <%= s.classYear %></small><% } %>
                                     </div>
+                                    <button type="button" class="btn-edit" 
+                                            data-uid="<%= s.uid %>"
+                                            data-role="student"
+                                            data-name="<%= s.name %>"
+                                            data-email="<%= s.email %>"
+                                            data-classyear="<%= s.classYear || "" %>"
+                                            data-subjects=""
+                                            data-parentemail="<%= s.parentEmail || "" %>"
+                                            onclick="openEditModalFromButton(this)" 
+                                            style="padding: 6px 12px; font-size: 13px;">Edit</button>
                                 </div>
                             <% }); %>
                         </div>
@@ -489,6 +518,15 @@
                     <% } %>
                 </div>
             </div>
+        </section>
+
+        <!-- Academic Year Management Section -->
+        <section class="section" style="border: 2px solid var(--error); padding: 20px; border-radius: 8px; background: rgba(248, 113, 113, 0.05); margin-bottom: 40px;">
+            <h2 style="color: var(--error);">⚠️ Academic Year Management</h2>
+            <p class="helper" style="margin-bottom: 16px;">Advance all students to the next grade level and clear all academic records for the new year. This action is <strong>irreversible</strong>.</p>
+            <button type="button" class="danger-btn" onclick="showAdvanceYearModal()" style="margin-top: 12px; padding: 12px 24px; font-size: 15px;">
+                Advance Academic Year
+            </button>
         </section>
 
         <!-- Footer -->
@@ -508,6 +546,88 @@
                 <button class="ghost-btn" type="button" onclick="closeModal()">Cancel</button>
                 <button class="danger-btn" type="button" onclick="deleteSubject()">Delete Subject</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Advance Academic Year Modal -->
+    <div id="advanceYearModal" class="modal">
+        <div class="modal-content" style="max-width: 550px;">
+            <h3 style="color: var(--error);">⚠️ Advance Academic Year</h3>
+            <div style="background: rgba(248, 113, 113, 0.1); border-left: 4px solid var(--error); padding: 16px; margin: 16px 0; border-radius: 4px;">
+                <p style="margin: 0 0 12px 0; font-weight: 600;">This action will:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Advance all students by one grade level (e.g., Grade 5 → Grade 6, 9A → 10A)</li>
+                    <li><strong>Permanently delete ALL grades</strong> for all students</li>
+                    <li><strong>Permanently delete ALL absences</strong> for all students</li>
+                    <li>This action <strong>cannot be undone</strong></li>
+                </ul>
+            </div>
+            <p style="margin: 16px 0;"><strong>Students affected: <%= students.length %></strong></p>
+            <p style="margin-bottom: 20px; color: var(--text-dim);">To confirm, type <strong style="color: var(--error);">ADVANCE YEAR</strong> in the field below:</p>
+            <form id="advanceYearForm" onsubmit="handleAdvanceYear(event)">
+                <div class="field" style="margin-bottom: 20px;">
+                    <label for="confirm-text">Confirmation</label>
+                    <input type="text" id="confirm-text" name="confirmText" placeholder="Type: ADVANCE YEAR" required style="text-transform: uppercase;">
+                </div>
+                <div class="modal-actions">
+                    <button class="ghost-btn" type="button" onclick="closeAdvanceYearModal()">Cancel</button>
+                    <button class="danger-btn" type="submit">Advance Academic Year</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3>Edit User</h3>
+            <form id="editUserForm" onsubmit="handleEditUser(event)">
+                <input type="hidden" id="edit-user-uid" name="uid">
+                <input type="hidden" id="edit-user-role" name="role">
+                
+                <div class="field" style="margin-bottom: 16px;">
+                    <label for="edit-user-name">Full Name</label>
+                    <input type="text" id="edit-user-name" name="name" required>
+                </div>
+                
+                <div class="field" style="margin-bottom: 16px;">
+                    <label for="edit-user-email">Email</label>
+                    <input type="email" id="edit-user-email" name="email" required>
+                </div>
+                
+                <div class="field" id="edit-classYearGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-classYear">Class</label>
+                    <select id="edit-user-classYear" name="classYear">
+                        <option value="">Select class</option>
+                        <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
+                            <option value="<%= cls %>"><%= cls %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                
+                <div class="field" id="edit-subjectGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-subjects">Subjects</label>
+                    <select id="edit-user-subjects" name="subjects" multiple style="min-height: 120px;">
+                        <% if (school.subjects && school.subjects.length > 0) { %>
+                            <% school.subjects.forEach(function(subject) { %>
+                                <option value="<%= subject %>"><%= subject %></option>
+                            <% }); %>
+                        <% } %>
+                    </select>
+                    <small class="helper">Hold Ctrl/Cmd to select multiple subjects</small>
+                </div>
+                
+                <div class="field" id="edit-parentEmailGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-parentEmail">Parent Email (Optional)</label>
+                    <input type="email" id="edit-user-parentEmail" name="parentEmail" placeholder="parent@example.com">
+                    <small class="helper">Leave empty to keep current parent account</small>
+                </div>
+                
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button class="ghost-btn" type="button" onclick="closeEditModal()">Cancel</button>
+                    <button class="btn-primary" type="submit">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -538,7 +658,6 @@
             
             if (submitButton) {
                 submitButton.disabled = true;
-                if (originalText) submitButton.textContent = 'Processing...';
             }
 
             try {
@@ -559,7 +678,8 @@
                         window.location.reload();
                     }, 500);
                 } else {
-                    console.error('Form submission error:', result.error || 'Operation failed');
+                    // Show error message to admin
+                    alert(`❌ Error: ${result.error || 'Operation failed'}`);
                     if (submitButton) {
                         submitButton.disabled = originalDisabled;
                         if (originalText) submitButton.textContent = originalText;
@@ -567,6 +687,7 @@
                 }
             } catch (error) {
                 console.error('Form submission error:', error);
+                alert('❌ An error occurred. Please try again.');
                 if (submitButton) {
                     submitButton.disabled = originalDisabled;
                     if (originalText) submitButton.textContent = originalText;
@@ -577,11 +698,11 @@
         function validateSubjectForm() {
             const subjectName = document.getElementById('subjectName').value.trim();
             if (!subjectName) {
-                console.warn('Subject name is required');
+                alert('⚠️ Please enter a subject name');
                 return false;
             }
             if (schoolSubjects.some(s => s.toLowerCase() === subjectName.toLowerCase())) {
-                console.warn('This subject already exists');
+                alert('⚠️ This subject already exists');
                 return false;
             }
             return true;
@@ -755,6 +876,61 @@
             msg.style.display = visible === 0 ? 'block' : 'none';
         }
 
+        function toggleClassDetails(className) {
+            const details = document.getElementById(`details-${className}`);
+            const icon = document.getElementById(`icon-${className}`);
+            const card = icon.closest('.class-accordion-card');
+            
+            if (!details || !icon || !card) return;
+            
+            const isExpanded = details.style.display !== 'none';
+            
+            if (isExpanded) {
+                details.style.display = 'none';
+                icon.textContent = '▼';
+                card.classList.remove('expanded');
+            } else {
+                details.style.display = 'block';
+                icon.textContent = '▲';
+                card.classList.add('expanded');
+            }
+        }
+
+        function filterClasses() {
+            const searchTerm = (document.getElementById('class-search').value || '').toLowerCase().trim();
+            const classCards = document.querySelectorAll('.class-accordion-card');
+            let visibleCount = 0;
+            
+            classCards.forEach(card => {
+                const className = card.getAttribute('data-class-name') || '';
+                
+                if (searchTerm === '' || className.includes(searchTerm)) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Show message if no classes match
+            const accordionList = document.getElementById('class-accordion-list');
+            let noResultsMsg = document.getElementById('no-classes-filtered');
+            
+            if (visibleCount === 0 && searchTerm !== '') {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('p');
+                    noResultsMsg.id = 'no-classes-filtered';
+                    noResultsMsg.className = 'helper';
+                    noResultsMsg.style.marginTop = '16px';
+                    noResultsMsg.textContent = 'No classes match your search.';
+                    accordionList.parentNode.appendChild(noResultsMsg);
+                }
+                noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
+            }
+        }
+
         // Batch Assignment Functions
         function toggleTeacherSubjects(year, teacherId) {
             const checkbox = document.querySelector(
@@ -855,6 +1031,187 @@
                     assignBtn.disabled = true;
                     assignBtn.textContent = 'Assign Selected Teachers';
                 }
+            }
+        }
+
+        // Edit User Modal Functions
+        function openEditModalFromButton(button) {
+            const uid = button.getAttribute('data-uid');
+            const role = button.getAttribute('data-role');
+            const name = button.getAttribute('data-name');
+            const email = button.getAttribute('data-email');
+            const classYear = button.getAttribute('data-classyear') || '';
+            const subjectsJson = button.getAttribute('data-subjects') || '[]';
+            const parentEmail = button.getAttribute('data-parentemail') || '';
+            
+            openEditModal(uid, role, name, email, classYear, subjectsJson, parentEmail);
+        }
+
+        function openEditModal(uid, role, name, email, classYear, subjectsJson, parentEmail) {
+            const modal = document.getElementById('editUserModal');
+            const form = document.getElementById('editUserForm');
+            
+            document.getElementById('edit-user-uid').value = uid;
+            document.getElementById('edit-user-role').value = role;
+            document.getElementById('edit-user-name').value = name;
+            document.getElementById('edit-user-email').value = email;
+            
+            const classYearGroup = document.getElementById('edit-classYearGroup');
+            const subjectGroup = document.getElementById('edit-subjectGroup');
+            const parentEmailGroup = document.getElementById('edit-parentEmailGroup');
+            const classYearSelect = document.getElementById('edit-user-classYear');
+            const subjectSelect = document.getElementById('edit-user-subjects');
+            const parentEmailInput = document.getElementById('edit-user-parentEmail');
+            
+            if (role === 'student') {
+                classYearGroup.style.display = 'block';
+                classYearSelect.value = classYear || '';
+                subjectGroup.style.display = 'none';
+                parentEmailGroup.style.display = 'block';
+                parentEmailInput.value = parentEmail || '';
+            } else if (role === 'teacher') {
+                classYearGroup.style.display = 'none';
+                subjectGroup.style.display = 'block';
+                parentEmailGroup.style.display = 'none';
+                
+                // Parse and set subjects
+                let subjects = [];
+                try {
+                    subjects = JSON.parse(subjectsJson.replace(/&apos;/g, "'"));
+                } catch (e) {
+                    subjects = [];
+                }
+                
+                // Select subjects in the multi-select
+                Array.from(subjectSelect.options).forEach(option => {
+                    option.selected = subjects.includes(option.value);
+                });
+            }
+            
+            modal.classList.add('active');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editUserModal');
+            const form = document.getElementById('editUserForm');
+            modal.classList.remove('active');
+            form.reset();
+        }
+
+        async function handleEditUser(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Handle multiple subjects for teachers
+            if (data.role === 'teacher') {
+                const subjectSelect = document.getElementById('edit-user-subjects');
+                const selected = Array.from(subjectSelect.selectedOptions).map(opt => opt.value);
+                data.subjects = selected;
+            }
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+            
+            try {
+                const response = await fetch('/admin/update-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    closeEditModal();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    console.error('Update user error:', result.error || 'Operation failed');
+                    alert(result.error || 'Failed to update user. Please try again.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Update user error:', error);
+                alert('An error occurred. Please try again.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+            }
+        }
+
+        // Close edit modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const editModal = document.getElementById('editUserModal');
+            if (e.target === editModal) closeEditModal();
+            
+            const advanceModal = document.getElementById('advanceYearModal');
+            if (e.target === advanceModal) closeAdvanceYearModal();
+        });
+
+        // Advance Academic Year Functions
+        function showAdvanceYearModal() {
+            const modal = document.getElementById('advanceYearModal');
+            modal.classList.add('active');
+            document.getElementById('confirm-text').focus();
+        }
+
+        function closeAdvanceYearModal() {
+            const modal = document.getElementById('advanceYearModal');
+            const form = document.getElementById('advanceYearForm');
+            modal.classList.remove('active');
+            form.reset();
+        }
+
+        async function handleAdvanceYear(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Convert to uppercase for comparison
+            data.confirmText = data.confirmText.toUpperCase().trim();
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+            
+            try {
+                const response = await fetch('/admin/advance-academic-year', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    closeAdvanceYearModal();
+                    alert(`✅ ${result.message}\n\n- ${result.studentsUpdated} students advanced\n- ${result.gradesDeleted} grades deleted\n- ${result.absencesDeleted || 0} absences deleted`);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert(`❌ ${result.error || 'Failed to advance academic year'}`);
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Advance year error:', error);
+                alert('❌ An error occurred. Please try again.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
             }
         }
 

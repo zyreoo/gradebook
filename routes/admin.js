@@ -634,5 +634,152 @@ router.post('/remove-classmaster', async (req, res) =>{
         res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMessage));
     }
 }); 
+router.post('/update-user', async (req, res) => {
+    try {
+        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+            if (req.headers.accept?.includes('application/json')) {
+                return res.status(401).json({ success: false, error: 'Unauthorized' });
+            }
+            return res.redirect('/auth/login');
+        }
+
+        const { uid, name, email, role, classYear, subjects, parentEmail } = req.body;
+        const schoolId = req.session.schoolId;
+
+        if (!uid || !name || !email || !role) {
+            const errorMsg = 'All required fields must be provided';
+            if (req.headers.accept?.includes('application/json')) {
+                return res.status(400).json({ success: false, error: errorMsg });
+            }
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+        }
+
+        // Check if email is being changed and if new email already exists
+        const currentUser = await User.findbyId(uid);
+        if (!currentUser) {
+            const errorMsg = 'User not found';
+            if (req.headers.accept?.includes('application/json')) {
+                return res.status(404).json({ success: false, error: errorMsg });
+            }
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+        }
+
+        if (email !== currentUser.email) {
+            const existingUser = await User.findbyEmail(email);
+            if (existingUser && existingUser.uid !== uid) {
+                const errorMsg = 'Email already in use by another user';
+                if (req.headers.accept?.includes('application/json')) {
+                    return res.status(400).json({ success: false, error: errorMsg });
+                }
+                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+            }
+        }
+
+        // Validate classYear for students
+        if (role === 'student' && classYear) {
+            const allClasses = await School.findById(schoolId);
+            const availableClasses = allClasses.classes || [];
+            if (!availableClasses.includes(classYear)) {
+                const errorMsg = 'Invalid class selected';
+                if (req.headers.accept?.includes('application/json')) {
+                    return res.status(400).json({ success: false, error: errorMsg });
+                }
+                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+            }
+        }
+
+        // Validate subjects for teachers
+        if (role === 'teacher' && subjects && subjects.length > 0) {
+            const schoolSubjects = await School.getSubjects(schoolId);
+            const invalidSubjects = subjects.filter(s => !schoolSubjects.includes(s));
+            if (invalidSubjects.length > 0) {
+                const errorMsg = 'Some selected subjects do not exist in your school.';
+                if (req.headers.accept?.includes('application/json')) {
+                    return res.status(400).json({ success: false, error: errorMsg });
+                }
+                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+            }
+        }
+
+        // Prepare update object
+        const updates = {
+            name,
+            email
+        };
+
+        if (role === 'student') {
+            updates.classYear = classYear || null;
+            if (parentEmail !== undefined) {
+                updates.parentEmail = parentEmail || null;
+            }
+        } else if (role === 'teacher') {
+            updates.subjects = subjects || [];
+        }
+
+        // Update the user
+        await User.update(uid, updates);
+
+        const successMsg = 'User updated successfully!';
+        if (req.headers.accept?.includes('application/json')) {
+            return res.json({ 
+                success: true, 
+                message: successMsg,
+                user: { uid, name, email, role, classYear: role === 'student' ? classYear : null }
+            });
+        }
+
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(successMsg));
+    } catch (error) {
+        console.error('Update user error:', error);
+        const errorMessage = error.message || 'Failed to update user. Please try again.';
+        if (req.headers.accept?.includes('application/json')) {
+            return res.status(500).json({ success: false, error: errorMessage });
+        }
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMessage));
+    }
+});
+
+router.post('/advance-academic-year', async (req, res) => {
+    try {
+        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+            if (req.headers.accept?.includes('application/json')) {
+                return res.status(401).json({ success: false, error: 'Unauthorized' });
+            }
+            return res.redirect('/auth/login');
+        }
+
+        const schoolId = req.session.schoolId;
+        const { confirmText } = req.body;
+
+        // Require confirmation text
+        if (confirmText !== 'ADVANCE YEAR') {
+            const errorMsg = 'Confirmation text must be "ADVANCE YEAR"';
+            if (req.headers.accept?.includes('application/json')) {
+                return res.status(400).json({ success: false, error: errorMsg });
+            }
+            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+        }
+
+        const result = await User.advanceAcademicYear(schoolId);
+
+        if (req.headers.accept?.includes('application/json')) {
+            return res.json({
+                success: true,
+                message: `Academic year advanced! ${result.studentsUpdated} students updated, ${result.gradesDeleted} grades deleted, ${result.absencesDeleted} absences deleted.`,
+                ...result
+            });
+        }
+
+        res.redirect('/admin/dashboard?success=' + encodeURIComponent(`Academic year advanced! ${result.studentsUpdated} students updated, ${result.gradesDeleted} grades deleted, ${result.absencesDeleted} absences deleted.`));
+    } catch (error) {
+        console.error('Advance academic year error:', error);
+        const errorMessage = error.message || 'Failed to advance academic year';
+        if (req.headers.accept?.includes('application/json')) {
+            return res.status(500).json({ success: false, error: errorMessage });
+        }
+        res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMessage));
+    }
+});
+
 module.exports = router;
 

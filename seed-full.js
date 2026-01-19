@@ -6,7 +6,7 @@ require('./config/firebase');
 const schools = [
     {
         name: 'Principal Smith',
-        email: 'admin@highschool.edu',
+        email: 'admin@highschool.edu', 
         password: 'password123',
         schoolName: 'Central High School',
         adress: '123 Education Street, Springfield, IL 62701',
