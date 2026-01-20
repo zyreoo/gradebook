@@ -125,6 +125,73 @@
             background: #f8d7da;
             color: #721c24;
         }
+
+        /* Mini calendar */
+        .mini-calendar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            min-width: 220px;
+            max-width: 260px;
+            font-size: 12px;
+        }
+
+        .mini-calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .mini-calendar-header button {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+        }
+
+        .mini-calendar-header span {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .mini-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .mini-calendar-day-header {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-dim);
+            padding: 2px 0;
+        }
+
+        .mini-calendar-day {
+            text-align: center;
+            padding: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .mini-calendar-day.other-month {
+            opacity: 0.35;
+        }
+
+        .mini-calendar-day:hover {
+            background: var(--bg-hover);
+        }
+
+        .mini-calendar-day.selected {
+            background: #6c757d;
+            color: #ffffff;
+            font-weight: 600;
+        }
         table {
             width: 100%;
         }
@@ -157,6 +224,76 @@
         ::-moz-selection {
             background-color: #6c757d;
             color: #000000;
+        }
+
+        /* Mobile-specific tweaks */
+        @media (max-width: 768px) {
+            .subject-tabs {
+                flex-wrap: wrap;
+                overflow-x: auto;
+                padding-bottom: 4px;
+                margin-bottom: 12px;
+            }
+
+            .subject-tab {
+                flex: 1 0 auto;
+                padding: 10px 12px;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+
+            .view-tabs {
+                flex-wrap: wrap;
+                gap: 6px;
+                padding: 6px;
+            }
+
+            .view-tab {
+                flex: 1 0 100%;
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+
+            .bulk-actions {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .bulk-actions > div {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .bulk-actions label {
+                font-size: 14px;
+            }
+
+            .grade-date-input,
+            .absence-date-input {
+                width: 100%;
+            }
+
+            .presence-btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .view-content table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+            }
+
+            .view-content table thead {
+                font-size: 13px;
+            }
+
+            .view-content table td,
+            .view-content table th {
+                padding: 8px;
+                font-size: 13px;
+            }
         }
     </style>
 </head>
@@ -306,45 +443,28 @@
                         <div class="view-content" data-view="grades" data-subject="<%= subject %>">
                             <h3>Add Grades - <%= subject %></h3>
                             
-                            <div class="bulk-actions">
-                                <label style="font-weight: 600;">
-                                    <input type="checkbox" id="select-all-grades-<%= subject %>" 
-                                           onchange="toggleSelectAll('<%= subject %>', 'grades')">
-                                    Select All
-                                </label>
-                                
-                                <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
-                                    <label><strong>Grade:</strong></label>
-                                    <select id="bulk-grade-<%= subject %>" class="grade-select">
-                                        <option value="">Select Grade</option>
-                                        <option value="10">10 - Excellent</option>
-                                        <option value="9">9 - Very Good</option>
-                                        <option value="8">8 - Good</option>
-                                        <option value="7">7 - Satisfactory</option>
-                                        <option value="6">6 - Sufficient</option>
-                                        <option value="5">5 - Insufficient</option>
-                                        <option value="4">4 - Insufficient</option>
-                                        <option value="3">3 - Insufficient</option>
-                                        <option value="2">2 - Insufficient</option>
-                                        <option value="1">1 - Insufficient</option>
-                                    </select>
-                                    <button type="button" class="btn-primary" 
-                                            onclick="bulkAddGrades('<%= subject %>', '<%= classYear %>')">
-                                        Add Grade to Selected
-                                    </button>
+                            <div class="bulk-actions" style="margin-bottom: 20px;">
+                                <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                                    <label style="font-weight: 600; display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap;">
+                                        <span><strong>Date:</strong></span>
+                                        <!-- Hidden input that actually stores the selected date -->
+                                        <input type="hidden" 
+                                               id="grade-date-<%= subject %>" 
+                                               value="<%= new Date().toISOString().split('T')[0] %>">
+                                        <!-- Mini calendar container -->
+                                        <div id="grade-calendar-<%= subject %>" class="mini-calendar"></div>
+                                    </label>
                                 </div>
                             </div>
 
                             <table>
                                 <thead>
                                     <tr>
-                                        <th class="checkbox-col">
-                                            <input type="checkbox" style="display: none;">
-                                        </th>
                                         <th>Name</th>
                                         <th>Email</th>
                                         <th>Current Grades</th>
                                         <th>Average</th>
+                                        <th>New Grade</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -356,13 +476,6 @@
                                             : 'N/A';
                                     %>
                                         <tr>
-                                            <td>
-                                                <input type="checkbox" 
-                                                       class="student-checkbox-grades" 
-                                                       data-subject="<%= subject %>"
-                                                       data-student-id="<%= student.uid %>"
-                                                       data-student-name="<%= student.name %>">
-                                            </td>
                                             <td><strong><%= student.name %></strong></td>
                                             <td><%= student.email %></td>
                                             <td>
@@ -378,18 +491,58 @@
                                                 <% } %>
                                             </td>
                                             <td><strong><%= average %></strong></td>
+                                            <td>
+                                                <select class="student-grade-select" 
+                                                        data-subject="<%= subject %>"
+                                                        data-student-id="<%= student.uid %>"
+                                                        data-student-name="<%= student.name %>"
+                                                        style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); min-width: 150px;">
+                                                    <option value="">-- Select Grade --</option>
+                                                    <option value="10">10 - Excellent</option>
+                                                    <option value="9">9 - Very Good</option>
+                                                    <option value="8">8 - Good</option>
+                                                    <option value="7">7 - Satisfactory</option>
+                                                    <option value="6">6 - Sufficient</option>
+                                                    <option value="5">5 - Insufficient</option>
+                                                    <option value="4">4 - Insufficient</option>
+                                                    <option value="3">3 - Insufficient</option>
+                                                    <option value="2">2 - Insufficient</option>
+                                                    <option value="1">1 - Insufficient</option>
+                                                </select>
+                                            </td>
                                         </tr>
                                     <% }); %>
                                 </tbody>
                             </table>
+                            
+                            <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                                <button type="button" 
+                                        class="btn-primary" 
+                                        id="save-grades-btn-<%= subject %>"
+                                        onclick="saveAllGrades('<%= subject %>', '<%= classYear %>')"
+                                        style="padding: 12px 24px; font-size: 16px; font-weight: 600;">
+                                    💾 Save All Grades
+                                </button>
+                            </div>
                         </div>
 
                         <!-- ABSENCES VIEW -->
                         <div class="view-content" data-view="absences" data-subject="<%= subject %>">
                             <h3>Take Attendance - <%= subject %></h3>
-                            <p class="helper" style="margin-bottom: 20px;">
-                                📅 Today: <%= new Date().toLocaleDateString() %> - Click "Mark Absent" to record an absence
-                            </p>
+                            
+                            <div class="bulk-actions" style="margin-bottom: 20px;">
+                                <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                                    <label style="font-weight: 600; display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap;">
+                                        <span><strong>Date:</strong></span>
+                                        <!-- Hidden input that actually stores the selected date -->
+                                        <input type="hidden" 
+                                               id="absence-date-<%= subject %>" 
+                                               value="<%= new Date().toISOString().split('T')[0] %>">
+                                        <!-- Mini calendar container -->
+                                        <div id="absence-calendar-<%= subject %>" class="mini-calendar"></div>
+                                    </label>
+                                </div>
+                            </div>
                             
                             <table>
                                 <thead>
@@ -453,6 +606,135 @@
     </div>
 
     <script>
+        // Simple mini calendar component (no weird -1 month bug)
+        // Simple working calendar - completely rewritten
+        const calendarStates = {}; // Store state per calendar instance
+        
+        function initMiniCalendar(containerId, hiddenInputId) {
+            const container = document.getElementById(containerId);
+            const hiddenInput = document.getElementById(hiddenInputId);
+            if (!container || !hiddenInput) return;
+
+            // Initialize state for this calendar only once
+            if (!calendarStates[containerId]) {
+                const today = new Date();
+                const initialDate = hiddenInput.value ? new Date(hiddenInput.value + 'T00:00:00') : today;
+                
+                calendarStates[containerId] = {
+                    year: initialDate.getFullYear(),
+                    month: initialDate.getMonth(),
+                    selectedDate: hiddenInput.value || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+                };
+                // Ensure hidden input has a value
+                if (!hiddenInput.value) {
+                    hiddenInput.value = calendarStates[containerId].selectedDate;
+                }
+            } else {
+                // Keep selectedDate in sync if it was changed externally
+                if (hiddenInput.value) {
+                    calendarStates[containerId].selectedDate = hiddenInput.value;
+                }
+            }
+
+            function renderCalendar() {
+                const state = calendarStates[containerId];
+                const { year, month } = state;
+                
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                
+                // Get first day of month and number of days
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const prevMonthDays = new Date(year, month, 0).getDate();
+                
+                let html = `
+                    <div class="mini-calendar-header">
+                        <button type="button" class="cal-nav-btn" data-cal="${containerId}" data-dir="-1">&lt;</button>
+                        <span>${monthNames[month]} ${year}</span>
+                        <button type="button" class="cal-nav-btn" data-cal="${containerId}" data-dir="1">&gt;</button>
+                    </div>
+                    <div class="mini-calendar-grid">
+                `;
+                
+                // Day headers
+                dayNames.forEach(day => {
+                    html += `<div class="mini-calendar-day-header">${day}</div>`;
+                });
+                
+                // Previous month days
+                for (let i = firstDay - 1; i >= 0; i--) {
+                    html += `<div class="mini-calendar-day other-month">${prevMonthDays - i}</div>`;
+                }
+                
+                // Current month days
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const isSelected = dateStr === state.selectedDate;
+                    html += `<div class="mini-calendar-day${isSelected ? ' selected' : ''}" data-cal="${containerId}" data-date="${dateStr}">${day}</div>`;
+                }
+                
+                // Next month days to fill grid
+                const totalCells = firstDay + daysInMonth;
+                const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+                for (let i = 1; i <= remainingCells; i++) {
+                    html += `<div class="mini-calendar-day other-month">${i}</div>`;
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+            }
+
+            renderCalendar();
+        }
+        
+        // Global event delegation for all calendars
+        document.addEventListener('click', function(e) {
+            // Handle navigation buttons
+            if (e.target.classList.contains('cal-nav-btn')) {
+                e.preventDefault();
+                const calId = e.target.getAttribute('data-cal');
+                const dir = parseInt(e.target.getAttribute('data-dir'));
+                const state = calendarStates[calId];
+                
+                if (state) {
+                    state.month += dir;
+                    if (state.month > 11) {
+                        state.month = 0;
+                        state.year++;
+                    } else if (state.month < 0) {
+                        state.month = 11;
+                        state.year--;
+                    }
+                    
+                    const container = document.getElementById(calId);
+                    if (container) {
+                        initMiniCalendar(calId, calId.replace('-calendar-', '-date-'));
+                    }
+                }
+            }
+            
+            // Handle day selection
+            if (e.target.classList.contains('mini-calendar-day') && e.target.getAttribute('data-date')) {
+                e.preventDefault();
+                const calId = e.target.getAttribute('data-cal');
+                const dateStr = e.target.getAttribute('data-date');
+                const hiddenInputId = calId.replace('-calendar-', '-date-');
+                const hiddenInput = document.getElementById(hiddenInputId);
+                
+                if (hiddenInput && calendarStates[calId]) {
+                    hiddenInput.value = dateStr;
+                    calendarStates[calId].selectedDate = dateStr;
+                    
+                    const container = document.getElementById(calId);
+                    if (container) {
+                        initMiniCalendar(calId, hiddenInputId);
+                    }
+                }
+            }
+        });
+
         // Switch between subjects
         function switchSubject(subject) {
             document.querySelectorAll('.subject-tab').forEach(tab => tab.classList.remove('active'));
@@ -473,11 +755,26 @@
             tabs[viewIndex].classList.add('active');
             
             subjectContent.querySelector(`.view-content[data-view="${view}"]`).classList.add('active');
+
+            // Initialize calendar when switching to grades or absences (first time only)
+            if (view === 'grades') {
+                const calId = `grade-calendar-${subject}`;
+                if (!calendarStates[calId]) {
+                    initMiniCalendar(calId, `grade-date-${subject}`);
+                }
+            } else if (view === 'absences') {
+                const calId = `absence-calendar-${subject}`;
+                if (!calendarStates[calId]) {
+                    initMiniCalendar(calId, `absence-date-${subject}`);
+                }
+            }
         }
 
-        // Toggle select all checkboxes
+        // Toggle select all checkboxes (for absences)
         function toggleSelectAll(subject, type) {
             const selectAll = document.getElementById(`select-all-${type}-${subject}`);
+            if (!selectAll) return;
+            
             const checkboxes = document.querySelectorAll(`.student-checkbox-${type}[data-subject="${subject}"]`);
             
             checkboxes.forEach(cb => {
@@ -485,85 +782,172 @@
             });
         }
 
-        // Bulk add grades to selected students
-        function bulkAddGrades(subject, classYear) {
-            const grade = document.getElementById(`bulk-grade-${subject}`).value;
-            if (!grade) {
-                alert('Please select a grade');
+        // Save all grades with selected date - using fetch for speed
+        async function saveAllGrades(subject, classYear) {
+            const dateInput = document.getElementById(`grade-date-${subject}`);
+            const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            
+            if (!date) {
+                alert('Please select a date for the grades');
                 return;
             }
             
-            const checkboxes = document.querySelectorAll(`.student-checkbox-grades[data-subject="${subject}"]:checked`);
-            if (checkboxes.length === 0) {
-                alert('Please select at least one student');
-                return;
-            }
+            // Collect all grades
+            const gradeSelects = document.querySelectorAll(`.student-grade-select[data-subject="${subject}"]`);
+            const grades = [];
             
-            const studentNames = Array.from(checkboxes).map(cb => cb.getAttribute('data-student-name')).join(', ');
-            if (!confirm(`Add grade ${grade} to ${checkboxes.length} student(s)?\n\n${studentNames}`)) {
-                return;
-            }
-            
-            // Submit form for each selected student
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/add-grade';
-            
-            checkboxes.forEach((checkbox, index) => {
-                const studentId = checkbox.getAttribute('data-student-id');
-                
-                const inputStudentId = document.createElement('input');
-                inputStudentId.type = 'hidden';
-                inputStudentId.name = `studentId`;
-                inputStudentId.value = studentId;
-                form.appendChild(inputStudentId);
+            gradeSelects.forEach(select => {
+                const grade = select.value;
+                if (grade) {
+                    grades.push({
+                        studentId: select.getAttribute('data-student-id'),
+                        studentName: select.getAttribute('data-student-name'),
+                        grade: grade
+                    });
+                }
             });
             
-            // For now, submit one by one (can be optimized with bulk endpoint later)
-            const studentId = checkboxes[0].getAttribute('data-student-id');
-            form.innerHTML = `
-                <input type="hidden" name="studentId" value="${studentId}">
-                <input type="hidden" name="subject" value="${subject}">
-                <input type="hidden" name="classYear" value="${classYear}">
-                <input type="hidden" name="grade" value="${grade}">
-            `;
+            if (grades.length === 0) {
+                alert('Please select at least one grade to save');
+                return;
+            }
             
-            document.body.appendChild(form);
-            form.submit();
+            // Show confirmation
+            const gradeList = grades.map(g => `${g.studentName}: ${g.grade}`).join('\n');
+            if (!confirm(`Save ${grades.length} grade(s) for ${date}?\n\n${gradeList}`)) {
+                return;
+            }
             
-            // Note: This currently only submits for first student
-            // For proper bulk operation, would need backend endpoint
-            alert('Adding grades... (Refresh to see updates)');
+            // Show loading indicator
+            const saveBtn = document.getElementById(`save-grades-btn-${subject}`);
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ Saving...';
+            
+            try {
+                // Submit grades via fetch (no page reload!)
+                const response = await fetch('/add-grades-bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        grades: grades,
+                        subject: subject,
+                        classYear: classYear,
+                        date: date
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Clear the grade selects
+                    gradeSelects.forEach(select => {
+                        if (select.value) {
+                            select.value = '';
+                        }
+                    });
+                    
+                    // Show success message
+                    alert('✓ ' + data.message);
+                    
+                    // Refresh the page to show updated grades
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Error saving grades:', error);
+                alert('Failed to save grades. Please try again.');
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
         }
 
-        // Mark student as absent
-        function markAbsent(studentId, studentName, subject, classYear) {
-            if (!confirm(`Mark ${studentName} as absent for ${subject}?`)) {
+        // Mark student as absent - using fetch for speed
+        async function markAbsent(studentId, studentName, subject, classYear) {
+            // Get the selected date from the mini calendar (hidden input)
+            const dateInput = document.getElementById(`absence-date-${subject}`);
+            const selectedDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            
+            if (!selectedDate) {
+                alert('Please select a date first');
+                return;
+            }
+            
+            const dateObj = new Date(selectedDate);
+            const dateStr = dateObj.toLocaleDateString();
+            
+            if (!confirm(`Mark ${studentName} as absent for ${subject} on ${dateStr}?`)) {
                 return;
             }
             
             const button = document.getElementById(`presence-${studentId}-${subject}`);
-            button.classList.remove('present');
-            button.classList.add('absent');
-            button.textContent = '✗ Absent';
+            const originalText = button.textContent;
+            button.textContent = '⏳ Saving...';
             button.disabled = true;
             
-            // Submit absence form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/add-absence';
-            form.innerHTML = `
-                <input type="hidden" name="studentId" value="${studentId}">
-                <input type="hidden" name="subject" value="${subject}">
-                <input type="hidden" name="classYear" value="${classYear}">
-                <input type="hidden" name="type" value="unmotivated">
-                <input type="hidden" name="date" value="${new Date().toISOString().split('T')[0]}">
-                <input type="hidden" name="reason" value="">
-            `;
-            
-            document.body.appendChild(form);
-            form.submit();
+            try {
+                // Submit absence via fetch (no page reload!)
+                const response = await fetch('/add-absence', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        subject: subject,
+                        classYear: classYear,
+                        type: 'unmotivated',
+                        date: selectedDate,
+                        reason: ''
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    button.classList.remove('present');
+                    button.classList.add('absent');
+                    button.textContent = '✗ Absent';
+                    
+                    // Show success message briefly
+                    setTimeout(() => {
+                        alert('✓ ' + data.message);
+                        // Refresh to show updated absence count
+                        window.location.reload();
+                    }, 300);
+                } else {
+                    alert('Error: ' + data.error);
+                    button.classList.add('present');
+                    button.classList.remove('absent');
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error marking absence:', error);
+                alert('Failed to mark absence. Please try again.');
+                button.classList.add('present');
+                button.classList.remove('absent');
+                button.textContent = originalText;
+                button.disabled = false;
+            }
         }
+
+        // Initialize calendars for the first visible subject on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstSubjectContent = document.querySelector('.subject-content.active');
+            if (firstSubjectContent) {
+                const subject = firstSubjectContent.getAttribute('data-subject');
+                if (subject) {
+                    initMiniCalendar(`grade-calendar-${subject}`, `grade-date-${subject}`);
+                    initMiniCalendar(`absence-calendar-${subject}`, `absence-date-${subject}`);
+                }
+            }
+        });
     </script>
 </body>
 </html>

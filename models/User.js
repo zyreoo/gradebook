@@ -153,7 +153,21 @@ class User {
     }
 
 
-    static async addGrade({studentId, studentName, grade, teacherId, teacherName, subject}){
+    static async addGrade({studentId, studentName, grade, teacherId, teacherName, subject, date}){
+        
+        // If date is provided, use it; otherwise use current date
+        let gradeDate = new Date();
+        if (date) {
+            // If date is a string, parse it
+            if (typeof date === 'string') {
+                gradeDate = new Date(date);
+            } else if (date.toDate) {
+                // If it's a Firestore timestamp, convert it
+                gradeDate = date.toDate();
+            } else {
+                gradeDate = date;
+            }
+        }
         
         const gradeData = {
             studentId, 
@@ -162,7 +176,7 @@ class User {
             teacherId, 
             teacherName, 
             subject: subject || 'General', 
-            createdAt: new Date(),
+            createdAt: gradeDate,
             timestamp: Date.now()
         }; 
 

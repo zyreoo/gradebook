@@ -759,7 +759,7 @@ app.post('/add-grade', async (req, res) =>{
             return res.redirect('/students?error=' + encodeURIComponent('Access denied. Teachers only.'));
         }
 
-        const { studentId, grade, classYear, subject } = req.body; 
+        const { studentId, grade, classYear, subject, date } = req.body; 
 
         if (!studentId || !grade || !subject){
             const redirectUrl = classYear ? `/class/${classYear}` : '/students';
@@ -812,7 +812,8 @@ app.post('/add-grade', async (req, res) =>{
             grade: gradeNum, 
             teacherId: req.session.userId, 
             teacherName: req.session.userName, 
-            subject: subject
+            subject: subject,
+            date: date || undefined
         });
 
         const redirectUrl = classYear ? `/class/${classYear}` : '/students';
@@ -826,7 +827,116 @@ app.post('/add-grade', async (req, res) =>{
     }
 }); 
 
+// Bulk add grades endpoint - optimized with parallel operations and JSON response
+app.post('/add-grades-bulk', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.json({ success: false, error: 'Not authenticated' });
+        }
 
+        if (req.session.userRole !== 'teacher') {
+            return res.json({ success: false, error: 'Access denied. Teachers only.' });
+        }
+
+        let { grades, classYear, subject, date } = req.body;
+
+        // Parse grades if it's a JSON string (from form submission)
+        if (typeof grades === 'string') {
+            try {
+                grades = JSON.parse(grades);
+            } catch (error) {
+                return res.json({ success: false, error: 'Invalid grades data format' });
+            }
+        }
+
+        if (!grades || !Array.isArray(grades) || grades.length === 0) {
+            return res.json({ success: false, error: 'No grades provided' });
+        }
+
+        if (!subject) {
+            return res.json({ success: false, error: 'Subject is required' });
+        }
+
+        if (!date) {
+            return res.json({ success: false, error: 'Date is required' });
+        }
+
+        const User = require('./models/User');
+        
+        // Get teacher's subjects
+        const teacher = await User.findbyId(req.session.userId);
+        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+
+        if (!teacher || teacherSubjects.length === 0) {
+            return res.json({ success: false, error: 'No subjects assigned. Contact your administrator.' });
+        }
+
+        // Verify teacher teaches this subject
+        if (!teacherSubjects.includes(subject)) {
+            return res.json({ success: false, error: 'You are not assigned to teach this subject.' });
+        }
+
+        // Process all grades in parallel for speed
+        const results = await Promise.all(
+            grades.map(async (gradeData) => {
+                const { studentId, grade } = gradeData;
+
+                if (!studentId || !grade) {
+                    return { success: false, studentId, error: 'Missing data' };
+                }
+
+                const gradeNum = parseInt(grade);
+                if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+                    return { success: false, studentId, error: 'Invalid grade' };
+                }
+
+                try {
+                    // Verify student exists and is in the same school
+                    const student = await User.findbyId(studentId);
+                    
+                    if (!student) {
+                        return { success: false, studentId, error: 'Student not found' };
+                    }
+
+                    if (student.schoolId !== req.session.schoolId) {
+                        return { success: false, studentId, error: 'Different school' };
+                    }
+
+                    // Add grade with selected subject and date
+                    await User.addGrade({
+                        studentId: studentId,
+                        studentName: student.name,
+                        grade: gradeNum,
+                        teacherId: req.session.userId,
+                        teacherName: req.session.userName,
+                        subject: subject,
+                        date: date
+                    });
+
+                    return { success: true, studentId, studentName: student.name, grade: gradeNum };
+                } catch (error) {
+                    console.error(`Error adding grade for student ${studentId}:`, error);
+                    return { success: false, studentId, error: error.message };
+                }
+            })
+        );
+
+        const successCount = results.filter(r => r.success).length;
+        const errorCount = results.length - successCount;
+
+        if (successCount > 0) {
+            const message = errorCount > 0 
+                ? `Successfully added ${successCount} grade(s). ${errorCount} failed.`
+                : `Successfully added ${successCount} grade(s).`;
+            res.json({ success: true, message, successCount, errorCount, results });
+        } else {
+            res.json({ success: false, error: 'Failed to add grades. Please try again.', results });
+        }
+    } catch (error) {
+        console.error('Error adding grades in bulk:', error);
+        res.json({ success: false, error: 'Failed to add grades. Please try again.' });
+    }
+});
 
 app.post('/edit-grade', async (req, res) => {
 
@@ -981,23 +1091,21 @@ app.post('/delete-grade', async (req,res) =>{
 app.post('/add-absence', async (req, res) => {
     try {
         if (!req.session.userId) {
-            return res.redirect("/auth/login");
+            return res.json({ success: false, error: 'Not authenticated' });
         }
 
         if (req.session.userRole !== 'teacher') {
-            return res.redirect('/students?error=' + encodeURIComponent('Access denied. Teachers only.'));
+            return res.json({ success: false, error: 'Access denied. Teachers only.' });
         }
 
         const { studentId, date, type, reason, classYear, subject } = req.body; 
 
         if (!studentId || !date || !type || !subject) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student, date, type, and subject are required'));
+            return res.json({ success: false, error: 'Student, date, type, and subject are required' });
         }
 
         if (type !== 'motivated' && type !== 'unmotivated') {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid absence type'));
+            return res.json({ success: false, error: 'Invalid absence type' });
         }
 
         const User = require('./models/User'); 
@@ -1007,34 +1115,29 @@ app.post('/add-absence', async (req, res) => {
         const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
 
         if (!teacher || teacherSubjects.length === 0) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('No subjects assigned. Contact your administrator.'));
+            return res.json({ success: false, error: 'No subjects assigned. Contact your administrator.' });
         }
 
         // Verify teacher teaches this subject
         if (!teacherSubjects.includes(subject)) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not assigned to teach this subject.'));
+            return res.json({ success: false, error: 'You are not assigned to teach this subject.' });
         }
 
         // Verify student exists and is in the same school
         const student = await User.findbyId(studentId); 
 
         if (!student) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student not found'));
+            return res.json({ success: false, error: 'Student not found' });
         }
 
         if (student.schoolId !== req.session.schoolId) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Cannot add absence for student from different school'));
+            return res.json({ success: false, error: 'Cannot add absence for student from different school' });
         }
 
         // Parse date
         const absenceDate = new Date(date);
         if (isNaN(absenceDate.getTime())) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid date format'));
+            return res.json({ success: false, error: 'Invalid date format' });
         }
 
         // Add absence
@@ -1050,14 +1153,17 @@ app.post('/add-absence', async (req, res) => {
         });
 
         const typeLabel = type === 'motivated' ? 'Motivated' : 'Unmotivated';
-        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`${typeLabel} absence recorded for ${student.name} on ${date} in ${subject}`));
+        res.json({ 
+            success: true, 
+            message: `${typeLabel} absence recorded for ${student.name} on ${date} in ${subject}`,
+            studentId,
+            studentName: student.name,
+            date
+        });
 
     } catch(error) {
         console.error('Error adding absence:', error);
-        const classYear = req.body.classYear;
-        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to add absence. Please try again.'));
+        res.json({ success: false, error: 'Failed to add absence. Please try again.' });
     }
 });
 
