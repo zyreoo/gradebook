@@ -565,7 +565,9 @@
                                                 <button type="button" 
                                                         class="presence-btn present" 
                                                         id="presence-<%= student.uid %>-<%= subject %>"
-                                                        onclick="markAbsent('<%= student.uid %>', '<%= student.name %>', '<%= subject %>', '<%= classYear %>')">
+                                                        data-student-id="<%= student.uid %>"
+                                                        data-student-name="<%= student.name %>"
+                                                        onclick="toggleAbsent('<%= student.uid %>', '<%= subject %>')">
                                                     ✓ Present
                                                 </button>
                                             </td>
@@ -592,6 +594,16 @@
                                     <% }); %>
                                 </tbody>
                             </table>
+                            
+                            <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                                <button type="button" 
+                                        class="btn-primary" 
+                                        id="save-absences-btn-<%= subject %>"
+                                        onclick="saveAllAbsences('<%= subject %>', '<%= classYear %>')"
+                                        style="padding: 12px 24px; font-size: 16px; font-weight: 600;">
+                                    💾 Save All Absences
+                                </button>
+                            </div>
                         </div>
                     </div>
                 <% }); %>
@@ -867,73 +879,111 @@
             }
         }
 
-        // Mark student as absent - using fetch for speed
-        async function markAbsent(studentId, studentName, subject, classYear) {
-            // Get the selected date from the mini calendar (hidden input)
-            const dateInput = document.getElementById(`absence-date-${subject}`);
-            const selectedDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
-            
-            if (!selectedDate) {
-                alert('Please select a date first');
-                return;
-            }
-            
-            const dateObj = new Date(selectedDate);
-            const dateStr = dateObj.toLocaleDateString();
-            
-            if (!confirm(`Mark ${studentName} as absent for ${subject} on ${dateStr}?`)) {
-                return;
-            }
-            
+        // Toggle student absent status (visual only, doesn't save)
+        function toggleAbsent(studentId, subject) {
             const button = document.getElementById(`presence-${studentId}-${subject}`);
-            const originalText = button.textContent;
-            button.textContent = '⏳ Saving...';
-            button.disabled = true;
+            
+            if (button.classList.contains('present')) {
+                // Mark as absent (visual only)
+                button.classList.remove('present');
+                button.classList.add('absent');
+                button.textContent = '✗ Absent';
+            } else {
+                // Mark as present (visual only)
+                button.classList.remove('absent');
+                button.classList.add('present');
+                button.textContent = '✓ Present';
+            }
+        }
+
+        // Save all absences with selected date
+        async function saveAllAbsences(subject, classYear) {
+            const dateInput = document.getElementById(`absence-date-${subject}`);
+            const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            
+            if (!date) {
+                alert('Please select a date for the absences');
+                return;
+            }
+            
+            // Collect all students marked as absent
+            const allButtons = document.querySelectorAll(`button[id^="presence-"][id$="-${subject}"]`);
+            const absences = [];
+            
+            allButtons.forEach(button => {
+                if (button.classList.contains('absent')) {
+                    const studentId = button.getAttribute('data-student-id');
+                    const studentName = button.getAttribute('data-student-name');
+                    if (studentId && studentName) {
+                        absences.push({
+                            studentId: studentId,
+                            studentName: studentName,
+                            type: 'unmotivated',
+                            reason: ''
+                        });
+                    }
+                }
+            });
+            
+            if (absences.length === 0) {
+                alert('Please mark at least one student as absent');
+                return;
+            }
+            
+            // Show confirmation
+            const studentNames = absences.map(a => a.studentName).join(', ');
+            const dateObj = new Date(date);
+            const dateStr = dateObj.toLocaleDateString();
+            if (!confirm(`Save ${absences.length} absence(s) for ${dateStr}?\n\nStudents: ${studentNames}`)) {
+                return;
+            }
+            
+            // Show loading indicator
+            const saveBtn = document.getElementById(`save-absences-btn-${subject}`);
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ Saving...';
             
             try {
-                // Submit absence via fetch (no page reload!)
-                const response = await fetch('/add-absence', {
+                // Submit absences via fetch (no page reload!)
+                const response = await fetch('/add-absences-bulk', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        studentId: studentId,
+                        absences: absences,
                         subject: subject,
                         classYear: classYear,
-                        type: 'unmotivated',
-                        date: selectedDate,
-                        reason: ''
+                        date: date
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    button.classList.remove('present');
-                    button.classList.add('absent');
-                    button.textContent = '✗ Absent';
+                    // Reset all buttons to present state
+                    allButtons.forEach(button => {
+                        button.classList.remove('absent');
+                        button.classList.add('present');
+                        button.textContent = '✓ Present';
+                    });
                     
-                    // Show success message briefly
-                    setTimeout(() => {
-                        alert('✓ ' + data.message);
-                        // Refresh to show updated absence count
-                        window.location.reload();
-                    }, 300);
+                    // Show success message
+                    alert('✓ ' + data.message);
+                    
+                    // Refresh the page to show updated absences
+                    window.location.reload();
                 } else {
                     alert('Error: ' + data.error);
-                    button.classList.add('present');
-                    button.classList.remove('absent');
-                    button.textContent = originalText;
-                    button.disabled = false;
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
                 }
             } catch (error) {
-                console.error('Error marking absence:', error);
-                alert('Failed to mark absence. Please try again.');
-                button.classList.add('present');
-                button.classList.remove('absent');
-                button.textContent = originalText;
-                button.disabled = false;
+                console.error('Error saving absences:', error);
+                alert('Failed to save absences. Please try again.');
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
             }
         }
 

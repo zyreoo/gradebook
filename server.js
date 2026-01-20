@@ -1167,6 +1167,119 @@ app.post('/add-absence', async (req, res) => {
     }
 });
 
+// Bulk add absences endpoint
+app.post('/add-absences-bulk', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.json({ success: false, error: 'Not authenticated' });
+        }
+
+        if (req.session.userRole !== 'teacher') {
+            return res.json({ success: false, error: 'Access denied. Teachers only.' });
+        }
+
+        let { absences, classYear, subject, date } = req.body;
+
+        // Parse absences if it's a JSON string
+        if (typeof absences === 'string') {
+            try {
+                absences = JSON.parse(absences);
+            } catch (error) {
+                return res.json({ success: false, error: 'Invalid absences data format' });
+            }
+        }
+
+        if (!absences || !Array.isArray(absences) || absences.length === 0) {
+            return res.json({ success: false, error: 'No absences provided' });
+        }
+
+        if (!subject) {
+            return res.json({ success: false, error: 'Subject is required' });
+        }
+
+        if (!date) {
+            return res.json({ success: false, error: 'Date is required' });
+        }
+
+        const User = require('./models/User');
+        
+        // Get teacher's subjects
+        const teacher = await User.findbyId(req.session.userId);
+        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+
+        if (!teacher || teacherSubjects.length === 0) {
+            return res.json({ success: false, error: 'No subjects assigned. Contact your administrator.' });
+        }
+
+        // Verify teacher teaches this subject
+        if (!teacherSubjects.includes(subject)) {
+            return res.json({ success: false, error: 'You are not assigned to teach this subject.' });
+        }
+
+        // Process all absences in parallel
+        const results = await Promise.all(
+            absences.map(async (absenceData) => {
+                const { studentId, type = 'unmotivated', reason = '' } = absenceData;
+
+                if (!studentId) {
+                    return { success: false, studentId, error: 'Missing student ID' };
+                }
+
+                try {
+                    // Verify student exists and is in the same school
+                    const student = await User.findbyId(studentId);
+                    
+                    if (!student) {
+                        return { success: false, studentId, error: 'Student not found' };
+                    }
+
+                    if (student.schoolId !== req.session.schoolId) {
+                        return { success: false, studentId, error: 'Different school' };
+                    }
+
+                    // Parse date
+                    const absenceDate = new Date(date);
+                    if (isNaN(absenceDate.getTime())) {
+                        return { success: false, studentId, error: 'Invalid date' };
+                    }
+
+                    // Add absence
+                    await User.addAbsence({
+                        studentId: studentId,
+                        studentName: student.name,
+                        teacherId: req.session.userId,
+                        teacherName: req.session.userName,
+                        subject: subject,
+                        date: absenceDate,
+                        type: type,
+                        reason: reason
+                    });
+
+                    return { success: true, studentId, studentName: student.name };
+                } catch (error) {
+                    console.error(`Error adding absence for student ${studentId}:`, error);
+                    return { success: false, studentId, error: error.message };
+                }
+            })
+        );
+
+        const successCount = results.filter(r => r.success).length;
+        const errorCount = results.length - successCount;
+
+        if (successCount > 0) {
+            const message = errorCount > 0 
+                ? `Successfully recorded ${successCount} absence(s). ${errorCount} failed.`
+                : `Successfully recorded ${successCount} absence(s).`;
+            res.json({ success: true, message, successCount, errorCount, results });
+        } else {
+            res.json({ success: false, error: 'Failed to record absences. Please try again.', results });
+        }
+    } catch (error) {
+        console.error('Error adding absences in bulk:', error);
+        res.json({ success: false, error: 'Failed to record absences. Please try again.' });
+    }
+});
+
 app.post('/motivate-absence', async (req, res) => {
     try {
         if (!req.session.userId) {
