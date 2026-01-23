@@ -219,7 +219,7 @@ async function handleTeacherDashboard(req, res, userData) {
         
         if (schoolId) {
             const schoolData = await School.findById(schoolId);
-            if (schoolData && schoolData.classYearTeachers) {
+            if (schoolData?.classYearTeachers) {
                 for (const [classYear, teacherIds] of Object.entries(schoolData.classYearTeachers)) {
                     if (teacherIds.includes(teacherId)) {
                         assignedClasses.push(classYear);

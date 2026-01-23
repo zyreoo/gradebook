@@ -307,7 +307,7 @@ class School {
         }
 
         // Remove from teacherAssignments
-        if (teacherAssignments[classYear] && teacherAssignments[classYear][teacherId]) {
+        if (teacherAssignments[classYear]?.[teacherId]) {
             delete teacherAssignments[classYear][teacherId];
         }
 
@@ -336,7 +336,7 @@ class School {
         const data = doc.data();
         const teacherAssignments = data.teacherAssignments || {};
         
-        if (teacherAssignments[classYear] && teacherAssignments[classYear][teacherId]) {
+        if (teacherAssignments[classYear]?.[teacherId]) {
             return teacherAssignments[classYear][teacherId].subjects || [];
         }
         

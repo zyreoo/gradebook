@@ -90,7 +90,7 @@ class User {
 
     static async getParentByStudentId(studentId){
         const student  = await this.findbyId(studentId); 
-        if(!student || !student.parentId){
+        if(!student?.parentId){
             return null; 
         }
         return await this.findbyId(student.parentId); 

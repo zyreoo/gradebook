@@ -104,7 +104,14 @@ async function checkUserExists(email) {
 
 function prepareUserData(data, schoolId) {
     const { name, email, password, role, classYear, parentEmail, parentPassword } = data;
-    const subjects = Array.isArray(data.subjects) ? data.subjects : (data.subjects ? [data.subjects] : []);
+    let subjects;
+    if (Array.isArray(data.subjects)) {
+        subjects = data.subjects;
+    } else if (data.subjects) {
+        subjects = [data.subjects];
+    } else {
+        subjects = [];
+    }
     
     return {
         name,
@@ -153,7 +160,14 @@ async function validateRoleSpecificFields(role, req, schoolId) {
     }
 
     if (role === 'teacher') {
-        const subjects = Array.isArray(req.body.subjects) ? req.body.subjects : (req.body.subjects ? [req.body.subjects] : []);
+        let subjects;
+        if (Array.isArray(req.body.subjects)) {
+            subjects = req.body.subjects;
+        } else if (req.body.subjects) {
+            subjects = [req.body.subjects];
+        } else {
+            subjects = [];
+        }
         const subjectError = await validateTeacherSubjects(subjects, schoolId);
         if (subjectError) {
             return subjectError;
@@ -355,7 +369,14 @@ router.post('/create-user', async (req, res) => {
 
         const { role, parentEmail } = req.body;
         const schoolId = req.session.schoolId;
-        const subjects = Array.isArray(req.body.subjects) ? req.body.subjects : (req.body.subjects ? [req.body.subjects] : []);
+        let subjects;
+        if (Array.isArray(req.body.subjects)) {
+            subjects = req.body.subjects;
+        } else if (req.body.subjects) {
+            subjects = [req.body.subjects];
+        } else {
+            subjects = [];
+        }
 
         // Basic field validation
         const basicError = validateBasicFields(req.body);
@@ -599,15 +620,20 @@ router.post('/assign-teacher-ajax', async (req, res) => {
 
         await School.assignTeacherToClass(schoolId, classYear, teacherId, subjectArray);
         
+        let message = 'Teacher assigned successfully';
+        if (subjectArray.length > 0) {
+            message += ` to teach: ${subjectArray.join(', ')}`;
+        }
+        
         res.json({ 
             success: true, 
-            message: `Teacher assigned successfully${subjectArray.length > 0 ? ` to teach: ${subjectArray.join(', ')}` : ''}` 
+            message
         });
     } catch (error) {
         console.error('AJAX assign teacher error:', error);
         res.status(500).json({ 
             success: false, 
-            message: error.message || 'Failed to assign teacher' 
+            message: error?.message || 'Failed to assign teacher' 
         });
     }
 });

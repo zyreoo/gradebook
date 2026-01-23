@@ -201,7 +201,7 @@ router.post('/verify-otp', async (req, res) => {
             return res.redirect('/auth/login?error=' + encodeURIComponent('Session expired. Please login again.'));
         }
 
-        if (!code || code.length !== 6) {
+        if (!code?.length || code.length !== 6) {
             return res.redirect('/auth/verify-otp?error=' + encodeURIComponent('Please enter a valid 6-digit code'));
         }
 
