@@ -8,7 +8,12 @@
     "dev": "nodemon server.js",
     "seed": "node seed.js",
     "seed:full": "node seed-full.js",
-    "test:email": "node test-email.js"
+    "test:email": "node test-email.js",
+    "test:backup": "node test-backup.js",
+    "backup:now": "node scripts/backup-now.js",
+    "backup:monthly": "node scripts/backup-now.js monthly",
+    "backup:list": "node scripts/backup-list.js",
+    "backup:restore": "node scripts/backup-restore.js"
   },
   "keywords": [],
   "author": "",

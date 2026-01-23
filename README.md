@@ -259,16 +259,38 @@ This application complies with **Order 3.896/2023** - Technical Standards for El
 - Mobile-ready responsive design (Art. 3)
 - Role-based access control (Art. 14-20)
 - Two-factor authentication for admins and teachers (Art. 6)
+- **Automated backup system** (Art. 7-10)
+  - Daily incremental backups at 2:00 AM
+  - Monthly full backups on 1st of each month
+  - Automatic retention management (30 daily, 12 monthly)
+  - Manual backup and restore commands
 - HTTPS support (Art. 5, 13)
 - Timestamp tracking for operations
 - Authorization checks (only teachers can modify grades)
 
 ⚠️ **Requires Configuration:**
-- Automated backup system (Art. 7-10) - Use Firestore automatic backups
+- Second backup location for full compliance (Art. 7) - Configure cloud storage
 - Complete audit logging (Art. 16) - Basic tracking exists, enhancement recommended
 - API documentation (Art. 13) - Foundation exists
 
-See `docs/2FA-SETUP.md` and `docs/QUICK-START-2FA.md` for setup instructions.
+### Setup Guides
+
+- **2FA Setup**: `docs/2FA-SETUP.md` and `docs/QUICK-START-2FA.md`
+- **Backup System**: `docs/BACKUP-SYSTEM.md` and `docs/BACKUP-QUICK-START.md`
+
+### Quick Backup Setup
+
+```env
+# Add to .env
+ENABLE_AUTO_BACKUP=true
+BACKUP_DIR=./backups
+```
+
+```bash
+# Test backup system
+npm run backup:now
+npm run backup:list
+```
 
 ## 💬 Final Thoughts
 

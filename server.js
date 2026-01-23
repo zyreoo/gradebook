@@ -1502,6 +1502,15 @@ setInterval(async () => {
     }
 }, 60 * 60 * 1000); // Every hour
 
+// Start automated backup scheduler (if enabled)
+if (process.env.ENABLE_AUTO_BACKUP === 'true') {
+    const backupScheduler = require('./services/backupScheduler');
+    backupScheduler.start();
+} else {
+    console.log('ℹ  Automated backups disabled. Set ENABLE_AUTO_BACKUP=true to enable.');
+    console.log('   You can still run manual backups with: npm run backup:now');
+}
+
 if (require.main === module) {
     // Running directly (local development)
     app.listen(PORT, () => {

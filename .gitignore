@@ -14,6 +14,11 @@ serviceAccountKey.json
 .env.test
 .env.production
 
+# Backups (contain sensitive data)
+backups/
+*.backup
+backup-*.json
+
 # Logs
 logs/
 *.log
