@@ -77,7 +77,7 @@
                                         <% if (student.stats && student.stats.totalAbsences > 0) { %>
                                             <div class="stat-mini">
                                                 <span class="stat-label-mini">Absences</span>
-                                                <span class="stat-value-mini" style="color: <%= student.stats.unmotivatedAbsences > 2 ? 'var(--error)' : 'var(--text-dim)' %>;">
+                                                <span class="stat-value-mini <%= student.stats.unmotivatedAbsences > 2 ? 'error' : 'dim' %>">
                                                     <%= student.stats.totalAbsences %>
                                                 </span>
                                             </div>
