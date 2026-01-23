@@ -274,7 +274,110 @@ class User {
     }
 
 
-        static async update(uid, updates) {
+    static async _updateAuthEmail(uid, email) {
+        await auth.updateUser(uid, { email });
+    }
+
+    static async _updateAuthName(uid, name) {
+        await auth.updateUser(uid, { displayName: name });
+    }
+
+    static async _createParentAccount(parentEmail, parentPassword, studentName, schoolId) {
+        const parentHashedPassword = await bcrypt.hash(parentPassword, 10);
+        
+        const parentRecord = await auth.createUser({
+            email: parentEmail,
+            password: parentPassword,
+            displayName: `${studentName}'s Parent`
+        });
+
+        const parentData = {
+            uid: parentRecord.uid,
+            name: `${studentName}'s Parent`,
+            email: parentEmail,
+            password: parentHashedPassword,
+            role: 'parent',
+            schoolId: schoolId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        await db.collection('users').doc(parentRecord.uid).set(parentData);
+        return parentRecord.uid;
+    }
+
+    static async _updateParentPassword(parentId, newPassword) {
+        const parentRef = db.collection('users').doc(parentId);
+        const parentDoc = await parentRef.get();
+        
+        if (!parentDoc.exists) {
+            return;
+        }
+
+        const parentHashedPassword = await bcrypt.hash(newPassword, 10);
+        await auth.updateUser(parentId, { password: newPassword });
+        await parentRef.update({
+            password: parentHashedPassword,
+            updatedAt: new Date()
+        });
+    }
+
+    static async _handleParentEmailUpdate(updates, currentUser, updateData) {
+        // Handle clearing parent association
+        if (!updates.parentEmail || updates.parentEmail.trim() === '') {
+            updateData.parentId = null;
+            updateData.parentEmail = null;
+            return null;
+        }
+
+        const needsNewParent = !currentUser.parentId || currentUser.parentEmail !== updates.parentEmail;
+        
+        if (!needsNewParent) {
+            return currentUser.parentId;
+        }
+
+        const existingParent = await this.findbyEmail(updates.parentEmail);
+        
+        if (existingParent) {
+            updateData.parentId = existingParent.uid;
+            updateData.parentEmail = updates.parentEmail;
+            return existingParent.uid;
+        }
+
+        const parentPassword = updates.parentPassword || Math.random().toString(36).slice(-12);
+        const studentName = updates.name || currentUser.name;
+        const parentId = await this._createParentAccount(
+            updates.parentEmail,
+            parentPassword,
+            studentName,
+            currentUser.schoolId
+        );
+
+        updateData.parentId = parentId;
+        updateData.parentEmail = updates.parentEmail;
+        return parentId;
+    }
+
+    static async _handleParentUpdates(updates, currentUser, updateData) {
+        const hasParentEmail = updates.hasOwnProperty('parentEmail');
+        const hasParentPassword = updates.hasOwnProperty('parentPassword');
+        
+        if (!hasParentEmail && !hasParentPassword) {
+            return;
+        }
+
+        let parentId = currentUser.parentId;
+
+        if (hasParentEmail) {
+            parentId = await this._handleParentEmailUpdate(updates, currentUser, updateData);
+        }
+
+        if (hasParentPassword && parentId) {
+            await this._updateParentPassword(parentId, updates.parentPassword);
+        }
+    }
+
+    static async update(uid, updates) {
         const userRef = db.collection('users').doc(uid);
         const doc = await userRef.get();
         
@@ -287,82 +390,16 @@ class User {
             updatedAt: new Date()
         };
 
-        // If email is being updated, also update in Firebase Auth
         if (updates.email) {
-            await auth.updateUser(uid, {
-                email: updates.email
-            });
+            await this._updateAuthEmail(uid, updates.email);
         }
 
-        // If name is being updated, also update displayName in Firebase Auth
         if (updates.name) {
-            await auth.updateUser(uid, {
-                displayName: updates.name
-            });
+            await this._updateAuthName(uid, updates.name);
         }
 
-        // If updating parent email/password, handle parent account
-        if (updates.parentEmail || updates.parentPassword) {
-            const currentUser = doc.data();
-            let parentId = currentUser.parentId;
-
-            if (updates.parentEmail) {
-                // Check if parent email changed or parent doesn't exist
-                if (!parentId || currentUser.parentEmail !== updates.parentEmail) {
-                    // Check if parent already exists with this email
-                    const existingParent = await this.findbyEmail(updates.parentEmail);
-                    
-                    if (existingParent) {
-                        // Use existing parent
-                        parentId = existingParent.uid;
-                    } else {
-                        // Create new parent account
-                        const parentPassword = updates.parentPassword || Math.random().toString(36).slice(-12);
-                        const parentHashedPassword = await bcrypt.hash(parentPassword, 10);
-                        
-                        const parentRecord = await auth.createUser({
-                            email: updates.parentEmail,
-                            password: parentPassword,
-                            displayName: `${updates.name || currentUser.name}'s Parent`
-                        });
-
-                        const parentData = {
-                            uid: parentRecord.uid,
-                            name: `${updates.name || currentUser.name}'s Parent`,
-                            email: updates.parentEmail,
-                            password: parentHashedPassword,
-                            role: 'parent',
-                            schoolId: currentUser.schoolId,
-                            createdAt: new Date(),
-                            updatedAt: new Date()
-                        };
-
-                        await db.collection('users').doc(parentRecord.uid).set(parentData);
-                        parentId = parentRecord.uid;
-                    }
-                    
-                    updateData.parentId = parentId;
-                    updateData.parentEmail = updates.parentEmail;
-                }
-            }
-
-            // If updating parent password and parent exists
-            if (updates.parentPassword && parentId) {
-                const parentRef = db.collection('users').doc(parentId);
-                const parentDoc = await parentRef.get();
-                
-                if (parentDoc.exists) {
-                    const parentHashedPassword = await bcrypt.hash(updates.parentPassword, 10);
-                    await auth.updateUser(parentId, {
-                        password: updates.parentPassword
-                    });
-                    await parentRef.update({
-                        password: parentHashedPassword,
-                        updatedAt: new Date()
-                    });
-                }
-            }
-        }
+        const currentUser = doc.data();
+        await this._handleParentUpdates(updates, currentUser, updateData);
 
         await userRef.update(updateData);
         const updatedDoc = await userRef.get();
@@ -386,47 +423,34 @@ class User {
         return { id: gradeId, deleted: true };
     }
 
-    static async advanceAcademicYear(schoolId) {
-        // Get all students for this school
-        const students = await this.getUserByRoleAndSchool('student', schoolId);
+    static _incrementClassYear(classYear) {
+        if (!classYear) return null;
         
-        if (students.length === 0) {
-            return {
-                studentsUpdated: 0,
-                gradesDeleted: 0,
-                absencesDeleted: 0
-            };
+        // Handle numeric: "5" -> "6"
+        if (/^\d+$/.test(classYear)) {
+            const num = parseInt(classYear);
+            return (num + 1).toString();
         }
         
-        // Function to increment class year (handles both "5" and "10A" formats)
-        function incrementClassYear(classYear) {
-            if (!classYear) return null;
-            
-            // Handle numeric: "5" -> "6"
-            if (/^\d+$/.test(classYear)) {
-                const num = parseInt(classYear);
-                return (num + 1).toString();
-            }
-            
-            // Handle class names: "9A" -> "10A", "10B" -> "11B"
-            const match = classYear.match(/^(\d+)([A-Z])?$/);
-            if (match) {
-                const num = parseInt(match[1]);
-                const letter = match[2] || '';
-                return (num + 1).toString() + letter;
-            }
-            
-            // Fallback: can't parse, return as is
-            return classYear;
+        // Handle class names: "9A" -> "10A", "10B" -> "11B"
+        const match = classYear.match(/^(\d+)([A-Z])?$/);
+        if (match) {
+            const num = parseInt(match[1]);
+            const letter = match[2] || '';
+            return (num + 1).toString() + letter;
         }
         
-        // Update all students
+        // Fallback: can't parse, return as is
+        return classYear;
+    }
+
+    static async _updateStudentClassYears(students) {
         const batch = db.batch();
         let updateCount = 0;
         
         for (const student of students) {
             if (student.classYear) {
-                const newClassYear = incrementClassYear(student.classYear);
+                const newClassYear = this._incrementClassYear(student.classYear);
                 const studentRef = db.collection('users').doc(student.uid);
                 batch.update(studentRef, {
                     classYear: newClassYear,
@@ -440,99 +464,112 @@ class User {
             await batch.commit();
         }
         
-        // Delete all grades and absences for students in this school
-        // Firestore 'in' query has a limit of 10 items, so we need to batch
-        const studentIds = students.map(s => s.uid);
-        let totalGradesDeleted = 0;
-        let totalAbsencesDeleted = 0;
+        return updateCount;
+    }
+
+    static async _deleteCollectionBatch(collectionName, studentIds, batchSize = 10) {
+        let totalDeleted = 0;
         
-        // Process in batches of 10
-        for (let i = 0; i < studentIds.length; i += 10) {
-            const batchIds = studentIds.slice(i, i + 10);
-            
-            // Delete grades
-            const gradeSnapshot = await db.collection('grades')
+        for (let i = 0; i < studentIds.length; i += batchSize) {
+            const batchIds = studentIds.slice(i, i + batchSize);
+            const snapshot = await db.collection(collectionName)
                 .where('studentId', 'in', batchIds)
                 .get();
             
-            if (!gradeSnapshot.empty) {
-                const gradeBatch = db.batch();
-                gradeSnapshot.docs.forEach(doc => {
-                    gradeBatch.delete(doc.ref);
+            if (!snapshot.empty) {
+                const deleteBatch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    deleteBatch.delete(doc.ref);
                 });
-                await gradeBatch.commit();
-                totalGradesDeleted += gradeSnapshot.size;
-            }
-            
-            // Delete absences
-            const absenceSnapshot = await db.collection('absences')
-                .where('studentId', 'in', batchIds)
-                .get();
-            
-            if (!absenceSnapshot.empty) {
-                const absenceBatch = db.batch();
-                absenceSnapshot.docs.forEach(doc => {
-                    absenceBatch.delete(doc.ref);
-                });
-                await absenceBatch.commit();
-                totalAbsencesDeleted += absenceSnapshot.size;
+                await deleteBatch.commit();
+                totalDeleted += snapshot.size;
             }
         }
         
-        // Update School classes and teacher assignments
+        return totalDeleted;
+    }
+
+    static async _deleteStudentGradesAndAbsences(studentIds) {
+        const [gradesDeleted, absencesDeleted] = await Promise.all([
+            this._deleteCollectionBatch('grades', studentIds),
+            this._deleteCollectionBatch('absences', studentIds)
+        ]);
+        
+        return { gradesDeleted, absencesDeleted };
+    }
+
+    static _updateObjectKeys(obj, incrementFn) {
+        const updated = {};
+        Object.keys(obj).forEach(oldKey => {
+            const newKey = incrementFn(oldKey);
+            updated[newKey] = obj[oldKey];
+        });
+        return updated;
+    }
+
+    static async _updateSchoolData(schoolId, incrementFn) {
         const schoolRef = db.collection('schools').doc(schoolId);
         const schoolDoc = await schoolRef.get();
         
-        if (schoolDoc.exists) {
-            const schoolData = schoolDoc.data();
-            const updateData = {};
-            
-            // Update explicit classes array
-            if (schoolData.classes && Array.isArray(schoolData.classes)) {
-                const updatedClasses = schoolData.classes.map(cls => incrementClassYear(cls));
-                updateData.classes = updatedClasses;
-            }
-            
-            // Update classYearTeachers object (keys are class names)
-            if (schoolData.classYearTeachers) {
-                const updatedClassYearTeachers = {};
-                Object.keys(schoolData.classYearTeachers).forEach(oldClass => {
-                    const newClass = incrementClassYear(oldClass);
-                    updatedClassYearTeachers[newClass] = schoolData.classYearTeachers[oldClass];
-                });
-                updateData.classYearTeachers = updatedClassYearTeachers;
-            }
-            
-            // Update teacherAssignments object (keys are class names)
-            if (schoolData.teacherAssignments) {
-                const updatedTeacherAssignments = {};
-                Object.keys(schoolData.teacherAssignments).forEach(oldClass => {
-                    const newClass = incrementClassYear(oldClass);
-                    updatedTeacherAssignments[newClass] = schoolData.teacherAssignments[oldClass];
-                });
-                updateData.teacherAssignments = updatedTeacherAssignments;
-            }
-            
-            // Update classMasters object (keys are class names)
-            if (schoolData.classMasters) {
-                const updatedClassMasters = {};
-                Object.keys(schoolData.classMasters).forEach(oldClass => {
-                    const newClass = incrementClassYear(oldClass);
-                    updatedClassMasters[newClass] = schoolData.classMasters[oldClass];
-                });
-                updateData.classMasters = updatedClassMasters;
-            }
-            
-            // Apply all school updates if any
-            if (Object.keys(updateData).length > 0) {
-                await schoolRef.update(updateData);
-            }
+        if (!schoolDoc.exists) {
+            return;
         }
+
+        const schoolData = schoolDoc.data();
+        const updateData = {};
+        
+        if (schoolData.classes && Array.isArray(schoolData.classes)) {
+            updateData.classes = schoolData.classes.map(cls => incrementFn(cls));
+        }
+        
+        if (schoolData.classYearTeachers) {
+            updateData.classYearTeachers = this._updateObjectKeys(
+                schoolData.classYearTeachers,
+                incrementFn
+            );
+        }
+        
+        if (schoolData.teacherAssignments) {
+            updateData.teacherAssignments = this._updateObjectKeys(
+                schoolData.teacherAssignments,
+                incrementFn
+            );
+        }
+        
+        if (schoolData.classMasters) {
+            updateData.classMasters = this._updateObjectKeys(
+                schoolData.classMasters,
+                incrementFn
+            );
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+            await schoolRef.update(updateData);
+        }
+    }
+
+    static async advanceAcademicYear(schoolId) {
+        const students = await this.getUserByRoleAndSchool('student', schoolId);
+        
+        if (students.length === 0) {
+            return {
+                studentsUpdated: 0,
+                gradesDeleted: 0,
+                absencesDeleted: 0
+            };
+        }
+        
+        const updateCount = await this._updateStudentClassYears(students);
+        
+        const studentIds = students.map(s => s.uid);
+        const { gradesDeleted, absencesDeleted } = await this._deleteStudentGradesAndAbsences(studentIds);
+        
+        await this._updateSchoolData(schoolId, (classYear) => this._incrementClassYear(classYear));
         
         return {
             studentsUpdated: updateCount,
-            gradesDeleted: totalGradesDeleted,
-            absencesDeleted: totalAbsencesDeleted
+            gradesDeleted,
+            absencesDeleted
         };
     }
 }

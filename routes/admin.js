@@ -3,6 +3,195 @@ const router = express.Router();
 const School = require('../models/School');
 const User = require('../models/User');
 
+// Helper functions for user creation
+function respondWithError(res, req, message, statusCode = 400) {
+    if (req.headers.accept?.includes('application/json')) {
+        return res.status(statusCode).json({ success: false, error: message });
+    }
+    return res.redirect('/admin/dashboard?error=' + encodeURIComponent(message));
+}
+
+function respondWithSuccess(res, req, message, additionalData = {}) {
+    if (req.headers.accept?.includes('application/json')) {
+        return res.json({ success: true, message, ...additionalData });
+    }
+    return res.redirect('/admin/dashboard?success=' + encodeURIComponent(message));
+}
+
+function checkAuthentication(req) {
+    return req.session.userId && req.session.userRole === 'school_admin';
+}
+
+function validateBasicFields(data) {
+    const { name, email, password, confirmPassword, role } = data;
+    
+    if (!name || !email || !password || !confirmPassword || !role) {
+        return 'All fields are required';
+    }
+    
+    if (password !== confirmPassword) {
+        return 'Passwords do not match';
+    }
+    
+    if (role !== 'student' && role !== 'teacher') {
+        return 'Invalid role selected';
+    }
+    
+    if (password.length < 6) {
+        return 'Password must be at least 6 characters';
+    }
+    
+    return null;
+}
+
+function validateStudentFields(data) {
+    const { classYear, parentEmail, parentPassword } = data;
+    
+    if (!classYear) {
+        return 'Please select a grade level for the student';
+    }
+    
+    if (parentEmail && !parentPassword) {
+        return 'Parent password is required if parent email is provided';
+    }
+    
+    if (parentPassword && !parentEmail) {
+        return 'Parent email is required if parent password is provided';
+    }
+    
+    if (parentEmail && parentPassword && parentPassword.length < 6) {
+        return 'Parent password must be at least 6 characters';
+    }
+    
+    return null;
+}
+
+async function validateParentEmail(parentEmail) {
+    if (!parentEmail) {
+        return null;
+    }
+    
+    const existingParent = await User.findbyEmail(parentEmail);
+    if (existingParent) {
+        return 'Parent email already exists';
+    }
+    
+    return null;
+}
+
+async function validateTeacherSubjects(subjects, schoolId) {
+    if (!subjects || subjects.length === 0) {
+        return null;
+    }
+    
+    const schoolSubjects = await School.getSubjects(schoolId);
+    const invalidSubjects = subjects.filter(s => !schoolSubjects.includes(s));
+    
+    if (invalidSubjects.length > 0) {
+        return 'Some selected subjects do not exist in your school.';
+    }
+    
+    return null;
+}
+
+async function checkUserExists(email) {
+    const existingUser = await User.findbyEmail(email);
+    if (existingUser) {
+        return 'User with this email already exists';
+    }
+    return null;
+}
+
+function prepareUserData(data, schoolId) {
+    const { name, email, password, role, classYear, parentEmail, parentPassword } = data;
+    const subjects = Array.isArray(data.subjects) ? data.subjects : (data.subjects ? [data.subjects] : []);
+    
+    return {
+        name,
+        email,
+        password,
+        role,
+        schoolId,
+        classYear: role === 'student' ? classYear : null,
+        subjects: role === 'teacher' ? subjects : null,
+        parentEmail: role === 'student' ? (parentEmail || null) : null,
+        parentPassword: role === 'student' ? (parentPassword || null) : null
+    };
+}
+
+function generateSuccessMessage(role, name, parentEmail) {
+    const roleCapitalized = role.charAt(0).toUpperCase() + role.slice(1);
+    
+    if (role === 'student' && parentEmail) {
+        return `${roleCapitalized} ${name} and parent account created successfully!`;
+    }
+    
+    return `${roleCapitalized} ${name} created successfully!`;
+}
+
+// Helper functions for user updates
+function validateUpdateFields(data) {
+    const { uid, name, email, role } = data;
+    
+    if (!uid || !name || !email || !role) {
+        return 'All required fields must be provided';
+    }
+    
+    return null;
+}
+
+async function validateUserExists(uid) {
+    const currentUser = await User.findbyId(uid);
+    if (!currentUser) {
+        return { error: 'User not found', user: null };
+    }
+    return { error: null, user: currentUser };
+}
+
+async function validateEmailChange(newEmail, currentEmail, uid) {
+    if (newEmail === currentEmail) {
+        return null;
+    }
+    
+    const existingUser = await User.findbyEmail(newEmail);
+    if (existingUser && existingUser.uid !== uid) {
+        return 'Email already in use by another user';
+    }
+    
+    return null;
+}
+
+async function validateStudentClassYear(classYear, schoolId) {
+    if (!classYear) {
+        return null;
+    }
+    
+    const school = await School.findById(schoolId);
+    const availableClasses = school.classes || [];
+    
+    if (!availableClasses.includes(classYear)) {
+        return 'Invalid class selected';
+    }
+    
+    return null;
+}
+
+function prepareUpdateData(data, role) {
+    const { name, email, classYear, subjects, parentEmail } = data;
+    const updates = { name, email };
+    
+    if (role === 'student') {
+        updates.classYear = classYear || null;
+        if (parentEmail !== undefined) {
+            updates.parentEmail = parentEmail || null;
+        }
+    } else if (role === 'teacher') {
+        updates.subjects = subjects || [];
+    }
+    
+    return updates;
+}
+
 
 router.get('/dashboard', async (req, res) => {
     try {
@@ -28,7 +217,38 @@ router.get('/dashboard', async (req, res) => {
         const allClassesSet = new Set();
         explicitClasses.forEach(cls => allClassesSet.add(cls));
         implicitClasses.forEach(cls => allClassesSet.add(cls));
-        const allClasses = Array.from(allClassesSet).sort();
+        
+        // Sort classes numerically (e.g., "5" before "10", "9A" before "10A")
+        const compareClasses = (a, b) => {
+            // Extract numeric part and optional letter suffix
+            const matchA = a.match(/^(\d+)([A-Z])?$/);
+            const matchB = b.match(/^(\d+)([A-Z])?$/);
+            
+            // If either doesn't match the pattern, fall back to alphabetical
+            if (!matchA || !matchB) {
+                return a.localeCompare(b);
+            }
+            
+            const numA = parseInt(matchA[1]);
+            const numB = parseInt(matchB[1]);
+            const letterA = matchA[2] || '';
+            const letterB = matchB[2] || '';
+            
+            // Compare by number first
+            if (numA !== numB) {
+                return numA - numB;
+            }
+            
+            // If numbers are equal, compare by letter (empty string comes first)
+            if (letterA === letterB) {
+                return 0;
+            }
+            if (letterA === '') return -1;
+            if (letterB === '') return 1;
+            return letterA.localeCompare(letterB);
+        };
+        
+        const allClasses = Array.from(allClassesSet).sort(compareClasses);
 
         res.render('admin', {
             user: {
@@ -93,150 +313,69 @@ router.post('/remove-subject-from-class', async (req, res) => {
 
 router.post('/create-user', async (req, res) => {
     try {
-        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+        // Check authentication
+        if (!checkAuthentication(req)) {
             if (req.headers.accept?.includes('application/json')) {
                 return res.status(401).json({ success: false, error: 'Unauthorized' });
             }
             return res.redirect('/auth/login');
         }
 
-        const { name, email, password, confirmPassword, role, classYear, parentEmail, parentPassword} = req.body;
-        // subjects will be an array if multiple selected
-        const subjects = Array.isArray(req.body.subjects) ? req.body.subjects : (req.body.subjects ? [req.body.subjects] : []);
+        const { role, parentEmail } = req.body;
         const schoolId = req.session.schoolId;
+        const subjects = Array.isArray(req.body.subjects) ? req.body.subjects : (req.body.subjects ? [req.body.subjects] : []);
 
-        if (!name || !email || !password || !confirmPassword || !role) {
-            const errorMsg = 'All fields are required';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(400).json({ success: false, error: errorMsg });
-            }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+        // Basic field validation
+        const basicError = validateBasicFields(req.body);
+        if (basicError) {
+            return respondWithError(res, req, basicError);
         }
 
-        if (password !== confirmPassword) {
-            const errorMsg = 'Passwords do not match';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(400).json({ success: false, error: errorMsg });
-            }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-        }
-
-        if (role !== 'student' && role !== 'teacher') {
-            const errorMsg = 'Invalid role selected';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(400).json({ success: false, error: errorMsg });
-            }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-        }
-
-        if (role === 'student' && !classYear) {
-            const errorMsg = 'Please select a grade level for the student';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(400).json({ success: false, error: errorMsg });
-            }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-        }
-
+        // Role-specific validation
         if (role === 'student') {
-            if (parentEmail && !parentPassword) {
-                const errorMsg = 'Parent password is required if parent email is provided';
-                if (req.headers.accept?.includes('application/json')) {
-                    return res.status(400).json({ success: false, error: errorMsg });
-                }
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+            const studentError = validateStudentFields(req.body);
+            if (studentError) {
+                return respondWithError(res, req, studentError);
             }
-            if (parentPassword && !parentEmail) {
-                const errorMsg = 'Parent email is required if parent password is provided';
-                if (req.headers.accept?.includes('application/json')) {
-                    return res.status(400).json({ success: false, error: errorMsg });
-                }
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-            }
-            if (parentEmail && parentPassword && parentPassword.length < 6) {
-                const errorMsg = 'Parent password must be at least 6 characters';
-                if (req.headers.accept?.includes('application/json')) {
-                    return res.status(400).json({ success: false, error: errorMsg });
-                }
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-            }
-            // Check if parent email already exists
-            if (parentEmail) {
-                const existingParent = await User.findbyEmail(parentEmail);
-                if (existingParent) {
-                    const errorMsg = 'Parent email already exists';
-                    if (req.headers.accept?.includes('application/json')) {
-                        return res.status(400).json({ success: false, error: errorMsg });
-                    }
-                    return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-                }
+
+            const parentError = await validateParentEmail(parentEmail);
+            if (parentError) {
+                return respondWithError(res, req, parentError);
             }
         }
 
-
-
-        // Validate subjects for teachers
-        if (role === 'teacher' && subjects.length > 0) {
-            const schoolSubjects = await School.getSubjects(schoolId);
-            const invalidSubjects = subjects.filter(s => !schoolSubjects.includes(s));
-            if (invalidSubjects.length > 0) {
-                const errorMsg = 'Some selected subjects do not exist in your school.';
-                if (req.headers.accept?.includes('application/json')) {
-                    return res.status(400).json({ success: false, error: errorMsg });
-                }
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+        if (role === 'teacher') {
+            const subjectError = await validateTeacherSubjects(subjects, schoolId);
+            if (subjectError) {
+                return respondWithError(res, req, subjectError);
             }
         }
 
-        if (password.length < 6) {
-            const errorMsg = 'Password must be at least 6 characters';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(400).json({ success: false, error: errorMsg });
+        // Check if user exists
+        const userExistsError = await checkUserExists(req.body.email);
+        if (userExistsError) {
+            return respondWithError(res, req, userExistsError);
+        }
+
+        // Create user
+        const userData = prepareUserData({ ...req.body, subjects }, schoolId);
+        await User.create(userData);
+
+        // Generate success message and respond
+        const successMsg = generateSuccessMessage(role, req.body.name, parentEmail);
+        const additionalData = {
+            user: { 
+                name: req.body.name, 
+                email: req.body.email, 
+                role, 
+                classYear: role === 'student' ? req.body.classYear : null 
             }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-        }
+        };
 
-        const existingUser = await User.findbyEmail(email);
-        if (existingUser) {
-            const errorMsg = 'User with this email already exists';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(400).json({ success: false, error: errorMsg });
-            }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-        }
-
-        await User.create({
-            name,
-            email,
-            password,
-            role,
-            schoolId,
-            classYear: role === 'student' ? classYear : null,
-            subjects: role === 'teacher' ? subjects : null, 
-            parentEmail: role === 'student'? (parentEmail || null) : null,
-            parentPassword: role === 'student' ? (parentPassword || null) : null
-        });
-
-
-        const successMsg = role === 'student' && parentEmail
-            ? `${role.charAt(0).toUpperCase() + role.slice(1)} ${name} and parent account created successfully!`
-            : `${role.charAt(0).toUpperCase() + role.slice(1)} ${name} created successfully!`;
-
-        if (req.headers.accept?.includes('application/json')) {
-            return res.json({ 
-                success: true, 
-                message: successMsg,
-                user: { name, email, role, classYear: role === 'student' ? classYear : null }
-            });
-        }
-
-        res.redirect('/admin/dashboard?success=' + encodeURIComponent(successMsg));
+        return respondWithSuccess(res, req, successMsg, additionalData);
     } catch (error) {
         console.error('Create user error:', error);
-        const errorMessage = 'Failed to create user. Please try again.';
-        if (req.headers.accept?.includes('application/json')) {
-            return res.status(500).json({ success: false, error: errorMessage });
-        }
-        res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMessage));
+        return respondWithError(res, req, 'Failed to create user. Please try again.', 500);
     }
 });
 
@@ -636,106 +775,71 @@ router.post('/remove-classmaster', async (req, res) =>{
 }); 
 router.post('/update-user', async (req, res) => {
     try {
-        if (!req.session.userId || req.session.userRole !== 'school_admin') {
+        // Check authentication
+        if (!checkAuthentication(req)) {
             if (req.headers.accept?.includes('application/json')) {
                 return res.status(401).json({ success: false, error: 'Unauthorized' });
             }
             return res.redirect('/auth/login');
         }
 
-        const { uid, name, email, role, classYear, subjects, parentEmail } = req.body;
+        const { uid, email, role, classYear, subjects } = req.body;
         const schoolId = req.session.schoolId;
 
-        if (!uid || !name || !email || !role) {
-            const errorMsg = 'All required fields must be provided';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(400).json({ success: false, error: errorMsg });
-            }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+        // Validate required fields
+        const fieldError = validateUpdateFields(req.body);
+        if (fieldError) {
+            return respondWithError(res, req, fieldError);
         }
 
-        // Check if email is being changed and if new email already exists
-        const currentUser = await User.findbyId(uid);
-        if (!currentUser) {
-            const errorMsg = 'User not found';
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(404).json({ success: false, error: errorMsg });
-            }
-            return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
+        // Check if user exists
+        const { error: userError, user: currentUser } = await validateUserExists(uid);
+        if (userError) {
+            return respondWithError(res, req, userError, 404);
         }
 
-        if (email !== currentUser.email) {
-            const existingUser = await User.findbyEmail(email);
-            if (existingUser && existingUser.uid !== uid) {
-                const errorMsg = 'Email already in use by another user';
-                if (req.headers.accept?.includes('application/json')) {
-                    return res.status(400).json({ success: false, error: errorMsg });
-                }
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-            }
+        // Validate email change
+        const emailError = await validateEmailChange(email, currentUser.email, uid);
+        if (emailError) {
+            return respondWithError(res, req, emailError);
         }
 
-        // Validate classYear for students
-        if (role === 'student' && classYear) {
-            const allClasses = await School.findById(schoolId);
-            const availableClasses = allClasses.classes || [];
-            if (!availableClasses.includes(classYear)) {
-                const errorMsg = 'Invalid class selected';
-                if (req.headers.accept?.includes('application/json')) {
-                    return res.status(400).json({ success: false, error: errorMsg });
-                }
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-            }
-        }
-
-        // Validate subjects for teachers
-        if (role === 'teacher' && subjects && subjects.length > 0) {
-            const schoolSubjects = await School.getSubjects(schoolId);
-            const invalidSubjects = subjects.filter(s => !schoolSubjects.includes(s));
-            if (invalidSubjects.length > 0) {
-                const errorMsg = 'Some selected subjects do not exist in your school.';
-                if (req.headers.accept?.includes('application/json')) {
-                    return res.status(400).json({ success: false, error: errorMsg });
-                }
-                return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
-            }
-        }
-
-        // Prepare update object
-        const updates = {
-            name,
-            email
-        };
-
+        // Role-specific validation
         if (role === 'student') {
-            updates.classYear = classYear || null;
-            if (parentEmail !== undefined) {
-                updates.parentEmail = parentEmail || null;
+            const classError = await validateStudentClassYear(classYear, schoolId);
+            if (classError) {
+                return respondWithError(res, req, classError);
             }
-        } else if (role === 'teacher') {
-            updates.subjects = subjects || [];
         }
 
-        // Update the user
+        if (role === 'teacher') {
+            const subjectError = await validateTeacherSubjects(subjects, schoolId);
+            if (subjectError) {
+                return respondWithError(res, req, subjectError);
+            }
+        }
+
+        // Prepare and apply updates
+        const updates = prepareUpdateData(req.body, role);
         await User.update(uid, updates);
 
+        // Respond with success
         const successMsg = 'User updated successfully!';
-        if (req.headers.accept?.includes('application/json')) {
-            return res.json({ 
-                success: true, 
-                message: successMsg,
-                user: { uid, name, email, role, classYear: role === 'student' ? classYear : null }
-            });
-        }
+        const additionalData = {
+            user: { 
+                uid, 
+                name: req.body.name, 
+                email, 
+                role, 
+                classYear: role === 'student' ? classYear : null 
+            }
+        };
 
-        res.redirect('/admin/dashboard?success=' + encodeURIComponent(successMsg));
+        return respondWithSuccess(res, req, successMsg, additionalData);
     } catch (error) {
         console.error('Update user error:', error);
         const errorMessage = error.message || 'Failed to update user. Please try again.';
-        if (req.headers.accept?.includes('application/json')) {
-            return res.status(500).json({ success: false, error: errorMessage });
-        }
-        res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMessage));
+        return respondWithError(res, req, errorMessage, 500);
     }
 });
 

@@ -47,375 +47,292 @@ const { validateHeaderName } = require('http');
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 
-app.get('/', (req, res) => {
-    res.redirect('/auth/login');
-});
-
-app.get('/dashboard', async (req, res) => {
-
-    if (!req.session.userId) {
-        return res.redirect('/auth/login');
-    }
-
-
-    
-    if (req.session.userRole === 'school_admin') {
-        return res.redirect('/admin/dashboard');
-    }
-
-    const userData = {
-        name: req.session.userName,
-        email: req.session.userEmail,
-        role: req.session.userRole
+// Helper functions for dashboard
+function createUserData(session) {
+    return {
+        name: session.userName,
+        email: session.userEmail,
+        role: session.userRole
     };
+}
 
-    if (req.session.userRole === 'teacher') {
-        try {
-            const School = require('./models/School');
-            const schoolId = req.session.schoolId;
-            const teacherId = req.session.userId;
-
-            let assignedClasses = [];
-            let classmasterClasses = [];
-            
-            if (schoolId) {
-                const schoolData = await School.findById(schoolId);
-                if (schoolData && schoolData.classYearTeachers) {
-                    for (const [classYear, teacherIds] of Object.entries(schoolData.classYearTeachers)) {
-                        if (teacherIds.includes(teacherId)) {
-                            assignedClasses.push(classYear);
-                        }
-                    }
-                }
-                
-                // Remove duplicates (in case of data inconsistencies)
-                assignedClasses = [...new Set(assignedClasses)];
-
-                classmasterClasses = await School.getClassesByClassmaster(schoolId, teacherId);
-            }
-            
-            res.render('dashboard-teacher', { 
-                user: userData,
-                assignedClasses: assignedClasses,
-                classmasterClasses: classmasterClasses
-            });
-        } catch (error) {
-            console.error('Error fetching classes:', error);
-            res.render('dashboard-teacher', { 
-                user: userData,
-                assignedClasses: [],
-                classmasterClasses: []
-            });
-        }
-    } else if (req.session.userRole === 'student') {
-        try {
-            const User = require('./models/User');
-            const School = require('./models/School');
-            const studentId = req.session.userId;
-            const schoolId = req.session.schoolId;
-            
-            const allGrades = await User.getStudentGrades(studentId);
-            const allAbsences = await User.getStudentAbsences(studentId);
-            
-            const gradesBySubject = {};
-            
-            allGrades.forEach(gradeEntry => {
-                const subject = gradeEntry.subject || 'General';
-                if (!gradesBySubject[subject]) {
-                    gradesBySubject[subject] = {
-                        grades: [],
-                        teacherName: gradeEntry.teacherName
-                    };
-                }
-                gradesBySubject[subject].grades.push({
-                    value: gradeEntry.grade,
-                    date: gradeEntry.createdAt,
-                    teacherName: gradeEntry.teacherName
-                });
-            });
-            
-            
-            // Get student's class year
-            const studentInfo = await User.findbyId(studentId);
-            const studentClassYear = studentInfo?.classYear;
-            
-            // Get subjects taught by teachers assigned to student's class
-            let availableSubjects = [];
-            
-            if (schoolId && studentClassYear) {
-                // Get school data to find teachers assigned to this class
-                const schoolData = await School.findById(schoolId);
-                const classTeachers = schoolData?.classYearTeachers?.[studentClassYear] || [];
-                
-                // Collect subjects from all teachers assigned to this class
-                const teacherSubjectsSet = new Set();
-                for (const teacherId of classTeachers) {
-                    const teacher = await User.findbyId(teacherId);
-                    if (teacher) {
-                        // Support both old single subject and new multiple subjects
-                        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-                        teacherSubjects.forEach(subj => teacherSubjectsSet.add(subj));
-                    }
-                }
-                availableSubjects = Array.from(teacherSubjectsSet);
-            } else {
-                // Fallback: if no class year, show all school subjects
-                availableSubjects = schoolId ? await School.getSubjects(schoolId) : [];
-            }
-            
-            // Create subject list with only subjects taught in this class
-            const subjects = availableSubjects.map(subjectName => {
-                const subjectData = gradesBySubject[subjectName];
-                
-                if (subjectData) {
-                    // Subject has grades
-                    const grades = subjectData.grades.map(g => g.value);
-                    const average = grades.length > 0 
-                        ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-                        : 0;
-                    
-                    return {
-                        name: subjectName,
-                        grades: subjectData.grades.sort((a, b) => b.date - a.date),
-                        average: parseFloat(average),
-                        teacherName: subjectData.teacherName,
-                        gradeCount: grades.length,
-                        hasGrades: true
-                    };
-                } else {
-                    // Subject has no grades yet but is taught in this class
-                    return {
-                        name: subjectName,
-                        grades: [],
-                        average: 0,
-                        teacherName: null,
-                        gradeCount: 0,
-                        hasGrades: false
-                    };
-                }
-            });
-            
-            // Sort subjects by name
-            subjects.sort((a, b) => a.name.localeCompare(b.name));
-            
-            // Process absences by subject
-            const absencesBySubject = {};
-            allAbsences.forEach(absence => {
-                const subject = absence.subject || 'General';
-                if (!absencesBySubject[subject]) {
-                    absencesBySubject[subject] = {
-                        motivated: [],
-                        unmotivated: []
-                    };
-                }
-                if (absence.type === 'motivated') {
-                    absencesBySubject[subject].motivated.push({
-                        date: absence.date,
-                        reason: absence.reason,
-                        teacherName: absence.teacherName
-                    });
-                } else {
-                    absencesBySubject[subject].unmotivated.push({
-                        date: absence.date,
-                        teacherName: absence.teacherName
-                    });
-                }
-            });
-            
-            // Calculate overall statistics (only from subjects with grades)
-            const totalGrades = allGrades.length;
-            const overallAverage = totalGrades > 0
-                ? (allGrades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
-                : 0;
-            
-            const stats = {
-                totalSubjects: subjects.filter(s => s.hasGrades).length,
-                totalGrades: totalGrades,
-                overallAverage: parseFloat(overallAverage),
-                totalAbsences: allAbsences.length,
-                motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
-                unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
+function groupGradesBySubject(grades) {
+    const gradesBySubject = {};
+    
+    grades.forEach(gradeEntry => {
+        const subject = gradeEntry.subject || 'General';
+        if (!gradesBySubject[subject]) {
+            gradesBySubject[subject] = {
+                grades: [],
+                teacherName: gradeEntry.teacherName
             };
-
-            // Generate feedback using decision tree
-            const { generateStudentFeedback } = require('./utils/feedbackGenerator');
-            const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
-            
-            res.render('dashboard-student', { 
-                user: userData,
-                subjects: subjects,
-                absencesBySubject: absencesBySubject,
-                stats: stats,
-                feedback: feedback
-            });
-        } catch (error) {
-            console.error('Error fetching student grades:', error);
-            res.render('dashboard-student', { 
-                user: userData,
-                subjects: [],
-                absencesBySubject: {},
-                stats: {
-                    totalSubjects: 0,
-                    totalGrades: 0,
-                    overallAverage: 0,
-                    totalAbsences: 0,
-                    motivatedAbsences: 0,
-                    unmotivatedAbsences: 0
-                }
-            });
         }
-    } else if(req.session.userRole === 'parent'){
+        gradesBySubject[subject].grades.push({
+            value: gradeEntry.grade,
+            date: gradeEntry.createdAt,
+            teacherName: gradeEntry.teacherName
+        });
+    });
+    
+    return gradesBySubject;
+}
 
-        try{
-
-            const User = require('./models/User'); 
-            const School = require('./models/School'); 
-            const parentId = req.session.userId; 
-
-            const students = await User.getStudentByParentId(parentId); 
-
-            const studentsWithData = await Promise.all(students.map(async (student) =>{
-                const allGrades = await User.getStudentGrades(student.uid); 
-                const allAbsences = await User.getStudentAbsences(student.uid); 
-
-                const gradesBySubject = {}; 
-
-                allGrades.forEach(gradeEntry => {
-                    const subject = gradeEntry.subject || 'General'; 
-
-                    if(!gradesBySubject[subject]){
-                        gradesBySubject[subject] = {
-                        grades: [],
-                        teacherName: gradeEntry.teacherName 
-                    }; 
-                }
-
-                    gradesBySubject[subject].grades.push({
-                        value: gradeEntry.grade, 
-                        date: gradeEntry.createdAt, 
-                        teacherName: gradeEntry.teacherName
-                    }); 
-            });
-
-
-            let availableSubjects = []; 
-            if (student.schoolId && student.classYear){
-                const schoolData = await School.findById(student.schoolId);
-                const classTeachers = schoolData?.classYearTeachers?.[student.classYear] || []; 
-
-                const teacherSubjectsSet = new Set(); 
-
-                for(const teacherId of classTeachers) {
-                    const teacher = await User.findbyId(teacherId); 
-                    if(teacher){
-                        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []); 
-                        teacherSubjects.forEach(subj => teacherSubjectsSet.add(subj)); 
-                    }
-                }
-                availableSubjects = Array.from(teacherSubjectsSet); 
-            } else{
-                availableSubjects = student.schoolId? await School.getSubjects(student.schoolId) : []; 
-            }
-
-
-
-            const subjects = availableSubjects.map(subjectName => {
-                const subjectData = gradesBySubject[subjectName]; 
-
-                if (subjectData){
-                    const grades = subjectData.grades.map(g => g.value); 
-                    const average = grades.length > 0
-                        ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-                        : 0; 
-
-                    return{
-                        name:subjectName, 
-                        grades: subjectData.grades.sort((a,b) => b.date - a.date), 
-                        average: parseFloat(average), 
-                        teacherName: subjectData.teacherName, 
-                        gradeCount: grades.length, 
-                        hasGrades: true
-                    }; 
-                }else{
-                    return{
-                        name: subjectName, 
-                        grades: [], 
-                        average: 0, 
-                        teacherName:null, 
-                        gradeCount: 0, 
-                        hasGrades: false
-                    }; 
-                }
-            });
-
-            subjects.sort((a, b) => a.name.localeCompare(b.name));
-
-            const absencesBySubject = {};
-            allAbsences.forEach(absence => {
-                const subject = absence.subject || 'General';
-                if (!absencesBySubject[subject]) {
-                    absencesBySubject[subject] = {
-                        motivated: [],
-                        unmotivated: []
-                    };
-                }
-                if (absence.type === 'motivated') {
-                    absencesBySubject[subject].motivated.push({
-                        date: absence.date,
-                        reason: absence.reason,
-                        teacherName: absence.teacherName
-                    });
-                } else {
-                    absencesBySubject[subject].unmotivated.push({
-                        date: absence.date,
-                        teacherName: absence.teacherName
-                    });
-                }
-            });
-
-            const totalGrades = allGrades.length;
-            const overallAverage = totalGrades > 0
-                ? (allGrades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
-                : 0;
-            
-            const stats = {
-                totalSubjects: subjects.filter(s => s.hasGrades).length,
-                totalGrades: totalGrades,
-                overallAverage: parseFloat(overallAverage),
-                totalAbsences: allAbsences.length,
-                motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
-                unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
+function groupAbsencesBySubject(absences) {
+    const absencesBySubject = {};
+    
+    absences.forEach(absence => {
+        const subject = absence.subject || 'General';
+        if (!absencesBySubject[subject]) {
+            absencesBySubject[subject] = {
+                motivated: [],
+                unmotivated: []
             };
+        }
+        
+        const absenceData = {
+            date: absence.date,
+            teacherName: absence.teacherName
+        };
+        
+        if (absence.type === 'motivated') {
+            absenceData.reason = absence.reason;
+            absencesBySubject[subject].motivated.push(absenceData);
+        } else {
+            absencesBySubject[subject].unmotivated.push(absenceData);
+        }
+    });
+    
+    return absencesBySubject;
+}
 
-            // Generate feedback using decision tree
-            const { generateStudentFeedback } = require('./utils/feedbackGenerator');
-            const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
+async function getAvailableSubjects(schoolId, classYear) {
+    const User = require('./models/User');
+    const School = require('./models/School');
+    
+    if (!schoolId || !classYear) {
+        return schoolId ? await School.getSubjects(schoolId) : [];
+    }
+    
+    const schoolData = await School.findById(schoolId);
+    const classTeachers = schoolData?.classYearTeachers?.[classYear] || [];
+    
+    const teacherSubjectsSet = new Set();
+    for (const teacherId of classTeachers) {
+        const teacher = await User.findbyId(teacherId);
+        if (teacher) {
+            const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+            teacherSubjects.forEach(subj => teacherSubjectsSet.add(subj));
+        }
+    }
+    
+    return Array.from(teacherSubjectsSet);
+}
+
+function createSubjectList(availableSubjects, gradesBySubject) {
+    const subjects = availableSubjects.map(subjectName => {
+        const subjectData = gradesBySubject[subjectName];
+        
+        if (subjectData) {
+            const grades = subjectData.grades.map(g => g.value);
+            const average = grades.length > 0
+                ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
+                : 0;
             
             return {
-                ...student,
-                subjects: subjects,
-                absencesBySubject: absencesBySubject,
-                stats: stats,
-                feedback: feedback
+                name: subjectName,
+                grades: subjectData.grades.sort((a, b) => b.date - a.date),
+                average: parseFloat(average),
+                teacherName: subjectData.teacherName,
+                gradeCount: grades.length,
+                hasGrades: true
             };
-        }));
+        }
+        
+        return {
+            name: subjectName,
+            grades: [],
+            average: 0,
+            teacherName: null,
+            gradeCount: 0,
+            hasGrades: false
+        };
+    });
+    
+    return subjects.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function calculateStats(grades, absences, subjects) {
+    const totalGrades = grades.length;
+    const overallAverage = totalGrades > 0
+        ? (grades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
+        : 0;
+    
+    return {
+        totalSubjects: subjects.filter(s => s.hasGrades).length,
+        totalGrades: totalGrades,
+        overallAverage: parseFloat(overallAverage),
+        totalAbsences: absences.length,
+        motivatedAbsences: absences.filter(a => a.type === 'motivated').length,
+        unmotivatedAbsences: absences.filter(a => a.type === 'unmotivated').length
+    };
+}
+
+async function handleTeacherDashboard(req, res, userData) {
+    try {
+        const School = require('./models/School');
+        const schoolId = req.session.schoolId;
+        const teacherId = req.session.userId;
+
+        let assignedClasses = [];
+        let classmasterClasses = [];
+        
+        if (schoolId) {
+            const schoolData = await School.findById(schoolId);
+            if (schoolData && schoolData.classYearTeachers) {
+                for (const [classYear, teacherIds] of Object.entries(schoolData.classYearTeachers)) {
+                    if (teacherIds.includes(teacherId)) {
+                        assignedClasses.push(classYear);
+                    }
+                }
+            }
+            
+            assignedClasses = [...new Set(assignedClasses)];
+            classmasterClasses = await School.getClassesByClassmaster(schoolId, teacherId);
+        }
+        
+        res.render('dashboard-teacher', { 
+            user: userData,
+            assignedClasses: assignedClasses,
+            classmasterClasses: classmasterClasses
+        });
+    } catch (error) {
+        console.error('Error fetching classes:', error);
+        res.render('dashboard-teacher', { 
+            user: userData,
+            assignedClasses: [],
+            classmasterClasses: []
+        });
+    }
+}
+
+async function handleStudentDashboard(req, res, userData) {
+    try {
+        const User = require('./models/User');
+        const studentId = req.session.userId;
+        const schoolId = req.session.schoolId;
+        
+        const allGrades = await User.getStudentGrades(studentId);
+        const allAbsences = await User.getStudentAbsences(studentId);
+        const studentInfo = await User.findbyId(studentId);
+        
+        const gradesBySubject = groupGradesBySubject(allGrades);
+        const availableSubjects = await getAvailableSubjects(schoolId, studentInfo?.classYear);
+        const subjects = createSubjectList(availableSubjects, gradesBySubject);
+        const absencesBySubject = groupAbsencesBySubject(allAbsences);
+        const stats = calculateStats(allGrades, allAbsences, subjects);
+        
+        const { generateStudentFeedback } = require('./utils/feedbackGenerator');
+        const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
+        
+        res.render('dashboard-student', { 
+            user: userData,
+            subjects: subjects,
+            absencesBySubject: absencesBySubject,
+            stats: stats,
+            feedback: feedback
+        });
+    } catch (error) {
+        console.error('Error fetching student grades:', error);
+        res.render('dashboard-student', { 
+            user: userData,
+            subjects: [],
+            absencesBySubject: {},
+            stats: {
+                totalSubjects: 0,
+                totalGrades: 0,
+                overallAverage: 0,
+                totalAbsences: 0,
+                motivatedAbsences: 0,
+                unmotivatedAbsences: 0
+            }
+        });
+    }
+}
+
+async function processStudentData(student) {
+    const User = require('./models/User');
+    
+    const allGrades = await User.getStudentGrades(student.uid);
+    const allAbsences = await User.getStudentAbsences(student.uid);
+    
+    const gradesBySubject = groupGradesBySubject(allGrades);
+    const availableSubjects = await getAvailableSubjects(student.schoolId, student.classYear);
+    const subjects = createSubjectList(availableSubjects, gradesBySubject);
+    const absencesBySubject = groupAbsencesBySubject(allAbsences);
+    const stats = calculateStats(allGrades, allAbsences, subjects);
+    
+    const { generateStudentFeedback } = require('./utils/feedbackGenerator');
+    const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
+    
+    return {
+        ...student,
+        subjects: subjects,
+        absencesBySubject: absencesBySubject,
+        stats: stats,
+        feedback: feedback
+    };
+}
+
+async function handleParentDashboard(req, res, userData) {
+    try {
+        const User = require('./models/User');
+        const parentId = req.session.userId;
+        
+        const students = await User.getStudentByParentId(parentId);
+        const studentsWithData = await Promise.all(students.map(processStudentData));
         
         res.render('dashboard-parent', { 
             user: userData,
             students: studentsWithData
         });
-
-
-        } catch (error){
-            console.error('Error fetching parent dashboard:', error);
-            res.render('dashboard-parent', { 
-                user: userData,
-                students: []
-            });
-        } 
-    } else {
-        res.render('dashboard', { user: userData }); 
+    } catch (error) {
+        console.error('Error fetching parent dashboard:', error);
+        res.render('dashboard-parent', { 
+            user: userData,
+            students: []
+        });
     }
+}
+
+app.get('/', (req, res) => {
+    res.redirect('/auth/login');
+});
+
+app.get('/dashboard', async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/auth/login');
+    }
+
+    if (req.session.userRole === 'school_admin') {
+        return res.redirect('/admin/dashboard');
+    }
+
+    const userData = createUserData(req.session);
+    const role = req.session.userRole;
+
+    if (role === 'teacher') {
+        return handleTeacherDashboard(req, res, userData);
+    }
+    
+    if (role === 'student') {
+        return handleStudentDashboard(req, res, userData);
+    }
+    
+    if (role === 'parent') {
+        return handleParentDashboard(req, res, userData);
+    }
+    
+    res.render('dashboard', { user: userData });
 });
 
 app.get('/class/:classYear', async (req, res) => {
