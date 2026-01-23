@@ -2,7 +2,7 @@
 
 require('dotenv').config();
 const backupService = require('../services/backupService');
-const readline = require('readline');
+const readline = require('node:readline');
 
 const rl = readline.createInterface({
     input: process.stdin,

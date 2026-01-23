@@ -17,7 +17,7 @@ async function listBackups() {
         console.log('-'.repeat(80));
         if (backups.daily.length > 0) {
             backups.daily
-                .sort((a, b) => b.created - a.created)
+                .toSorted((a, b) => b.created - a.created)
                 .forEach((backup, index) => {
                     const sizeMB = (backup.size / (1024 * 1024)).toFixed(2);
                     const date = new Date(backup.created).toLocaleString();
@@ -37,7 +37,7 @@ async function listBackups() {
         console.log('-'.repeat(80));
         if (backups.monthly.length > 0) {
             backups.monthly
-                .sort((a, b) => b.created - a.created)
+                .toSorted((a, b) => b.created - a.created)
                 .forEach((backup, index) => {
                     const sizeMB = (backup.size / (1024 * 1024)).toFixed(2);
                     const date = new Date(backup.created).toLocaleString();

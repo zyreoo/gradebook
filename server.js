@@ -1,5 +1,5 @@
 const express = require('express');
-const path = require('path');
+const path = require('node:path');
 const session = require('express-session');
 require('dotenv').config();
 
@@ -62,7 +62,7 @@ app.set('views', path.join(__dirname, 'views'));
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const { check2FAComplete } = require('./middleware/check2FA');
-const { validateHeaderName } = require('http');
+const { validateHeaderName } = require('node:http');
 
 app.use('/auth', authRoutes);
 
@@ -172,7 +172,7 @@ function createSubjectList(availableSubjects, gradesBySubject) {
                     return {
                         name: subjectName,
                         grades: subjectData.grades.sort((a, b) => b.date - a.date),
-                        average: parseFloat(average),
+                        average: Number.parseFloat(average),
                         teacherName: subjectData.teacherName,
                         gradeCount: grades.length,
                         hasGrades: true
@@ -201,7 +201,7 @@ function calculateStats(grades, absences, subjects) {
     return {
                 totalSubjects: subjects.filter(s => s.hasGrades).length,
                 totalGrades: totalGrades,
-                overallAverage: parseFloat(overallAverage),
+                overallAverage: Number.parseFloat(overallAverage),
         totalAbsences: absences.length,
         motivatedAbsences: absences.filter(a => a.type === 'motivated').length,
         unmotivatedAbsences: absences.filter(a => a.type === 'unmotivated').length
@@ -404,7 +404,7 @@ function createSubjectListWithFirestoreDates(availableSubjects, gradesBySubject)
                     const dateB = b.date?.toDate?.() || new Date(0);
                     return dateB - dateA;
                 }),
-                        average: parseFloat(average), 
+                        average: Number.parseFloat(average), 
                         teacherName: subjectData.teacherName, 
                         gradeCount: grades.length, 
                         hasGrades: true
@@ -463,8 +463,8 @@ function validateGradeInput(studentId, grade, subject) {
         return 'Student, grade, and subject are required';
     }
     
-    const gradeNum = parseInt(grade);
-    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+    const gradeNum = Number.parseInt(grade);
+    if (Number.isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
         return 'Invalid grade. Must be between 1-10.';
     }
     
@@ -543,8 +543,8 @@ async function processBulkGrade(gradeData, subject, date, teacherId, teacherName
         return { success: false, studentId, error: 'Missing data' };
     }
 
-    const gradeNum = parseInt(grade);
-    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+    const gradeNum = Number.parseInt(grade);
+    if (Number.isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
         return { success: false, studentId, error: 'Invalid grade' };
     }
 
@@ -629,7 +629,7 @@ async function processBulkAbsence(absenceData, subject, date, teacherId, teacher
 
         // Parse and validate date
         const absenceDate = new Date(date);
-        if (isNaN(absenceDate.getTime())) {
+        if (Number.isNaN(absenceDate.getTime())) {
             return { success: false, studentId, error: 'Invalid date' };
         }
 
@@ -691,8 +691,8 @@ function validateEditGradeInput(gradeId, grade, subject) {
         return 'Grade ID, grade value, and subject are required';
     }
     
-    const gradeNum = parseInt(grade);
-    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+    const gradeNum = Number.parseInt(grade);
+    if (Number.isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
         return 'Invalid grade. Must be between 1-10.';
     }
     
@@ -886,7 +886,7 @@ app.get('/class/:classYear', async (req, res) => {
                     ...student,
                     stats: {
                         totalGrades: totalGrades,
-                        overallAverage: parseFloat(overallAverage),
+                        overallAverage: Number.parseFloat(overallAverage),
                         totalAbsences: allAbsences.length,
                         unmotivatedAbsences: unmotivatedAbsences,
                         motivatedAbsences: motivatedAbsences
@@ -1050,7 +1050,7 @@ app.post('/add-grade', async (req, res) => {
             return redirectWithError(res, classYear, inputError);
         }
 
-        const gradeNum = parseInt(grade);
+        const gradeNum = Number.parseInt(grade);
 
         // Validate teacher subject access
         const { error: teacherError } = await validateTeacherSubjectAccess(req.session.userId, subject);
@@ -1157,7 +1157,7 @@ app.post('/edit-grade', async (req, res) => {
             return redirectEditWithError(res, studentId, classYear, inputError);
         }
 
-        const gradeNum = parseInt(grade); 
+        const gradeNum = Number.parseInt(grade); 
 
         // Get and validate grade document
         const { error: gradeError, grade: existingGrade } = await getGradeDocument(gradeId);
@@ -1252,7 +1252,7 @@ app.post('/add-absence', async (req, res) => {
             return res.json({ success: false, error: 'Access denied. Teachers only.' });
         }
 
-        const { studentId, date, type, reason, classYear, subject } = req.body; 
+        const { studentId, date, type, reason, subject } = req.body; 
 
         if (!studentId || !date || !type || !subject) {
             return res.json({ success: false, error: 'Student, date, type, and subject are required' });
@@ -1290,7 +1290,7 @@ app.post('/add-absence', async (req, res) => {
 
         // Parse date
         const absenceDate = new Date(date);
-        if (isNaN(absenceDate.getTime())) {
+        if (Number.isNaN(absenceDate.getTime())) {
             return res.json({ success: false, error: 'Invalid date format' });
         }
 
@@ -1443,7 +1443,6 @@ app.post('/api/reset-database', async (req, res) => {
             });
         }
 
-        const User = require('./models/User');
         const { db } = require('./config/firebase');
 
         const usersSnapshot = await db.collection('users').get();

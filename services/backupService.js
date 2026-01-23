@@ -1,8 +1,8 @@
 const { db } = require('../config/firebase');
-const fs = require('fs').promises;
-const path = require('path');
-const { createWriteStream } = require('fs');
-const { pipeline } = require('stream/promises');
+const fs = require('node:fs').promises;
+const path = require('node:path');
+const { createWriteStream } = require('node:fs');
+const { pipeline } = require('node:stream/promises');
 
 class BackupService {
     constructor() {
@@ -300,11 +300,11 @@ class BackupService {
             .reduce((sum, backup) => sum + backup.size, 0);
 
         const latestDaily = backups.daily.length > 0 
-            ? backups.daily.sort((a, b) => b.created - a.created)[0]
+            ? backups.daily.toSorted((a, b) => b.created - a.created)[0]
             : null;
 
         const latestMonthly = backups.monthly.length > 0
-            ? backups.monthly.sort((a, b) => b.created - a.created)[0]
+            ? backups.monthly.toSorted((a, b) => b.created - a.created)[0]
             : null;
 
         return {

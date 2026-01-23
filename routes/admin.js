@@ -263,8 +263,8 @@ router.get('/dashboard', async (req, res) => {
                 return a.localeCompare(b);
             }
             
-            const numA = parseInt(matchA[1]);
-            const numB = parseInt(matchB[1]);
+            const numA = Number.parseInt(matchA[1]);
+            const numB = Number.parseInt(matchB[1]);
             const letterA = matchA[2] || '';
             const letterB = matchB[2] || '';
             

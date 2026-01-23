@@ -1,5 +1,5 @@
 const { db } = require('../config/firebase');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 
 class OTP {
     static generateCode() {

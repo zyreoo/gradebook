@@ -172,7 +172,7 @@ class User {
         const gradeData = {
             studentId, 
             studentName, 
-            grade: parseInt(grade), 
+            grade: Number.parseInt(grade), 
             teacherId, 
             teacherName, 
             subject: subject || 'General', 
@@ -262,7 +262,7 @@ class User {
         }
 
         const gradeData = {
-            grade: parseInt(grade),
+            grade: Number.parseInt(grade),
             subject: subject || gradeDoc.data().subject,
             teacherId: teacherId || gradeDoc.data().teacherId,
             teacherName: teacherName || gradeDoc.data().teacherName,
@@ -428,14 +428,14 @@ class User {
         
         // Handle numeric: "5" -> "6"
         if (/^\d+$/.test(classYear)) {
-            const num = parseInt(classYear);
+            const num = Number.parseInt(classYear);
             return (num + 1).toString();
         }
         
         // Handle class names: "9A" -> "10A", "10B" -> "11B"
         const match = classYear.match(/^(\d+)([A-Z])?$/);
         if (match) {
-            const num = parseInt(match[1]);
+            const num = Number.parseInt(match[1]);
             const letter = match[2] || '';
             return (num + 1).toString() + letter;
         }
