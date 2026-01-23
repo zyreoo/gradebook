@@ -304,6 +304,325 @@ async function handleParentDashboard(req, res, userData) {
     }
 }
 
+// Helper functions for student detail view
+function groupGradesBySubjectWithIds(grades) {
+    const gradesBySubject = {};
+    
+    grades.forEach(gradeEntry => {
+        const subject = gradeEntry.subject || 'General';
+        if (!gradesBySubject[subject]) {
+            gradesBySubject[subject] = {
+                grades: [],
+                teacherName: gradeEntry.teacherName
+            };
+        }
+        gradesBySubject[subject].grades.push({
+            id: gradeEntry.id,
+            value: gradeEntry.grade,
+            date: gradeEntry.createdAt,
+            teacherName: gradeEntry.teacherName
+        });
+    });
+    
+    return gradesBySubject;
+}
+
+function groupAbsencesBySubjectWithIds(absences) {
+    const absencesBySubject = {};
+    
+    absences.forEach(absence => {
+        const subject = absence.subject || 'General';
+        if (!absencesBySubject[subject]) {
+            absencesBySubject[subject] = {
+                motivated: [],
+                unmotivated: []
+            };
+        }
+        
+        const absenceData = {
+            id: absence.id,
+            date: absence.date,
+            teacherName: absence.teacherName
+        };
+        
+        if (absence.type === 'motivated') {
+            absenceData.reason = absence.reason;
+            absencesBySubject[subject].motivated.push(absenceData);
+        } else {
+            absencesBySubject[subject].unmotivated.push(absenceData);
+        }
+    });
+    
+    return absencesBySubject;
+}
+
+function createSubjectListWithFirestoreDates(availableSubjects, gradesBySubject) {
+    const subjects = availableSubjects.map(subjectName => {
+        const subjectData = gradesBySubject[subjectName];
+        
+        if (subjectData) {
+            const grades = subjectData.grades.map(g => g.value);
+            const average = grades.length > 0
+                ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
+                : 0;
+            
+            return {
+                name: subjectName,
+                grades: subjectData.grades.sort((a, b) => {
+                    const dateA = a.date?.toDate?.() || new Date(0);
+                    const dateB = b.date?.toDate?.() || new Date(0);
+                    return dateB - dateA;
+                }),
+                average: parseFloat(average),
+                teacherName: subjectData.teacherName,
+                gradeCount: grades.length,
+                hasGrades: true
+            };
+        }
+        
+        return {
+            name: subjectName,
+            grades: [],
+            average: 0,
+            teacherName: null,
+            gradeCount: 0,
+            hasGrades: false
+        };
+    });
+    
+    return subjects.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function validateStudentAccess(studentId, schoolId, teacherId) {
+    const User = require('./models/User');
+    const School = require('./models/School');
+    
+    const student = await User.findbyId(studentId);
+    if (!student || student.schoolId !== schoolId) {
+        return { error: 'Student not found', student: null };
+    }
+    
+    const classmasterId = await School.getClassmaster(schoolId, student.classYear);
+    const isClassmaster = classmasterId === teacherId;
+    
+    if (!isClassmaster) {
+        return { error: 'Only classmaster can view student details', student: null };
+    }
+    
+    return { error: null, student };
+}
+
+// Helper functions for grade management
+function buildRedirectUrl(classYear, basePath = '/students') {
+    return classYear ? `/class/${classYear}` : basePath;
+}
+
+function redirectWithError(res, classYear, message) {
+    const redirectUrl = buildRedirectUrl(classYear);
+    return res.redirect(redirectUrl + '?error=' + encodeURIComponent(message));
+}
+
+function redirectWithSuccess(res, classYear, message) {
+    const redirectUrl = buildRedirectUrl(classYear);
+    return res.redirect(redirectUrl + '?success=' + encodeURIComponent(message));
+}
+
+function validateGradeInput(studentId, grade, subject) {
+    if (!studentId || !grade || !subject) {
+        return 'Student, grade, and subject are required';
+    }
+    
+    const gradeNum = parseInt(grade);
+    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+        return 'Invalid grade. Must be between 1-10.';
+    }
+    
+    return null;
+}
+
+async function validateTeacherSubjectAccess(teacherId, subject) {
+    const User = require('./models/User');
+    const teacher = await User.findbyId(teacherId);
+    
+    if (!teacher) {
+        return { error: 'Teacher not found', teacher: null };
+    }
+    
+    const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+    
+    if (teacherSubjects.length === 0) {
+        return { error: 'No subjects assigned. Contact your administrator.', teacher: null };
+    }
+    
+    if (!teacherSubjects.includes(subject)) {
+        return { error: 'You are not assigned to teach this subject.', teacher: null };
+    }
+    
+    return { error: null, teacher };
+}
+
+async function validateStudentForGrade(studentId, schoolId) {
+    const User = require('./models/User');
+    const student = await User.findbyId(studentId);
+    
+    if (!student) {
+        return { error: 'Student not found', student: null };
+    }
+    
+    if (student.schoolId !== schoolId) {
+        return { error: 'Cannot add grade for student from different school', student: null };
+    }
+    
+    return { error: null, student };
+}
+
+// Helper functions for bulk grade operations
+function parseGradesData(grades) {
+    if (typeof grades === 'string') {
+        try {
+            return JSON.parse(grades);
+        } catch (error) {
+            return null;
+        }
+    }
+    return grades;
+}
+
+function validateBulkGradeInput(grades, subject, date) {
+    if (!grades || !Array.isArray(grades) || grades.length === 0) {
+        return 'No grades provided';
+    }
+    s
+    if (!subject) {
+        return 'Subject is required';
+    }
+    
+    if (!date) {
+        return 'Date is required';
+    }
+    
+    return null;
+}
+
+async function processBulkGrade(gradeData, subject, date, teacherId, teacherName, schoolId) {
+    const User = require('./models/User');
+    const { studentId, grade } = gradeData;
+
+    if (!studentId || !grade) {
+        return { success: false, studentId, error: 'Missing data' };
+    }
+
+    const gradeNum = parseInt(grade);
+    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+        return { success: false, studentId, error: 'Invalid grade' };
+    }
+
+    try {
+        const { error: studentError, student } = await validateStudentForGrade(studentId, schoolId);
+        if (studentError) {
+            return { success: false, studentId, error: studentError === 'Student not found' ? 'Student not found' : 'Different school' };
+        }
+
+        await User.addGrade({
+            studentId: studentId,
+            studentName: student.name,
+            grade: gradeNum,
+            teacherId: teacherId,
+            teacherName: teacherName,
+            subject: subject,
+            date: date
+        });
+
+        return { success: true, studentId, studentName: student.name, grade: gradeNum };
+    } catch (error) {
+        console.error(`Error adding grade for student ${studentId}:`, error);
+        return { success: false, studentId, error: error.message };
+    }
+}
+
+function formatBulkGradeResponse(results) {
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.length - successCount;
+
+    if (successCount > 0) {
+        const message = errorCount > 0 
+            ? `Successfully added ${successCount} grade(s). ${errorCount} failed.`
+            : `Successfully added ${successCount} grade(s).`;
+        return { success: true, message, successCount, errorCount, results };
+    }
+    
+    return { success: false, error: 'Failed to add grades. Please try again.', results };
+}
+
+// Helper functions for grade editing
+function buildEditRedirectUrl(studentId, classYear) {
+    if (studentId) {
+        return `/student/${studentId}`;
+    }
+    if (classYear) {
+        return `/class/${classYear}`;
+    }
+    return '/students';
+}
+
+function redirectEditWithError(res, studentId, classYear, message) {
+    const redirectUrl = buildEditRedirectUrl(studentId, classYear);
+    return res.redirect(redirectUrl + '?error=' + encodeURIComponent(message));
+}
+
+function redirectEditWithSuccess(res, studentId, classYear, message) {
+    const redirectUrl = buildEditRedirectUrl(studentId, classYear);
+    return res.redirect(redirectUrl + '?success=' + encodeURIComponent(message));
+}
+
+function validateEditGradeInput(gradeId, grade, subject) {
+    if (!gradeId || !grade || !subject) {
+        return 'Grade ID, grade value, and subject are required';
+    }
+    
+    const gradeNum = parseInt(grade);
+    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+        return 'Invalid grade. Must be between 1-10.';
+    }
+    
+    return null;
+}
+
+async function getGradeDocument(gradeId) {
+    const { db } = require('./config/firebase');
+    const gradeRef = db.collection('grades').doc(gradeId);
+    const gradeDoc = await gradeRef.get();
+    
+    if (!gradeDoc.exists) {
+        return { error: 'Grade not found', grade: null };
+    }
+    
+    return { error: null, grade: gradeDoc.data() };
+}
+
+async function validateGradeAccess(gradeData, schoolId) {
+    const User = require('./models/User');
+    const student = await User.findbyId(gradeData.studentId);
+    
+    if (!student || student.schoolId !== schoolId) {
+        return { error: 'Invalid grade or access denied', student: null };
+    }
+    
+    return { error: null, student };
+}
+
+async function validateGradeEditAuthorization(teacherId, gradeSubject) {
+    const User = require('./models/User');
+    const teacher = await User.findbyId(teacherId);
+    const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+    
+    if (!teacherSubjects.includes(gradeSubject)) {
+        return 'You are not authorized to edit this grade. You can only edit grades for subjects you teach.';
+    }
+    
+    return null;
+}
+
 app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });
@@ -453,147 +772,26 @@ app.get('/student/:studentId', async (req, res) => {
 
     try {
         const User = require('./models/User');
-        const School = require('./models/School');
         const studentId = req.params.studentId;
         const schoolId = req.session.schoolId;
         const teacherId = req.session.userId;
 
-        // Get student
-        const student = await User.findbyId(studentId);
-        if (!student || student.schoolId !== schoolId) {
-            return res.redirect('/dashboard?error=' + encodeURIComponent('Student not found'));
-        }
-
-        // Check if teacher is classmaster of this student's class
-        const classmasterId = await School.getClassmaster(schoolId, student.classYear);
-        const isClassmaster = classmasterId === teacherId;
-
-        if (!isClassmaster) {
-            return res.redirect('/dashboard?error=' + encodeURIComponent('Only classmaster can view student details'));
+        // Validate student access and classmaster permissions
+        const { error: accessError, student } = await validateStudentAccess(studentId, schoolId, teacherId);
+        if (accessError) {
+            return res.redirect('/dashboard?error=' + encodeURIComponent(accessError));
         }
 
         // Get all grades and absences
         const allGrades = await User.getStudentGrades(studentId);
         const allAbsences = await User.getStudentAbsences(studentId);
 
-        // Organize grades by subject
-        const gradesBySubject = {};
-        allGrades.forEach(gradeEntry => {
-            const subject = gradeEntry.subject || 'General';
-            if (!gradesBySubject[subject]) {
-                gradesBySubject[subject] = {
-                    grades: [],
-                    teacherName: gradeEntry.teacherName
-                };
-            }
-            gradesBySubject[subject].grades.push({
-                id: gradeEntry.id,
-                value: gradeEntry.grade,
-                date: gradeEntry.createdAt,
-                teacherName: gradeEntry.teacherName
-            });
-        });
-
-        // Get subjects taught by teachers assigned to student's class (same as student dashboard)
-        let availableSubjects = [];
-        
-        if (schoolId && student.classYear) {
-            // Get school data to find teachers assigned to this class
-            const schoolData = await School.findById(schoolId);
-            const classTeachers = schoolData?.classYearTeachers?.[student.classYear] || [];
-            
-            // Collect subjects from all teachers assigned to this class
-            const teacherSubjectsSet = new Set();
-            for (const teacherId of classTeachers) {
-                const teacher = await User.findbyId(teacherId);
-                if (teacher) {
-                    // Support both old single subject and new multiple subjects
-                    const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-                    teacherSubjects.forEach(subj => teacherSubjectsSet.add(subj));
-                }
-            }
-            availableSubjects = Array.from(teacherSubjectsSet);
-        } else {
-            // Fallback: if no class year, show all school subjects
-            const schoolData = await School.findById(schoolId);
-            availableSubjects = schoolId ? await School.getSubjects(schoolId) : [];
-        }
-
-        const subjects = availableSubjects.map(subjectName => {
-            const subjectData = gradesBySubject[subjectName];
-            
-            if (subjectData) {
-                const grades = subjectData.grades.map(g => g.value);
-                const average = grades.length > 0 
-                    ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-                    : 0;
-                
-                return {
-                    name: subjectName,
-                    grades: subjectData.grades.sort((a, b) => {
-                        const dateA = a.date?.toDate?.() || new Date(0);
-                        const dateB = b.date?.toDate?.() || new Date(0);
-                        return dateB - dateA;
-                    }),
-                    average: parseFloat(average),
-                    teacherName: subjectData.teacherName,
-                    gradeCount: grades.length,
-                    hasGrades: true
-                };
-            } else {
-                return {
-                    name: subjectName,
-                    grades: [],
-                    average: 0,
-                    teacherName: null,
-                    gradeCount: 0,
-                    hasGrades: false
-                };
-            }
-        });
-
-        subjects.sort((a, b) => a.name.localeCompare(b.name));
-
-        // Process absences by subject
-        const absencesBySubject = {};
-        allAbsences.forEach(absence => {
-            const subject = absence.subject || 'General';
-            if (!absencesBySubject[subject]) {
-                absencesBySubject[subject] = {
-                    motivated: [],
-                    unmotivated: []
-                };
-            }
-            if (absence.type === 'motivated') {
-                absencesBySubject[subject].motivated.push({
-                    id: absence.id,
-                    date: absence.date,
-                    reason: absence.reason,
-                    teacherName: absence.teacherName
-                });
-            } else {
-                absencesBySubject[subject].unmotivated.push({
-                    id: absence.id,
-                    date: absence.date,
-                    teacherName: absence.teacherName
-                });
-            }
-        });
-
-        // Calculate overall statistics
-        const totalGrades = allGrades.length;
-        const overallAverage = totalGrades > 0
-            ? (allGrades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
-            : 0;
-
-        const stats = {
-            totalSubjects: subjects.filter(s => s.hasGrades).length,
-            totalGrades: totalGrades,
-            overallAverage: parseFloat(overallAverage),
-            totalAbsences: allAbsences.length,
-            motivatedAbsences: allAbsences.filter(a => a.type === 'motivated').length,
-            unmotivatedAbsences: allAbsences.filter(a => a.type === 'unmotivated').length
-        };
+        // Process data using helper functions
+        const gradesBySubject = groupGradesBySubjectWithIds(allGrades);
+        const availableSubjects = await getAvailableSubjects(schoolId, student.classYear);
+        const subjects = createSubjectListWithFirestoreDates(availableSubjects, gradesBySubject);
+        const absencesBySubject = groupAbsencesBySubjectWithIds(allAbsences);
+        const stats = calculateStats(allGrades, allAbsences, subjects);
 
         // Generate feedback
         const { generateStudentFeedback } = require('./utils/feedbackGenerator');
@@ -604,18 +802,14 @@ app.get('/student/:studentId', async (req, res) => {
         const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
 
         res.render('student-detail', {
-            user: {
-                name: req.session.userName,
-                email: req.session.userEmail,
-                role: req.session.userRole
-            },
+            user: createUserData(req.session),
             student: student,
             subjects: subjects,
             absencesBySubject: absencesBySubject,
             stats: stats,
             feedback: feedback,
             classYear: student.classYear,
-            teacherSubjects: teacherSubjects, // Pass teacher's subjects to restrict edit/delete
+            teacherSubjects: teacherSubjects,
             error: req.query.error || null,
             success: req.query.success || null
         });
@@ -665,88 +859,62 @@ app.get('/students', (req, res) =>{
 });
 
 
-app.post('/add-grade', async (req, res) =>{
-
-    try{
-        if(!req.session.userId){
-            return res.redirect("/auth/login")
+app.post('/add-grade', async (req, res) => {
+    try {
+        // Check authentication
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
         }
 
-        if(req.session.userRole !== 'teacher'){
+        if (req.session.userRole !== 'teacher') {
             return res.redirect('/students?error=' + encodeURIComponent('Access denied. Teachers only.'));
         }
 
-        const { studentId, grade, classYear, subject, date } = req.body; 
+        const { studentId, grade, classYear, subject, date } = req.body;
 
-        if (!studentId || !grade || !subject){
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student, grade, and subject are required'));
+        // Validate input
+        const inputError = validateGradeInput(studentId, grade, subject);
+        if (inputError) {
+            return redirectWithError(res, classYear, inputError);
         }
 
         const gradeNum = parseInt(grade);
 
-        if(isNaN(gradeNum)|| gradeNum < 1 || gradeNum > 10){
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid grade. Must be between 1-10.'));
+        // Validate teacher subject access
+        const { error: teacherError } = await validateTeacherSubjectAccess(req.session.userId, subject);
+        if (teacherError) {
+            return redirectWithError(res, classYear, teacherError);
         }
 
-        const User = require('./models/User'); 
-        
-        // Get teacher's subjects
-        const teacher = await User.findbyId(req.session.userId); 
-
-        // Support both old single subject and new multiple subjects
-        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-
-        if(!teacher || teacherSubjects.length === 0){
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('No subjects assigned. Contact your administrator.'));
+        // Validate student
+        const { error: studentError, student } = await validateStudentForGrade(studentId, req.session.schoolId);
+        if (studentError) {
+            return redirectWithError(res, classYear, studentError);
         }
 
-        // Verify teacher teaches this subject
-        if (!teacherSubjects.includes(subject)) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not assigned to teach this subject.'));
-        }
-
-        // Verify student exists and is in the same school
-        const student = await User.findbyId(studentId); 
-
-        if(!student){
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Student not found'));
-        }
-
-        if (student.schoolId !== req.session.schoolId) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Cannot add grade for student from different school'));
-        }
-
-        // Add grade with selected subject
+        // Add grade
+        const User = require('./models/User');
         await User.addGrade({
             studentId: studentId,
-            studentName: student.name, 
-            grade: gradeNum, 
-            teacherId: req.session.userId, 
-            teacherName: req.session.userName, 
+            studentName: student.name,
+            grade: gradeNum,
+            teacherId: req.session.userId,
+            teacherName: req.session.userName,
             subject: subject,
             date: date || undefined
         });
 
-        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Grade ${gradeNum} added for ${student.name} in ${subject}`));
-
-    } catch(error){
+        return redirectWithSuccess(res, classYear, `Grade ${gradeNum} added for ${student.name} in ${subject}`);
+    } catch (error) {
         console.error('Error adding grade:', error);
-        const classYear = req.body.classYear;
-        const redirectUrl = classYear ? `/class/${classYear}` : '/students';
-        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to add grade. Please try again.'));
+        return redirectWithError(res, req.body.classYear, 'Failed to add grade. Please try again.');
     }
 }); 
 
 // Bulk add grades endpoint - optimized with parallel operations and JSON response
 app.post('/add-grades-bulk', async (req, res) => {
     try {
+        // Check authentication
         if (!req.session.userId) {
             return res.json({ success: false, error: 'Not authenticated' });
         }
@@ -755,168 +923,90 @@ app.post('/add-grades-bulk', async (req, res) => {
             return res.json({ success: false, error: 'Access denied. Teachers only.' });
         }
 
-        let { grades, classYear, subject, date } = req.body;
+        let { grades, subject, date } = req.body;
 
-        // Parse grades if it's a JSON string (from form submission)
-        if (typeof grades === 'string') {
-            try {
-                grades = JSON.parse(grades);
-            } catch (error) {
-                return res.json({ success: false, error: 'Invalid grades data format' });
-            }
+        // Parse grades data
+        grades = parseGradesData(grades);
+        if (!grades) {
+            return res.json({ success: false, error: 'Invalid grades data format' });
         }
 
-        if (!grades || !Array.isArray(grades) || grades.length === 0) {
-            return res.json({ success: false, error: 'No grades provided' });
+        // Validate input
+        const inputError = validateBulkGradeInput(grades, subject, date);
+        if (inputError) {
+            return res.json({ success: false, error: inputError });
         }
 
-        if (!subject) {
-            return res.json({ success: false, error: 'Subject is required' });
+        // Validate teacher subject access
+        const { error: teacherError } = await validateTeacherSubjectAccess(req.session.userId, subject);
+        if (teacherError) {
+            return res.json({ success: false, error: teacherError });
         }
 
-        if (!date) {
-            return res.json({ success: false, error: 'Date is required' });
-        }
-
-        const User = require('./models/User');
-        
-        // Get teacher's subjects
-        const teacher = await User.findbyId(req.session.userId);
-        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-
-        if (!teacher || teacherSubjects.length === 0) {
-            return res.json({ success: false, error: 'No subjects assigned. Contact your administrator.' });
-        }
-
-        // Verify teacher teaches this subject
-        if (!teacherSubjects.includes(subject)) {
-            return res.json({ success: false, error: 'You are not assigned to teach this subject.' });
-        }
-
-        // Process all grades in parallel for speed
+        // Process all grades in parallel
         const results = await Promise.all(
-            grades.map(async (gradeData) => {
-                const { studentId, grade } = gradeData;
-
-                if (!studentId || !grade) {
-                    return { success: false, studentId, error: 'Missing data' };
-                }
-
-                const gradeNum = parseInt(grade);
-                if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
-                    return { success: false, studentId, error: 'Invalid grade' };
-                }
-
-                try {
-                    // Verify student exists and is in the same school
-                    const student = await User.findbyId(studentId);
-                    
-                    if (!student) {
-                        return { success: false, studentId, error: 'Student not found' };
-                    }
-
-                    if (student.schoolId !== req.session.schoolId) {
-                        return { success: false, studentId, error: 'Different school' };
-                    }
-
-                    // Add grade with selected subject and date
-                    await User.addGrade({
-                        studentId: studentId,
-                        studentName: student.name,
-                        grade: gradeNum,
-                        teacherId: req.session.userId,
-                        teacherName: req.session.userName,
-                        subject: subject,
-                        date: date
-                    });
-
-                    return { success: true, studentId, studentName: student.name, grade: gradeNum };
-                } catch (error) {
-                    console.error(`Error adding grade for student ${studentId}:`, error);
-                    return { success: false, studentId, error: error.message };
-                }
-            })
+            grades.map(gradeData => 
+                processBulkGrade(
+                    gradeData, 
+                    subject, 
+                    date, 
+                    req.session.userId, 
+                    req.session.userName, 
+                    req.session.schoolId
+                )
+            )
         );
 
-        const successCount = results.filter(r => r.success).length;
-        const errorCount = results.length - successCount;
-
-        if (successCount > 0) {
-            const message = errorCount > 0 
-                ? `Successfully added ${successCount} grade(s). ${errorCount} failed.`
-                : `Successfully added ${successCount} grade(s).`;
-            res.json({ success: true, message, successCount, errorCount, results });
-        } else {
-            res.json({ success: false, error: 'Failed to add grades. Please try again.', results });
-        }
+        // Format and send response
+        const response = formatBulkGradeResponse(results);
+        return res.json(response);
     } catch (error) {
         console.error('Error adding grades in bulk:', error);
-        res.json({ success: false, error: 'Failed to add grades. Please try again.' });
+        return res.json({ success: false, error: 'Failed to add grades. Please try again.' });
     }
 });
 
 app.post('/edit-grade', async (req, res) => {
-
-    try{
-
-
-        if(!req.session.userId){
-            return res.redirect('/auth/login'); 
+    try {
+        // Check authentication
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
         }
 
-        if(req.session.userRole !== 'teacher'){
+        if (req.session.userRole !== 'teacher') {
             return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. Teachers only.'));
         }
 
-        const {gradeId, grade, subject, studentId, classYear } = req.body; 
+        const { gradeId, grade, subject, studentId, classYear } = req.body;
 
-        if (!gradeId || !grade || !subject){
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Grade ID, grade value, and subject are required'));
+        // Validate input
+        const inputError = validateEditGradeInput(gradeId, grade, subject);
+        if (inputError) {
+            return redirectEditWithError(res, studentId, classYear, inputError);
         }
 
+        const gradeNum = parseInt(grade);
 
-        const gradeNum = parseInt(grade); 
-
-        if(isNaN(gradeNum) || gradeNum <1 || gradeNum >10){
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid grade. Must be between 1-10.'));
+        // Get and validate grade document
+        const { error: gradeError, grade: existingGrade } = await getGradeDocument(gradeId);
+        if (gradeError) {
+            return redirectEditWithError(res, studentId, classYear, gradeError);
         }
 
-
-        const User = require('./models/User'); 
-        const {db} = require('./config/firebase'); 
-
-
-        const gradeRef = db.collection('grades').doc(gradeId); 
-        const gradeDoc = await gradeRef.get(); 
-
-        if(!gradeDoc.exists){
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Grade not found'));
+        // Validate student access
+        const { error: accessError, student } = await validateGradeAccess(existingGrade, req.session.schoolId);
+        if (accessError) {
+            return redirectEditWithError(res, studentId, classYear, accessError);
         }
 
-        const existingGrade = gradeDoc.data(); 
-
-        const student = await User.findbyId(existingGrade.studentId); 
-
-        if(!student || student.schoolId !== req.session.schoolId){
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid grade or access denied'));
-        } 
-
-
-        const teacher = await User.findbyId(req.session.userId); 
-        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []); 
-
-        // Check authorization: teacher must teach the subject (no exception for original teacher)
-        // This ensures classmasters can only edit grades for their own subject
-        if(!teacherSubjects.includes(existingGrade.subject)){
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not authorized to edit this grade. You can only edit grades for subjects you teach.'));
+        // Validate authorization
+        const authError = await validateGradeEditAuthorization(req.session.userId, existingGrade.subject);
+        if (authError) {
+            return redirectEditWithError(res, studentId, classYear, authError);
         }
 
         // Update the grade
+        const User = require('./models/User');
         await User.updateGrade(gradeId, {
             grade: gradeNum,
             subject: subject,
@@ -924,15 +1014,10 @@ app.post('/edit-grade', async (req, res) => {
             teacherName: req.session.userName
         });
 
-        const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Grade updated to ${gradeNum} for ${student.name} in ${subject}`));
-
-    } catch(error){
+        return redirectEditWithSuccess(res, studentId, classYear, `Grade updated to ${gradeNum} for ${student.name} in ${subject}`);
+    } catch (error) {
         console.error('Error editing grade:', error);
-        const studentId = req.body.studentId;
-        const classYear = req.body.classYear;
-        const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to edit grade. Please try again.'));
+        return redirectEditWithError(res, req.body.studentId, req.body.classYear, 'Failed to edit grade. Please try again.');
     }
 }); 
 

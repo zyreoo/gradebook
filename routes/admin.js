@@ -129,6 +129,40 @@ function generateSuccessMessage(role, name, parentEmail) {
     return `${roleCapitalized} ${name} created successfully!`;
 }
 
+function checkAuthAndRespond(res, req) {
+    if (!checkAuthentication(req)) {
+        if (req.headers.accept?.includes('application/json')) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+        return res.redirect('/auth/login');
+    }
+    return null;
+}
+
+async function validateRoleSpecificFields(role, req, schoolId) {
+    if (role === 'student') {
+        const studentError = validateStudentFields(req.body);
+        if (studentError) {
+            return studentError;
+        }
+
+        const parentError = await validateParentEmail(req.body.parentEmail);
+        if (parentError) {
+            return parentError;
+        }
+    }
+
+    if (role === 'teacher') {
+        const subjects = Array.isArray(req.body.subjects) ? req.body.subjects : (req.body.subjects ? [req.body.subjects] : []);
+        const subjectError = await validateTeacherSubjects(subjects, schoolId);
+        if (subjectError) {
+            return subjectError;
+        }
+    }
+
+    return null;
+}
+
 // Helper functions for user updates
 function validateUpdateFields(data) {
     const { uid, name, email, role } = data;
@@ -314,11 +348,9 @@ router.post('/remove-subject-from-class', async (req, res) => {
 router.post('/create-user', async (req, res) => {
     try {
         // Check authentication
-        if (!checkAuthentication(req)) {
-            if (req.headers.accept?.includes('application/json')) {
-                return res.status(401).json({ success: false, error: 'Unauthorized' });
-            }
-            return res.redirect('/auth/login');
+        const authResponse = checkAuthAndRespond(res, req);
+        if (authResponse) {
+            return authResponse;
         }
 
         const { role, parentEmail } = req.body;
@@ -332,23 +364,9 @@ router.post('/create-user', async (req, res) => {
         }
 
         // Role-specific validation
-        if (role === 'student') {
-            const studentError = validateStudentFields(req.body);
-            if (studentError) {
-                return respondWithError(res, req, studentError);
-            }
-
-            const parentError = await validateParentEmail(parentEmail);
-            if (parentError) {
-                return respondWithError(res, req, parentError);
-            }
-        }
-
-        if (role === 'teacher') {
-            const subjectError = await validateTeacherSubjects(subjects, schoolId);
-            if (subjectError) {
-                return respondWithError(res, req, subjectError);
-            }
+        const roleError = await validateRoleSpecificFields(role, req, schoolId);
+        if (roleError) {
+            return respondWithError(res, req, roleError);
         }
 
         // Check if user exists
