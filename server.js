@@ -492,7 +492,7 @@ function validateBulkGradeInput(grades, subject, date) {
     if (!grades || !Array.isArray(grades) || grades.length === 0) {
         return 'No grades provided';
     }
-    s
+    
     if (!subject) {
         return 'Subject is required';
     }
@@ -552,6 +552,86 @@ function formatBulkGradeResponse(results) {
     }
     
     return { success: false, error: 'Failed to add grades. Please try again.', results };
+}
+
+// Helper functions for bulk absence operations
+function parseAbsencesData(absences) {
+    if (typeof absences === 'string') {
+        try {
+            return JSON.parse(absences);
+        } catch (error) {
+            return null;
+        }
+    }
+    return absences;
+}
+
+function validateBulkAbsenceInput(absences, subject, date) {
+    if (!absences || !Array.isArray(absences) || absences.length === 0) {
+        return 'No absences provided';
+    }
+    
+    if (!subject) {
+        return 'Subject is required';
+    }
+    
+    if (!date) {
+        return 'Date is required';
+    }
+    
+    return null;
+}
+
+async function processBulkAbsence(absenceData, subject, date, teacherId, teacherName, schoolId) {
+    const User = require('./models/User');
+    const { studentId, type = 'unmotivated', reason = '' } = absenceData;
+
+    if (!studentId) {
+        return { success: false, studentId, error: 'Missing student ID' };
+    }
+
+    try {
+        const { error: studentError, student } = await validateStudentForGrade(studentId, schoolId);
+        if (studentError) {
+            return { success: false, studentId, error: studentError === 'Student not found' ? 'Student not found' : 'Different school' };
+        }
+
+        // Parse and validate date
+        const absenceDate = new Date(date);
+        if (isNaN(absenceDate.getTime())) {
+            return { success: false, studentId, error: 'Invalid date' };
+        }
+
+        await User.addAbsence({
+            studentId: studentId,
+            studentName: student.name,
+            teacherId: teacherId,
+            teacherName: teacherName,
+            subject: subject,
+            date: absenceDate,
+            type: type,
+            reason: reason
+        });
+
+        return { success: true, studentId, studentName: student.name };
+    } catch (error) {
+        console.error(`Error adding absence for student ${studentId}:`, error);
+        return { success: false, studentId, error: error.message };
+    }
+}
+
+function formatBulkAbsenceResponse(results) {
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.length - successCount;
+
+    if (successCount > 0) {
+        const message = errorCount > 0 
+            ? `Successfully recorded ${successCount} absence(s). ${errorCount} failed.`
+            : `Successfully recorded ${successCount} absence(s).`;
+        return { success: true, message, successCount, errorCount, results };
+    }
+    
+    return { success: false, error: 'Failed to record absences. Please try again.', results };
 }
 
 // Helper functions for grade editing
@@ -618,6 +698,67 @@ async function validateGradeEditAuthorization(teacherId, gradeSubject) {
     
     if (!teacherSubjects.includes(gradeSubject)) {
         return 'You are not authorized to edit this grade. You can only edit grades for subjects you teach.';
+    }
+    
+    return null;
+}
+
+async function validateGradeDeleteAuthorization(teacherId, gradeSubject) {
+    const User = require('./models/User');
+    const teacher = await User.findbyId(teacherId);
+    const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+    
+    if (!teacherSubjects.includes(gradeSubject)) {
+        return 'You are not authorized to delete this grade. You can only delete grades for subjects you teach.';
+    }
+    
+    return null;
+}
+
+// Helper functions for absence motivation
+function buildMotivateRedirectUrl(classYear) {
+    return classYear ? `/class/${classYear}` : '/dashboard';
+}
+
+function redirectMotivateWithError(res, classYear, message) {
+    const redirectUrl = buildMotivateRedirectUrl(classYear);
+    return res.redirect(redirectUrl + '?error=' + encodeURIComponent(message));
+}
+
+function redirectMotivateWithSuccess(res, classYear, message) {
+    const redirectUrl = buildMotivateRedirectUrl(classYear);
+    return res.redirect(redirectUrl + '?success=' + encodeURIComponent(message));
+}
+
+async function getAbsenceDocument(absenceId) {
+    const { db } = require('./config/firebase');
+    const absenceRef = db.collection('absences').doc(absenceId);
+    const absenceDoc = await absenceRef.get();
+    
+    if (!absenceDoc.exists) {
+        return { error: 'Absence not found', absence: null, absenceRef: null };
+    }
+    
+    return { error: null, absence: absenceDoc.data(), absenceRef };
+}
+
+async function validateAbsenceAccess(absence, schoolId) {
+    const User = require('./models/User');
+    const student = await User.findbyId(absence.studentId);
+    
+    if (!student || student.schoolId !== schoolId) {
+        return { error: 'Invalid absence', student: null };
+    }
+    
+    return { error: null, student };
+}
+
+async function validateClassmasterAuthorization(schoolId, classYear, teacherId) {
+    const School = require('./models/School');
+    const classmasterId = await School.getClassmaster(schoolId, classYear);
+    
+    if (classmasterId !== teacherId) {
+        return 'Only the classmaster can motivate absences';
     }
     
     return null;
@@ -1023,70 +1164,50 @@ app.post('/edit-grade', async (req, res) => {
 
 
 
-app.post('/delete-grade', async (req,res) =>{ 
-    try{
-
-
-        if(!req.session.userId){
-            return res.redirect("/auth/login");
+app.post('/delete-grade', async (req, res) => {
+    try {
+        // Check authentication
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
         }
 
-        if(req.session.userRole !== 'teacher'){
+        if (req.session.userRole !== 'teacher') {
             return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. Teachers only.'));
         }
 
         const { gradeId, studentId, classYear } = req.body;
 
+        // Validate input
         if (!gradeId) {
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Grade ID is required'));
+            return redirectEditWithError(res, studentId, classYear, 'Grade ID is required');
         }
 
-
-        const User = require('./models/User'); 
-        const { db } = require('./config/firebase'); 
-
-
-        const gradeRef = db.collection('grades').doc(gradeId); 
-        const gradeDoc = await gradeRef.get(); 
-
-
-        if (!gradeDoc.exists) {
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Grade not found'));
+        // Get and validate grade document
+        const { error: gradeError, grade: existingGrade } = await getGradeDocument(gradeId);
+        if (gradeError) {
+            return redirectEditWithError(res, studentId, classYear, gradeError);
         }
 
-        const existingGrade = gradeDoc.data(); 
-
-
-        const student = await User.findbyId(existingGrade.studentId); 
-
-        if (!student || student.schoolId !== req.session.schoolId) {
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid grade or access denied'));
+        // Validate student access
+        const { error: accessError, student } = await validateGradeAccess(existingGrade, req.session.schoolId);
+        if (accessError) {
+            return redirectEditWithError(res, studentId, classYear, accessError);
         }
 
-        const teacher = await User.findbyId(req.session.userId); 
-        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []); 
-
-        // Check authorization: teacher must teach the subject (no exception for original teacher)
-        // This ensures classmasters can only delete grades for their own subject
-        if (!teacherSubjects.includes(existingGrade.subject)) {
-            const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('You are not authorized to delete this grade. You can only delete grades for subjects you teach.'));
+        // Validate authorization
+        const authError = await validateGradeDeleteAuthorization(req.session.userId, existingGrade.subject);
+        if (authError) {
+            return redirectEditWithError(res, studentId, classYear, authError);
         }
 
-        await User.deleteGrade(gradeId); 
+        // Delete the grade
+        const User = require('./models/User');
+        await User.deleteGrade(gradeId);
 
-        const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Grade deleted for ${student.name}`));
-
-    }catch (error){
+        return redirectEditWithSuccess(res, studentId, classYear, `Grade deleted for ${student.name}`);
+    } catch (error) {
         console.error('Error deleting grade:', error);
-        const studentId = req.body.studentId;
-        const classYear = req.body.classYear;
-        const redirectUrl = studentId ? `/student/${studentId}` : (classYear ? `/class/${classYear}` : '/students');
-        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to delete grade. Please try again.'));
+        return redirectEditWithError(res, req.body.studentId, req.body.classYear, 'Failed to delete grade. Please try again.');
     }
 }); 
 
@@ -1172,6 +1293,7 @@ app.post('/add-absence', async (req, res) => {
 // Bulk add absences endpoint
 app.post('/add-absences-bulk', async (req, res) => {
     try {
+        // Check authentication
         if (!req.session.userId) {
             return res.json({ success: false, error: 'Not authenticated' });
         }
@@ -1180,112 +1302,54 @@ app.post('/add-absences-bulk', async (req, res) => {
             return res.json({ success: false, error: 'Access denied. Teachers only.' });
         }
 
-        let { absences, classYear, subject, date } = req.body;
+        let { absences, subject, date } = req.body;
 
-        // Parse absences if it's a JSON string
-        if (typeof absences === 'string') {
-            try {
-                absences = JSON.parse(absences);
-            } catch (error) {
-                return res.json({ success: false, error: 'Invalid absences data format' });
-            }
+        // Parse absences data
+        absences = parseAbsencesData(absences);
+        if (!absences) {
+            return res.json({ success: false, error: 'Invalid absences data format' });
         }
 
-        if (!absences || !Array.isArray(absences) || absences.length === 0) {
-            return res.json({ success: false, error: 'No absences provided' });
+        // Validate input
+        const inputError = validateBulkAbsenceInput(absences, subject, date);
+        if (inputError) {
+            return res.json({ success: false, error: inputError });
         }
 
-        if (!subject) {
-            return res.json({ success: false, error: 'Subject is required' });
-        }
-
-        if (!date) {
-            return res.json({ success: false, error: 'Date is required' });
-        }
-
-        const User = require('./models/User');
-        
-        // Get teacher's subjects
-        const teacher = await User.findbyId(req.session.userId);
-        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-
-        if (!teacher || teacherSubjects.length === 0) {
-            return res.json({ success: false, error: 'No subjects assigned. Contact your administrator.' });
-        }
-
-        // Verify teacher teaches this subject
-        if (!teacherSubjects.includes(subject)) {
-            return res.json({ success: false, error: 'You are not assigned to teach this subject.' });
+        // Validate teacher subject access
+        const { error: teacherError } = await validateTeacherSubjectAccess(req.session.userId, subject);
+        if (teacherError) {
+            return res.json({ success: false, error: teacherError });
         }
 
         // Process all absences in parallel
         const results = await Promise.all(
-            absences.map(async (absenceData) => {
-                const { studentId, type = 'unmotivated', reason = '' } = absenceData;
-
-                if (!studentId) {
-                    return { success: false, studentId, error: 'Missing student ID' };
-                }
-
-                try {
-                    // Verify student exists and is in the same school
-                    const student = await User.findbyId(studentId);
-                    
-                    if (!student) {
-                        return { success: false, studentId, error: 'Student not found' };
-                    }
-
-                    if (student.schoolId !== req.session.schoolId) {
-                        return { success: false, studentId, error: 'Different school' };
-                    }
-
-                    // Parse date
-                    const absenceDate = new Date(date);
-                    if (isNaN(absenceDate.getTime())) {
-                        return { success: false, studentId, error: 'Invalid date' };
-                    }
-
-                    // Add absence
-                    await User.addAbsence({
-                        studentId: studentId,
-                        studentName: student.name,
-                        teacherId: req.session.userId,
-                        teacherName: req.session.userName,
-                        subject: subject,
-                        date: absenceDate,
-                        type: type,
-                        reason: reason
-                    });
-
-                    return { success: true, studentId, studentName: student.name };
-                } catch (error) {
-                    console.error(`Error adding absence for student ${studentId}:`, error);
-                    return { success: false, studentId, error: error.message };
-                }
-            })
+            absences.map(absenceData => 
+                processBulkAbsence(
+                    absenceData, 
+                    subject, 
+                    date, 
+                    req.session.userId, 
+                    req.session.userName, 
+                    req.session.schoolId
+                )
+            )
         );
 
-        const successCount = results.filter(r => r.success).length;
-        const errorCount = results.length - successCount;
-
-        if (successCount > 0) {
-            const message = errorCount > 0 
-                ? `Successfully recorded ${successCount} absence(s). ${errorCount} failed.`
-                : `Successfully recorded ${successCount} absence(s).`;
-            res.json({ success: true, message, successCount, errorCount, results });
-        } else {
-            res.json({ success: false, error: 'Failed to record absences. Please try again.', results });
-        }
+        // Format and send response
+        const response = formatBulkAbsenceResponse(results);
+        return res.json(response);
     } catch (error) {
         console.error('Error adding absences in bulk:', error);
-        res.json({ success: false, error: 'Failed to record absences. Please try again.' });
+        return res.json({ success: false, error: 'Failed to record absences. Please try again.' });
     }
 });
 
 app.post('/motivate-absence', async (req, res) => {
     try {
+        // Check authentication
         if (!req.session.userId) {
-            return res.redirect("/auth/login");
+            return res.redirect('/auth/login');
         }
 
         if (req.session.userRole !== 'teacher') {
@@ -1296,37 +1360,27 @@ app.post('/motivate-absence', async (req, res) => {
         const schoolId = req.session.schoolId;
         const teacherId = req.session.userId;
 
+        // Validate input
         if (!absenceId) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Absence ID is required'));
+            return redirectMotivateWithError(res, classYear, 'Absence ID is required');
         }
 
-        const School = require('./models/School');
-        const User = require('./models/User');
-        const { db } = require('./config/firebase');
-
-        // Get the absence
-        const absenceRef = db.collection('absences').doc(absenceId);
-        const absenceDoc = await absenceRef.get();
-
-        if (!absenceDoc.exists) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Absence not found'));
+        // Get and validate absence document
+        const { error: absenceError, absence, absenceRef } = await getAbsenceDocument(absenceId);
+        if (absenceError) {
+            return redirectMotivateWithError(res, classYear, absenceError);
         }
 
-        const absence = absenceDoc.data();
-        const student = await User.findbyId(absence.studentId);
-
-        if (!student || student.schoolId !== schoolId) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Invalid absence'));
+        // Validate student access
+        const { error: accessError, student } = await validateAbsenceAccess(absence, schoolId);
+        if (accessError) {
+            return redirectMotivateWithError(res, classYear, accessError);
         }
 
-        // Check if teacher is classmaster of this student's class
-        const classmasterId = await School.getClassmaster(schoolId, student.classYear);
-        if (classmasterId !== teacherId) {
-            const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
-            return res.redirect(redirectUrl + '?error=' + encodeURIComponent('Only the classmaster can motivate absences'));
+        // Validate classmaster authorization
+        const authError = await validateClassmasterAuthorization(schoolId, student.classYear, teacherId);
+        if (authError) {
+            return redirectMotivateWithError(res, classYear, authError);
         }
 
         // Update absence to motivated
@@ -1336,14 +1390,10 @@ app.post('/motivate-absence', async (req, res) => {
             motivatedAt: new Date()
         });
 
-        const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
-        res.redirect(redirectUrl + '?success=' + encodeURIComponent(`Absence motivated for ${absence.studentName}`));
-
+        return redirectMotivateWithSuccess(res, classYear, `Absence motivated for ${absence.studentName}`);
     } catch (error) {
         console.error('Error motivating absence:', error);
-        const classYear = req.body.classYear;
-        const redirectUrl = classYear ? `/class/${classYear}` : '/dashboard';
-        res.redirect(redirectUrl + '?error=' + encodeURIComponent('Failed to motivate absence. Please try again.'));
+        return redirectMotivateWithError(res, req.body.classYear, 'Failed to motivate absence. Please try again.');
     }
 });
 
