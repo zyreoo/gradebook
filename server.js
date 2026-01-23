@@ -48,6 +48,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: { 
         maxAge: 72 * 60 * 60 * 1000 // 72 hours
     }
