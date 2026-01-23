@@ -152,7 +152,7 @@ class BackupService {
             // Filter backup files and sort by date (newest first)
             const backupFiles = files
                 .filter(f => f.startsWith('backup-') && f.endsWith('.json'))
-                .sort()
+                .sort((a, b) => a.localeCompare(b))
                 .reverse();
 
             // Delete old backups

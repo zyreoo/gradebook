@@ -7,12 +7,18 @@ class EmailService {
     }
 
     initTransporter() {
-        // Configure with Gmail
+        // Configure with Gmail using HTTPS/TLS
         this.transporter = nodemailer.createTransport({
             service: 'gmail',
+            secure: true, // Use SSL/TLS
+            port: 465, // Gmail SSL port
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_APP_PASSWORD // Use App Password, not regular password
+            },
+            tls: {
+                // Reject unauthorized certificates
+                rejectUnauthorized: true
             }
         });
     }

@@ -431,7 +431,7 @@ router.post('/add-subject', async (req, res) => {
         const { subjectName } = req.body;
         const schoolId = req.session.schoolId;
 
-        if (!subjectName || !subjectName.trim()) {
+        if (!subjectName?.trim()) {
             const errorMsg = 'Subject name is required';
             if (req.headers.accept?.includes('application/json')) {
                 return res.status(400).json({ success: false, error: errorMsg });
@@ -653,7 +653,7 @@ router.post('/add-class', async (req, res) =>{
         const {className} = req.body; 
         const schoolId = req.session.schoolId; 
 
-        if(!className || !className.trim()){
+        if(!className?.trim()){
             const errorMsg = 'Class name is required';
             if (req.headers.accept?.includes('application/json')) {
                 return res.status(400).json({ success: false, error: errorMsg });
