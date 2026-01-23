@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Code - Online Gradebook</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <h1>Verification Required</h1>
+            <p style="color: var(--text-dim); margin-bottom: 32px;">
+                We sent a 6-digit code to <strong><%= email %></strong>
+            </p>
+
+            <% if (error) { %>
+                <div class="error-message"><%= error %></div>
+            <% } %>
+
+            <% if (success) { %>
+                <div class="success-message"><%= success %></div>
+            <% } %>
+
+            <form action="/auth/verify-otp" method="POST">
+                <div class="form-group">
+                    <label for="code">Verification Code</label>
+                    <input 
+                        type="text" 
+                        id="code" 
+                        name="code" 
+                        required 
+                        pattern="[0-9]{6}"
+                        maxlength="6"
+                        placeholder="000000"
+                        autocomplete="one-time-code"
+                        inputmode="numeric"
+                        style="text-align: center; letter-spacing: 8px; font-size: 32px; font-weight: 600; font-family: 'Courier New', monospace;"
+                        autofocus
+                    >
+                    <small style="color: var(--text-dim); font-size: 15px; display: block; margin-top: 8px;">
+                        Code expires in 10 minutes
+                    </small>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%;">
+                    Verify Code
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 24px;">
+                <p style="color: var(--text-dim); font-size: 15px; margin-bottom: 12px;">
+                    Didn't receive the code?
+                </p>
+                <button 
+                    id="resendBtn" 
+                    class="btn-secondary" 
+                    style="width: 100%;"
+                    onclick="resendOTP()"
+                >
+                    Resend Code
+                </button>
+                <div id="resendMessage" style="margin-top: 12px; font-size: 15px;"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 32px;">
+                <a href="/auth/login" style="color: var(--accent); text-decoration: none; font-size: 15px;">
+                    ← Back to Login
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-focus and auto-submit on 6 digits
+        const codeInput = document.getElementById('code');
+        
+        codeInput.addEventListener('input', (e) => {
+            // Only allow numbers
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            
+            // Auto-submit when 6 digits entered
+            if (e.target.value.length === 6) {
+                e.target.form.submit();
+            }
+        });
+
+        // Resend OTP function
+        async function resendOTP() {
+            const btn = document.getElementById('resendBtn');
+            const message = document.getElementById('resendMessage');
+            
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            message.textContent = '';
+            
+            try {
+                const response = await fetch('/auth/resend-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    message.style.color = 'var(--success)';
+                    message.textContent = data.message;
+                    
+                    // Disable button for 30 seconds
+                    let countdown = 30;
+                    const interval = setInterval(() => {
+                        btn.textContent = `Resend Code (${countdown}s)`;
+                        countdown--;
+                        
+                        if (countdown < 0) {
+                            clearInterval(interval);
+                            btn.disabled = false;
+                            btn.textContent = 'Resend Code';
+                        }
+                    }, 1000);
+                } else {
+                    message.style.color = 'var(--error)';
+                    message.textContent = data.error;
+                    btn.disabled = false;
+                    btn.textContent = 'Resend Code';
+                }
+            } catch (error) {
+                console.error('Resend error:', error);
+                message.style.color = 'var(--error)';
+                message.textContent = 'Failed to resend code';
+                btn.disabled = false;
+                btn.textContent = 'Resend Code';
+            }
+        }
+
+        // Paste support for 6-digit codes
+        codeInput.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const numbers = pastedText.replace(/[^0-9]/g, '').slice(0, 6);
+            codeInput.value = numbers;
+            
+            if (numbers.length === 6) {
+                codeInput.form.submit();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -146,7 +146,33 @@ online-gradebook/
 
 ## 🔐 Authentication
 
-The app uses session-based authentication. Passwords are hashed with bcrypt, so they're secure. 
+The app uses session-based authentication with **Two-Factor Authentication (2FA)** for enhanced security.
+
+### 🔒 Two-Factor Authentication (2FA)
+
+**Mandatory for:**
+- School administrators
+- Teachers
+
+**How it works:**
+1. Enter email and password
+2. Receive 6-digit code via email
+3. Enter code to complete login
+4. Code expires in 10 minutes
+
+**Setup required:**
+```env
+EMAIL_USER=your-email@gmail.com
+EMAIL_APP_PASSWORD=your-16-character-app-password
+SCHOOL_NAME=Your School Name
+```
+
+See detailed setup instructions in `docs/2FA-SETUP.md`
+
+**Test email configuration:**
+```bash
+npm run test:email
+```
 
 ### Admin System
 
@@ -220,8 +246,29 @@ MIT License - do whatever you want with it!
 - 👔 **Classmaster View**: Enhanced student detail pages for classmasters
 - 📊 **Academic Feedback**: Automated feedback generation based on grades and attendance
 - 👨‍👩‍👧‍👦 **Parent Dashboard**: Parents can view all their children's academic progress
-- 🎨 **Modern UI**: Dark theme with clean, responsive design
+- 🎨 **Modern UI**: Apple-inspired white theme with clean, responsive design
 - 🔒 **Enhanced Security**: Proper authorization checks for grade editing/deletion
+- 🔐 **2FA Authentication**: Email-based two-factor authentication for admins and teachers
+
+## 📋 Compliance with Romanian Standards
+
+This application complies with **Order 3.896/2023** - Technical Standards for Electronic Gradebook:
+
+✅ **Implemented:**
+- Web-based access across devices (Art. 2)
+- Mobile-ready responsive design (Art. 3)
+- Role-based access control (Art. 14-20)
+- Two-factor authentication for admins and teachers (Art. 6)
+- HTTPS support (Art. 5, 13)
+- Timestamp tracking for operations
+- Authorization checks (only teachers can modify grades)
+
+⚠️ **Requires Configuration:**
+- Automated backup system (Art. 7-10) - Use Firestore automatic backups
+- Complete audit logging (Art. 16) - Basic tracking exists, enhancement recommended
+- API documentation (Art. 13) - Foundation exists
+
+See `docs/2FA-SETUP.md` and `docs/QUICK-START-2FA.md` for setup instructions.
 
 ## 💬 Final Thoughts
 

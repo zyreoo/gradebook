@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 // Initialize Firebase - fail fast if it doesn't work
 try {
     require('./config/firebase');
-    console.log('Firebase initialized successfully');
+    console.log('✓ Firebase initialized successfully');
 } catch (error) {
     console.error('CRITICAL: Failed to initialize Firebase');
     console.error('Error:', error.message);
@@ -17,6 +17,24 @@ try {
     // In serverless, we want to fail fast - the app won't work without Firebase
     throw error;
 }
+
+// Initialize Email Service for 2FA
+const emailService = require('./services/emailService');
+(async () => {
+    if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
+        const emailTest = await emailService.testConnection();
+        if (emailTest.success) {
+            console.log('✓ Email service configured successfully');
+        } else {
+            console.warn('⚠ Email service configuration issue:', emailTest.error);
+            console.warn('  2FA will not work. Please configure EMAIL_USER and EMAIL_APP_PASSWORD');
+        }
+    } else {
+        console.warn('⚠ Email service not configured');
+        console.warn('  Set EMAIL_USER and EMAIL_APP_PASSWORD in .env for 2FA');
+        console.warn('  See docs/2FA-SETUP.md for instructions');
+    }
+})();
 
 // Middleware
 app.use(express.json());
@@ -42,9 +60,21 @@ app.set('views', path.join(__dirname, 'views'));
 
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const { check2FAComplete } = require('./middleware/check2FA');
 const { validateHeaderName } = require('http');
 
 app.use('/auth', authRoutes);
+
+// Apply 2FA check to protected routes (except auth routes)
+app.use((req, res, next) => {
+    // Skip 2FA check for auth routes and static files
+    if (req.path.startsWith('/auth') || req.path.startsWith('/styles.css')) {
+        return next();
+    }
+    
+    check2FAComplete(req, res, next);
+});
+
 app.use('/admin', adminRoutes);
 
 // Helper functions for dashboard
@@ -57,23 +87,23 @@ function createUserData(session) {
 }
 
 function groupGradesBySubject(grades) {
-    const gradesBySubject = {};
-    
+            const gradesBySubject = {};
+            
     grades.forEach(gradeEntry => {
-        const subject = gradeEntry.subject || 'General';
-        if (!gradesBySubject[subject]) {
-            gradesBySubject[subject] = {
-                grades: [],
-                teacherName: gradeEntry.teacherName
-            };
-        }
-        gradesBySubject[subject].grades.push({
-            value: gradeEntry.grade,
-            date: gradeEntry.createdAt,
-            teacherName: gradeEntry.teacherName
-        });
-    });
-    
+                const subject = gradeEntry.subject || 'General';
+                if (!gradesBySubject[subject]) {
+                    gradesBySubject[subject] = {
+                        grades: [],
+                        teacherName: gradeEntry.teacherName
+                    };
+                }
+                gradesBySubject[subject].grades.push({
+                    value: gradeEntry.grade,
+                    date: gradeEntry.createdAt,
+                    teacherName: gradeEntry.teacherName
+                });
+            });
+            
     return gradesBySubject;
 }
 
@@ -113,49 +143,49 @@ async function getAvailableSubjects(schoolId, classYear) {
         return schoolId ? await School.getSubjects(schoolId) : [];
     }
     
-    const schoolData = await School.findById(schoolId);
+                const schoolData = await School.findById(schoolId);
     const classTeachers = schoolData?.classYearTeachers?.[classYear] || [];
-    
-    const teacherSubjectsSet = new Set();
-    for (const teacherId of classTeachers) {
-        const teacher = await User.findbyId(teacherId);
-        if (teacher) {
-            const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
-            teacherSubjects.forEach(subj => teacherSubjectsSet.add(subj));
-        }
-    }
+                
+                const teacherSubjectsSet = new Set();
+                for (const teacherId of classTeachers) {
+                    const teacher = await User.findbyId(teacherId);
+                    if (teacher) {
+                        const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
+                        teacherSubjects.forEach(subj => teacherSubjectsSet.add(subj));
+                    }
+                }
     
     return Array.from(teacherSubjectsSet);
 }
 
 function createSubjectList(availableSubjects, gradesBySubject) {
-    const subjects = availableSubjects.map(subjectName => {
-        const subjectData = gradesBySubject[subjectName];
-        
-        if (subjectData) {
-            const grades = subjectData.grades.map(g => g.value);
-            const average = grades.length > 0
-                ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-                : 0;
-            
-            return {
-                name: subjectName,
-                grades: subjectData.grades.sort((a, b) => b.date - a.date),
-                average: parseFloat(average),
-                teacherName: subjectData.teacherName,
-                gradeCount: grades.length,
-                hasGrades: true
-            };
+            const subjects = availableSubjects.map(subjectName => {
+                const subjectData = gradesBySubject[subjectName];
+                
+                if (subjectData) {
+                    const grades = subjectData.grades.map(g => g.value);
+                    const average = grades.length > 0 
+                        ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
+                        : 0;
+                    
+                    return {
+                        name: subjectName,
+                        grades: subjectData.grades.sort((a, b) => b.date - a.date),
+                        average: parseFloat(average),
+                        teacherName: subjectData.teacherName,
+                        gradeCount: grades.length,
+                        hasGrades: true
+                    };
         }
         
-        return {
-            name: subjectName,
-            grades: [],
-            average: 0,
-            teacherName: null,
-            gradeCount: 0,
-            hasGrades: false
-        };
+                    return {
+                        name: subjectName,
+                        grades: [],
+                        average: 0,
+                        teacherName: null,
+                        gradeCount: 0,
+                        hasGrades: false
+                    };
     });
     
     return subjects.sort((a, b) => a.name.localeCompare(b.name));
@@ -163,14 +193,14 @@ function createSubjectList(availableSubjects, gradesBySubject) {
 
 function calculateStats(grades, absences, subjects) {
     const totalGrades = grades.length;
-    const overallAverage = totalGrades > 0
+            const overallAverage = totalGrades > 0
         ? (grades.reduce((sum, g) => sum + g.grade, 0) / totalGrades).toFixed(2)
-        : 0;
-    
+                : 0;
+            
     return {
-        totalSubjects: subjects.filter(s => s.hasGrades).length,
-        totalGrades: totalGrades,
-        overallAverage: parseFloat(overallAverage),
+                totalSubjects: subjects.filter(s => s.hasGrades).length,
+                totalGrades: totalGrades,
+                overallAverage: parseFloat(overallAverage),
         totalAbsences: absences.length,
         motivatedAbsences: absences.filter(a => a.type === 'motivated').length,
         unmotivatedAbsences: absences.filter(a => a.type === 'unmotivated').length
@@ -231,32 +261,32 @@ async function handleStudentDashboard(req, res, userData) {
         const absencesBySubject = groupAbsencesBySubject(allAbsences);
         const stats = calculateStats(allGrades, allAbsences, subjects);
         
-        const { generateStudentFeedback } = require('./utils/feedbackGenerator');
-        const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
-        
-        res.render('dashboard-student', { 
-            user: userData,
-            subjects: subjects,
-            absencesBySubject: absencesBySubject,
-            stats: stats,
-            feedback: feedback
-        });
-    } catch (error) {
-        console.error('Error fetching student grades:', error);
-        res.render('dashboard-student', { 
-            user: userData,
-            subjects: [],
-            absencesBySubject: {},
-            stats: {
-                totalSubjects: 0,
-                totalGrades: 0,
-                overallAverage: 0,
-                totalAbsences: 0,
-                motivatedAbsences: 0,
-                unmotivatedAbsences: 0
-            }
-        });
-    }
+            const { generateStudentFeedback } = require('./utils/feedbackGenerator');
+            const feedback = generateStudentFeedback(stats, subjects, absencesBySubject);
+            
+            res.render('dashboard-student', { 
+                user: userData,
+                subjects: subjects,
+                absencesBySubject: absencesBySubject,
+                stats: stats,
+                feedback: feedback
+            });
+        } catch (error) {
+            console.error('Error fetching student grades:', error);
+            res.render('dashboard-student', { 
+                user: userData,
+                subjects: [],
+                absencesBySubject: {},
+                stats: {
+                    totalSubjects: 0,
+                    totalGrades: 0,
+                    overallAverage: 0,
+                    totalAbsences: 0,
+                    motivatedAbsences: 0,
+                    unmotivatedAbsences: 0
+                }
+            });
+        }
 }
 
 async function processStudentData(student) {
@@ -285,10 +315,10 @@ async function processStudentData(student) {
 
 async function handleParentDashboard(req, res, userData) {
     try {
-        const User = require('./models/User');
-        const parentId = req.session.userId;
-        
-        const students = await User.getStudentByParentId(parentId);
+            const User = require('./models/User'); 
+            const parentId = req.session.userId; 
+
+            const students = await User.getStudentByParentId(parentId); 
         const studentsWithData = await Promise.all(students.map(processStudentData));
         
         res.render('dashboard-parent', { 
@@ -306,24 +336,24 @@ async function handleParentDashboard(req, res, userData) {
 
 // Helper functions for student detail view
 function groupGradesBySubjectWithIds(grades) {
-    const gradesBySubject = {};
-    
+                const gradesBySubject = {}; 
+
     grades.forEach(gradeEntry => {
-        const subject = gradeEntry.subject || 'General';
+                    const subject = gradeEntry.subject || 'General'; 
         if (!gradesBySubject[subject]) {
-            gradesBySubject[subject] = {
-                grades: [],
-                teacherName: gradeEntry.teacherName
-            };
-        }
-        gradesBySubject[subject].grades.push({
+                        gradesBySubject[subject] = {
+                        grades: [],
+                        teacherName: gradeEntry.teacherName 
+                    }; 
+                }
+                    gradesBySubject[subject].grades.push({
             id: gradeEntry.id,
-            value: gradeEntry.grade,
-            date: gradeEntry.createdAt,
-            teacherName: gradeEntry.teacherName
-        });
-    });
-    
+                        value: gradeEntry.grade, 
+                        date: gradeEntry.createdAt, 
+                        teacherName: gradeEntry.teacherName
+                    }); 
+            });
+
     return gradesBySubject;
 }
 
@@ -357,15 +387,15 @@ function groupAbsencesBySubjectWithIds(absences) {
 }
 
 function createSubjectListWithFirestoreDates(availableSubjects, gradesBySubject) {
-    const subjects = availableSubjects.map(subjectName => {
-        const subjectData = gradesBySubject[subjectName];
-        
+            const subjects = availableSubjects.map(subjectName => {
+                const subjectData = gradesBySubject[subjectName]; 
+
         if (subjectData) {
-            const grades = subjectData.grades.map(g => g.value);
-            const average = grades.length > 0
-                ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-                : 0;
-            
+                    const grades = subjectData.grades.map(g => g.value); 
+                    const average = grades.length > 0
+                        ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
+                        : 0; 
+
             return {
                 name: subjectName,
                 grades: subjectData.grades.sort((a, b) => {
@@ -373,21 +403,21 @@ function createSubjectListWithFirestoreDates(availableSubjects, gradesBySubject)
                     const dateB = b.date?.toDate?.() || new Date(0);
                     return dateB - dateA;
                 }),
-                average: parseFloat(average),
-                teacherName: subjectData.teacherName,
-                gradeCount: grades.length,
-                hasGrades: true
-            };
+                        average: parseFloat(average), 
+                        teacherName: subjectData.teacherName, 
+                        gradeCount: grades.length, 
+                        hasGrades: true
+                    }; 
         }
         
         return {
-            name: subjectName,
-            grades: [],
-            average: 0,
+                        name: subjectName, 
+                        grades: [], 
+                        average: 0, 
             teacherName: null,
-            gradeCount: 0,
-            hasGrades: false
-        };
+                        gradeCount: 0, 
+                        hasGrades: false
+                    }; 
     });
     
     return subjects.sort((a, b) => a.name.localeCompare(b.name));
@@ -1011,7 +1041,7 @@ app.post('/add-grade', async (req, res) => {
             return res.redirect('/students?error=' + encodeURIComponent('Access denied. Teachers only.'));
         }
 
-        const { studentId, grade, classYear, subject, date } = req.body;
+        const { studentId, grade, classYear, subject, date } = req.body; 
 
         // Validate input
         const inputError = validateGradeInput(studentId, grade, subject);
@@ -1037,10 +1067,10 @@ app.post('/add-grade', async (req, res) => {
         const User = require('./models/User');
         await User.addGrade({
             studentId: studentId,
-            studentName: student.name,
-            grade: gradeNum,
-            teacherId: req.session.userId,
-            teacherName: req.session.userName,
+            studentName: student.name, 
+            grade: gradeNum, 
+            teacherId: req.session.userId, 
+            teacherName: req.session.userName, 
             subject: subject,
             date: date || undefined
         });
@@ -1069,7 +1099,7 @@ app.post('/add-grades-bulk', async (req, res) => {
         // Parse grades data
         grades = parseGradesData(grades);
         if (!grades) {
-            return res.json({ success: false, error: 'Invalid grades data format' });
+                return res.json({ success: false, error: 'Invalid grades data format' });
         }
 
         // Validate input
@@ -1111,7 +1141,7 @@ app.post('/edit-grade', async (req, res) => {
     try {
         // Check authentication
         if (!req.session.userId) {
-            return res.redirect('/auth/login');
+            return res.redirect('/auth/login'); 
         }
 
         if (req.session.userRole !== 'teacher') {
@@ -1126,7 +1156,7 @@ app.post('/edit-grade', async (req, res) => {
             return redirectEditWithError(res, studentId, classYear, inputError);
         }
 
-        const gradeNum = parseInt(grade);
+        const gradeNum = parseInt(grade); 
 
         // Get and validate grade document
         const { error: gradeError, grade: existingGrade } = await getGradeDocument(gradeId);
@@ -1202,7 +1232,7 @@ app.post('/delete-grade', async (req, res) => {
 
         // Delete the grade
         const User = require('./models/User');
-        await User.deleteGrade(gradeId);
+        await User.deleteGrade(gradeId); 
 
         return redirectEditWithSuccess(res, studentId, classYear, `Grade deleted for ${student.name}`);
     } catch (error) {
@@ -1307,7 +1337,7 @@ app.post('/add-absences-bulk', async (req, res) => {
         // Parse absences data
         absences = parseAbsencesData(absences);
         if (!absences) {
-            return res.json({ success: false, error: 'Invalid absences data format' });
+                return res.json({ success: false, error: 'Invalid absences data format' });
         }
 
         // Validate input
@@ -1458,6 +1488,19 @@ app.post('/api/reset-database', async (req, res) => {
         });
     }
 });
+
+// Cleanup expired OTP codes periodically (every hour)
+const OTP = require('./models/OTP');
+setInterval(async () => {
+    try {
+        const cleaned = await OTP.cleanupExpired();
+        if (cleaned > 0) {
+            console.log(`Cleaned up ${cleaned} expired OTP codes`);
+        }
+    } catch (error) {
+        console.error('OTP cleanup error:', error);
+    }
+}, 60 * 60 * 1000); // Every hour
 
 if (require.main === module) {
     // Running directly (local development)
