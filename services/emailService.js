@@ -51,7 +51,7 @@ class EmailService {
                                 </div>
                             </div>
                             <p style="margin: 0 0 16px; color: #86868b; font-size: 15px; line-height: 1.5;">
-                                This code will expire in <strong>10 minutes</strong>.
+                                This code will expire in <strong>15 minutes</strong>.
                             </p>
                             <p style="margin: 0; color: #86868b; font-size: 15px; line-height: 1.5;">
                                 If you didn't request this code, please ignore this email.

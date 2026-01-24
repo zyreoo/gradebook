@@ -8,7 +8,7 @@ class OTP {
 
     static async create(userId, email) {
         const code = this.generateCode();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
         const otpData = {
             userId,
@@ -45,42 +45,77 @@ class OTP {
         const otpData = otpDoc.data();
         const otpRef = otpDoc.ref;
 
+        const invalidatedError = { success: false, error: 'This code is no longer valid. Please request a new one.' };
+
+        const safeUpdate = async (data) => {
+            try {
+                await otpRef.update(data);
+            } catch (e) {
+                const isNotFound = e.code === 5
+                    || (e.details && String(e.details).includes('No document to update'))
+                    || (e.message && String(e.message).includes('No document to update'));
+                if (isNotFound) throw new Error('OTP_INVALIDATED');
+                throw e;
+            }
+        };
+
         const now = new Date();
         const expiresAt = otpData.expiresAt.toDate();
         if (now > expiresAt) {
-            await otpRef.update({ verified: true });
+            try {
+                await safeUpdate({ verified: true });
+            } catch (e) {
+                if (e.message === 'OTP_INVALIDATED') return invalidatedError;
+                throw e;
+            }
             return { success: false, error: 'Code expired. Please request a new one.' };
         }
 
         if (otpData.attempts >= 3) {
-            await otpRef.update({ verified: true });
+            try {
+                await safeUpdate({ verified: true });
+            } catch (e) {
+                if (e.message === 'OTP_INVALIDATED') return invalidatedError;
+                throw e;
+            }
             return { success: false, error: 'Too many attempts. Please request a new code.' };
         }
 
         if (otpData.code !== code) {
-            await otpRef.update({ attempts: otpData.attempts + 1 });
+            try {
+                await safeUpdate({ attempts: otpData.attempts + 1 });
+            } catch (e) {
+                if (e.message === 'OTP_INVALIDATED') return invalidatedError;
+                throw e;
+            }
             return { success: false, error: 'Invalid code' };
         }
 
-        await otpRef.update({ 
-            verified: true,
-            verifiedAt: new Date()
-        });
+        try {
+            await safeUpdate({ verified: true, verifiedAt: new Date() });
+        } catch (e) {
+            if (e.message === 'OTP_INVALIDATED') return invalidatedError;
+            throw e;
+        }
 
         return { success: true };
     }
 
-    static async cleanup(userId) {
+    static async cleanup(userId, options = {}) {
+        const { exceptId } = options;
         const snapshot = await db.collection('otp_codes')
             .where('userId', '==', userId)
             .get();
 
         const batch = db.batch();
+        let count = 0;
         snapshot.docs.forEach(doc => {
+            if (exceptId && doc.id === exceptId) return;
             batch.delete(doc.ref);
+            count++;
         });
 
-        await batch.commit();
+        if (count > 0) await batch.commit();
     }
 
     static async cleanupExpired() {

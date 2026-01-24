@@ -188,7 +188,7 @@ router.post('/verify-otp', async (req, res) => {
         const { code } = req.body;
 
         if (!req.session.pendingUserId) {
-            return res.redirect('/auth/login?error=' + encodeURIComponent('Session expired. Please login again.'));
+            return res.redirect('/auth/login?error=' + encodeURIComponent('Session was lost. Please sign in again.'));
         }
 
         if (!code?.length || code.length !== 6) {
@@ -230,14 +230,12 @@ router.post('/verify-otp', async (req, res) => {
 router.post('/resend-otp', async (req, res) => {
     try {
         if (!req.session.pendingUserId) {
-            return res.json({ success: false, error: 'Session expired. Please login again.' });
+            return res.json({ success: false, error: 'Session was lost. Please sign in again.' });
         }
 
         const userId = req.session.pendingUserId;
         const email = req.session.pendingUserEmail;
         const name = req.session.pendingUserName;
-
-        await OTP.cleanup(userId);
 
         const otpResult = await OTP.create(userId, email);
         const emailResult = await emailService.sendOTP(email, otpResult.code, name);
@@ -245,6 +243,8 @@ router.post('/resend-otp', async (req, res) => {
         if (!emailResult.success) {
             return res.json({ success: false, error: 'Failed to send verification code' });
         }
+
+        await OTP.cleanup(userId, { exceptId: otpResult.id });
 
         return res.json({ success: true, message: 'New code sent successfully' });
 
