@@ -1,5 +1,6 @@
 const {db, auth} = require('../config/firebase')
 const bcrypt = require('bcryptjs');
+const AuditLog = require('./AuditLog');
 
 
 
@@ -153,7 +154,7 @@ class User {
     }
 
 
-    static async addGrade({studentId, studentName, grade, teacherId, teacherName, subject, date}){
+    static async addGrade({studentId, studentName, grade, teacherId, teacherName, subject, date, reason = '', teacherRole = 'teacher', ipAddress = null}){
         
         // If date is provided, use it; otherwise use current date
         let gradeDate = new Date();
@@ -182,6 +183,31 @@ class User {
 
         const gradeRef = await db.collection('grades').add(gradeData);
 
+        // Get student's schoolId for audit log
+        const student = await this.findbyId(studentId);
+        const schoolId = student?.schoolId || null;
+
+        // Create audit log entry
+        try {
+            await AuditLog.create({
+                action: 'CREATE',
+                entityType: 'GRADE',
+                entityId: gradeRef.id,
+                userId: teacherId,
+                userName: teacherName,
+                userRole: teacherRole,
+                oldData: null,
+                newData: gradeData,
+                reason: reason || `Grade ${grade} added for ${subject}`,
+                schoolId: schoolId,
+                studentId: studentId,
+                ipAddress: ipAddress
+            });
+        } catch (auditError) {
+            console.error('Failed to create audit log for grade creation:', auditError);
+            // Don't fail the operation if audit log fails, but log the error
+        }
+
         return { id: gradeRef.id, ...gradeData}
     }
 
@@ -207,7 +233,7 @@ class User {
         });
     }
 
-    static async addAbsence({studentId, studentName, teacherId, teacherName, subject, date, type = 'unmotivated', reason = ''}){
+    static async addAbsence({studentId, studentName, teacherId, teacherName, subject, date, type = 'unmotivated', reason = '', teacherRole = 'teacher', ipAddress = null}){
         
         const absenceData = {
             studentId, 
@@ -223,6 +249,30 @@ class User {
         }; 
 
         const absenceRef = await db.collection('absences').add(absenceData);
+
+        // Get student's schoolId for audit log
+        const student = await this.findbyId(studentId);
+        const schoolId = student?.schoolId || null;
+
+        // Create audit log entry
+        try {
+            await AuditLog.create({
+                action: 'CREATE',
+                entityType: 'ABSENCE',
+                entityId: absenceRef.id,
+                userId: teacherId,
+                userName: teacherName,
+                userRole: teacherRole,
+                oldData: null,
+                newData: absenceData,
+                reason: reason || `Absence marked as ${type}`,
+                schoolId: schoolId,
+                studentId: studentId,
+                ipAddress: ipAddress
+            });
+        } catch (auditError) {
+            console.error('Failed to create audit log for absence creation:', auditError);
+        }
 
         return { id: absenceRef.id, ...absenceData}
     }
@@ -249,8 +299,108 @@ class User {
         });
     }
 
+    static async updateAbsence(absenceId, {type, reason, teacherId, teacherName, subject, date, userId = null, userName = null, userRole = 'teacher', updateReason = '', ipAddress = null}){
+        const { db } = require('../config/firebase')
 
-    static async updateGrade(gradeId, {grade ,subject, teacherId,teacherName}){
+        const absenceRef = db.collection('absences').doc(absenceId); 
+        const absenceDoc = await absenceRef.get(); 
+
+        if(!absenceDoc.exists){
+            throw new Error('Absence not found');
+        }
+
+        // Store old data for audit log
+        const oldData = { ...absenceDoc.data() };
+
+        const absenceData = {
+            type: type || oldData.type,
+            reason: reason !== undefined ? reason : oldData.reason,
+            teacherId: teacherId || oldData.teacherId,
+            teacherName: teacherName || oldData.teacherName,
+            subject: subject || oldData.subject,
+            date: date || oldData.date,
+            updatedAt: new Date()
+        }; 
+
+        await absenceRef.update(absenceData);
+
+        // Create new data object for audit
+        const newData = { ...oldData, ...absenceData };
+
+        // Get student's schoolId for audit log
+        const studentId = oldData.studentId;
+        const student = await this.findbyId(studentId);
+        const schoolId = student?.schoolId || null;
+
+        // Create audit log entry
+        try {
+            await AuditLog.create({
+                action: 'UPDATE',
+                entityType: 'ABSENCE',
+                entityId: absenceId,
+                userId: userId || teacherId || oldData.teacherId,
+                userName: userName || teacherName || oldData.teacherName,
+                userRole: userRole,
+                oldData: oldData,
+                newData: newData,
+                reason: updateReason || `Absence updated: type changed from ${oldData.type} to ${type || oldData.type}`,
+                schoolId: schoolId,
+                studentId: studentId,
+                ipAddress: ipAddress
+            });
+        } catch (auditError) {
+            console.error('Failed to create audit log for absence update:', auditError);
+        }
+
+        return { id: absenceId, ...oldData, ...absenceData };
+    }
+
+    static async deleteAbsence(absenceId, {userId = null, userName = null, userRole = 'teacher', reason = '', ipAddress = null} = {}){
+        const { db } = require('../config/firebase')
+
+        const absenceRef = db.collection('absences').doc(absenceId); 
+        const absenceDoc = await absenceRef.get(); 
+
+        if(!absenceDoc.exists) {
+            throw new Error('Absence not found');
+        }
+
+        // Store old data for audit log
+        const oldData = { ...absenceDoc.data() };
+        const studentId = oldData.studentId;
+
+        // Get student's schoolId for audit log
+        const student = await this.findbyId(studentId);
+        const schoolId = student?.schoolId || null;
+
+        // Delete the absence
+        await absenceRef.delete(); 
+
+        // Create audit log entry
+        try {
+            await AuditLog.create({
+                action: 'DELETE',
+                entityType: 'ABSENCE',
+                entityId: absenceId,
+                userId: userId || oldData.teacherId,
+                userName: userName || oldData.teacherName,
+                userRole: userRole,
+                oldData: oldData,
+                newData: null,
+                reason: reason || `Absence deleted`,
+                schoolId: schoolId,
+                studentId: studentId,
+                ipAddress: ipAddress
+            });
+        } catch (auditError) {
+            console.error('Failed to create audit log for absence deletion:', auditError);
+        }
+
+        return { id: absenceId, deleted: true };
+    }
+
+
+    static async updateGrade(gradeId, {grade ,subject, teacherId, teacherName, reason = '', teacherRole = 'teacher', ipAddress = null}){
 
         const { db } = require('../config/firebase')
 
@@ -261,6 +411,9 @@ class User {
             throw new Error('Grade not found');
         }
 
+        // Store old data for audit log
+        const oldData = { ...gradeDoc.data() };
+
         const gradeData = {
             grade: Number.parseInt(grade),
             subject: subject || gradeDoc.data().subject,
@@ -270,6 +423,35 @@ class User {
         }; 
 
         await gradeRef.update(gradeData);
+
+        // Create new data object for audit
+        const newData = { ...oldData, ...gradeData };
+
+        // Get student's schoolId for audit log
+        const studentId = oldData.studentId;
+        const student = await this.findbyId(studentId);
+        const schoolId = student?.schoolId || null;
+
+        // Create audit log entry
+        try {
+            await AuditLog.create({
+                action: 'UPDATE',
+                entityType: 'GRADE',
+                entityId: gradeId,
+                userId: teacherId || oldData.teacherId,
+                userName: teacherName || oldData.teacherName,
+                userRole: teacherRole,
+                oldData: oldData,
+                newData: newData,
+                reason: reason || `Grade updated from ${oldData.grade} to ${grade}`,
+                schoolId: schoolId,
+                studentId: studentId,
+                ipAddress: ipAddress
+            });
+        } catch (auditError) {
+            console.error('Failed to create audit log for grade update:', auditError);
+        }
+
         return { id: gradeId, ...gradeDoc.data(), ...gradeData };
     }
 
@@ -406,7 +588,7 @@ class User {
         return updatedDoc.data();
     }
 
-    static async deleteGrade(gradeId){
+    static async deleteGrade(gradeId, {userId = null, userName = null, userRole = 'teacher', reason = '', ipAddress = null} = {}){
         const { db } = require('../config/firebase')
 
 
@@ -418,8 +600,37 @@ class User {
             throw new Error('Grade not found');
         }
 
+        // Store old data for audit log
+        const oldData = { ...gradeDoc.data() };
+        const studentId = oldData.studentId;
 
+        // Get student's schoolId for audit log
+        const student = await this.findbyId(studentId);
+        const schoolId = student?.schoolId || null;
+
+        // Delete the grade
         await gradeRef.delete(); 
+
+        // Create audit log entry
+        try {
+            await AuditLog.create({
+                action: 'DELETE',
+                entityType: 'GRADE',
+                entityId: gradeId,
+                userId: userId || oldData.teacherId,
+                userName: userName || oldData.teacherName,
+                userRole: userRole,
+                oldData: oldData,
+                newData: null,
+                reason: reason || `Grade ${oldData.grade} deleted`,
+                schoolId: schoolId,
+                studentId: studentId,
+                ipAddress: ipAddress
+            });
+        } catch (auditError) {
+            console.error('Failed to create audit log for grade deletion:', auditError);
+        }
+
         return { id: gradeId, deleted: true };
     }
 

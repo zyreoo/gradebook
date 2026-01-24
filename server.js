@@ -535,7 +535,7 @@ function validateBulkGradeInput(grades, subject, date) {
     return null;
 }
 
-async function processBulkGrade(gradeData, subject, date, teacherId, teacherName, schoolId) {
+async function processBulkGrade(gradeData, subject, date, teacherId, teacherName, schoolId, teacherRole = 'teacher', ipAddress = null) {
     const User = require('./models/User');
     const { studentId, grade } = gradeData;
 
@@ -561,7 +561,10 @@ async function processBulkGrade(gradeData, subject, date, teacherId, teacherName
             teacherId: teacherId,
             teacherName: teacherName,
             subject: subject,
-            date: date
+            date: date,
+            reason: `Bulk grade ${gradeNum} added for ${subject}`,
+            teacherRole: teacherRole,
+            ipAddress: ipAddress
         });
 
         return { success: true, studentId, studentName: student.name, grade: gradeNum };
@@ -613,7 +616,7 @@ function validateBulkAbsenceInput(absences, subject, date) {
     return null;
 }
 
-async function processBulkAbsence(absenceData, subject, date, teacherId, teacherName, schoolId) {
+async function processBulkAbsence(absenceData, subject, date, teacherId, teacherName, schoolId, teacherRole = 'teacher', ipAddress = null) {
     const User = require('./models/User');
     const { studentId, type = 'unmotivated', reason = '' } = absenceData;
 
@@ -641,7 +644,9 @@ async function processBulkAbsence(absenceData, subject, date, teacherId, teacher
             subject: subject,
             date: absenceDate,
             type: type,
-            reason: reason
+            reason: reason,
+            teacherRole: teacherRole,
+            ipAddress: ipAddress
         });
 
         return { success: true, studentId, studentName: student.name };
@@ -1073,7 +1078,10 @@ app.post('/add-grade', async (req, res) => {
             teacherId: req.session.userId, 
             teacherName: req.session.userName, 
             subject: subject,
-            date: date || undefined
+            date: date || undefined,
+            reason: req.body.reason || `Grade ${gradeNum} added for ${subject}`,
+            teacherRole: req.session.role || 'teacher',
+            ipAddress: req.ip || req.connection.remoteAddress
         });
 
         return redirectWithSuccess(res, classYear, `Grade ${gradeNum} added for ${student.name} in ${subject}`);
@@ -1124,7 +1132,9 @@ app.post('/add-grades-bulk', async (req, res) => {
                     date, 
                     req.session.userId, 
                     req.session.userName, 
-                    req.session.schoolId
+                    req.session.schoolId,
+                    req.session.role || 'teacher',
+                    req.ip || req.connection.remoteAddress
                 )
             )
         );
@@ -1183,7 +1193,10 @@ app.post('/edit-grade', async (req, res) => {
             grade: gradeNum,
             subject: subject,
             teacherId: req.session.userId,
-            teacherName: req.session.userName
+            teacherName: req.session.userName,
+            reason: req.body.reason || `Grade updated to ${gradeNum}`,
+            teacherRole: req.session.role || 'teacher',
+            ipAddress: req.ip || req.connection.remoteAddress
         });
 
         return redirectEditWithSuccess(res, studentId, classYear, `Grade updated to ${gradeNum} for ${student.name} in ${subject}`);
@@ -1233,7 +1246,13 @@ app.post('/delete-grade', async (req, res) => {
 
         // Delete the grade
         const User = require('./models/User');
-        await User.deleteGrade(gradeId); 
+        await User.deleteGrade(gradeId, {
+            userId: req.session.userId,
+            userName: req.session.userName,
+            userRole: req.session.role || 'teacher',
+            reason: req.body.reason || `Grade deleted`,
+            ipAddress: req.ip || req.connection.remoteAddress
+        }); 
 
         return redirectEditWithSuccess(res, studentId, classYear, `Grade deleted for ${student.name}`);
     } catch (error) {
@@ -1303,7 +1322,9 @@ app.post('/add-absence', async (req, res) => {
             subject: subject,
             date: absenceDate,
             type: type,
-            reason: reason || ''
+            reason: reason || '',
+            teacherRole: req.session.role || 'teacher',
+            ipAddress: req.ip || req.connection.remoteAddress
         });
 
         const typeLabel = type === 'motivated' ? 'Motivated' : 'Unmotivated';
@@ -1362,7 +1383,9 @@ app.post('/add-absences-bulk', async (req, res) => {
                     date, 
                     req.session.userId, 
                     req.session.userName, 
-                    req.session.schoolId
+                    req.session.schoolId,
+                    req.session.role || 'teacher',
+                    req.ip || req.connection.remoteAddress
                 )
             )
         );
@@ -1486,6 +1509,249 @@ app.post('/api/reset-database', async (req, res) => {
             message: 'Failed to delete data', 
             error: error.message 
         });
+    }
+});
+
+
+// Get audit logs for a specific student
+app.get('/api/audit-logs/student/:studentId', async (req, res) => {
+    try {
+        if (!req.session || !req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Not authenticated' });
+        }
+
+        const { studentId } = req.params;
+        const { entityType, startDate, endDate, limit } = req.query;
+
+        // Verify access rights
+        const currentUser = await User.findbyId(req.session.userId);
+        const student = await User.findbyId(studentId);
+
+        if (!student) {
+            return res.status(404).json({ success: false, error: 'Student not found' });
+        }
+
+        // Check authorization
+        const canAccess = 
+            req.session.role === 'school_admin' && currentUser.schoolId === student.schoolId ||
+            req.session.role === 'parent' && student.parentId === req.session.userId ||
+            req.session.userId === studentId;
+
+        if (!canAccess) {
+            return res.status(403).json({ success: false, error: 'Unauthorized access' });
+        }
+
+        const AuditLog = require('./models/AuditLog');
+        const options = {
+            entityType,
+            startDate: startDate ? new Date(startDate) : undefined,
+            endDate: endDate ? new Date(endDate) : undefined,
+            limit: limit ? Number.parseInt(limit) : undefined
+        };
+
+        const logs = await AuditLog.getByStudent(studentId, options);
+
+        res.json({
+            success: true,
+            studentId,
+            totalLogs: logs.length,
+            logs
+        });
+
+    } catch (error) {
+        console.error('Error fetching student audit logs:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get complete history for a specific grade or absence
+app.get('/api/audit-logs/entity/:entityType/:entityId', async (req, res) => {
+    try {
+        if (!req.session || !req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Not authenticated' });
+        }
+
+        const { entityType, entityId } = req.params;
+
+        // Validate entity type
+        if (!['GRADE', 'ABSENCE'].includes(entityType)) {
+            return res.status(400).json({ success: false, error: 'Invalid entity type' });
+        }
+
+        const AuditLog = require('./models/AuditLog');
+        const history = await AuditLog.getEntityHistory(entityType, entityId);
+
+        // Verify access rights (check if entity belongs to user's school)
+        if (history.history.length > 0) {
+            const firstLog = history.history[history.history.length - 1];
+            const currentUser = await User.findbyId(req.session.userId);
+            
+            if (req.session.role === 'school_admin') {
+                if (currentUser.schoolId !== firstLog.schoolId) {
+                    return res.status(403).json({ success: false, error: 'Unauthorized access' });
+                }
+            } else if (req.session.role === 'teacher') {
+                // Teachers can only see their own modifications or those in their classes
+                if (currentUser.schoolId !== firstLog.schoolId) {
+                    return res.status(403).json({ success: false, error: 'Unauthorized access' });
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            ...history
+        });
+
+    } catch (error) {
+        console.error('Error fetching entity history:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get audit logs for the school (admin only)
+app.get('/api/audit-logs/school', async (req, res) => {
+    try {
+        if (!req.session || !req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Not authenticated' });
+        }
+
+        if (req.session.role !== 'school_admin') {
+            return res.status(403).json({ success: false, error: 'Admin access required' });
+        }
+
+        const { entityType, action, userId, startDate, limit } = req.query;
+
+        const AuditLog = require('./models/AuditLog');
+        const options = {
+            entityType,
+            action,
+            userId,
+            startDate: startDate ? new Date(startDate) : undefined,
+            limit: limit ? Number.parseInt(limit) : 50
+        };
+
+        const logs = await AuditLog.getBySchool(req.session.schoolId, options);
+
+        res.json({
+            success: true,
+            schoolId: req.session.schoolId,
+            totalLogs: logs.length,
+            logs
+        });
+
+    } catch (error) {
+        console.error('Error fetching school audit logs:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get audit statistics for the school (admin only)
+app.get('/api/audit-logs/statistics', async (req, res) => {
+    try {
+        if (!req.session || !req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Not authenticated' });
+        }
+
+        if (req.session.role !== 'school_admin') {
+            return res.status(403).json({ success: false, error: 'Admin access required' });
+        }
+
+        const { startDate, endDate } = req.query;
+
+        const AuditLog = require('./models/AuditLog');
+        const stats = await AuditLog.getStatistics(
+            req.session.schoolId,
+            startDate ? new Date(startDate) : null,
+            endDate ? new Date(endDate) : null
+        );
+
+        res.json({
+            success: true,
+            schoolId: req.session.schoolId,
+            statistics: stats
+        });
+
+    } catch (error) {
+        console.error('Error fetching audit statistics:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get audit logs by user (who made changes)
+app.get('/api/audit-logs/user/:userId', async (req, res) => {
+    try {
+        if (!req.session || !req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Not authenticated' });
+        }
+
+        const { userId } = req.params;
+        const { entityType, action, limit } = req.query;
+
+        // Authorization check
+        const currentUser = await User.findbyId(req.session.userId);
+        const targetUser = await User.findbyId(userId);
+
+        if (!targetUser) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        // School admins can see all users in their school, others can only see themselves
+        const canAccess = 
+            req.session.role === 'school_admin' && currentUser.schoolId === targetUser.schoolId ||
+            req.session.userId === userId;
+
+        if (!canAccess) {
+            return res.status(403).json({ success: false, error: 'Unauthorized access' });
+        }
+
+        const AuditLog = require('./models/AuditLog');
+        const options = {
+            entityType,
+            action,
+            limit: limit ? Number.parseInt(limit) : 50
+        };
+
+        const logs = await AuditLog.getByUser(userId, options);
+
+        res.json({
+            success: true,
+            userId,
+            userName: targetUser.name,
+            totalLogs: logs.length,
+            logs
+        });
+
+    } catch (error) {
+        console.error('Error fetching user audit logs:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Verify audit log integrity
+app.get('/api/audit-logs/verify/:auditLogId', async (req, res) => {
+    try {
+        if (!req.session || !req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Not authenticated' });
+        }
+
+        if (req.session.role !== 'school_admin') {
+            return res.status(403).json({ success: false, error: 'Admin access required' });
+        }
+
+        const { auditLogId } = req.params;
+
+        const AuditLog = require('./models/AuditLog');
+        const verification = await AuditLog.verifyIntegrity(auditLogId);
+
+        res.json({
+            success: true,
+            verification
+        });
+
+    } catch (error) {
+        console.error('Error verifying audit log:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
