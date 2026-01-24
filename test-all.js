@@ -11,7 +11,7 @@
  * - Article 19 Compliance
  */
 
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const path = require('path');
 
 // ANSI color codes
@@ -50,7 +50,8 @@ function runTest(testFile, testName) {
     return new Promise((resolve, reject) => {
         try {
             info(`Running ${testName}...`);
-            const output = execSync(`node ${testFile}`, {
+            const testPath = path.join(__dirname, testFile);
+            const output = execFileSync('node', [testPath], {
                 encoding: 'utf-8',
                 stdio: 'pipe',
                 cwd: __dirname
