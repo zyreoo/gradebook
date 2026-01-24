@@ -68,7 +68,7 @@ Then open your browser and go to `http://localhost:3000`
 To populate the database with sample data (one school, 10 teachers, 20 students):
 
 ```bash
-npm run seed:full
+npm run seed
 ```
 
 This will create:
@@ -184,7 +184,7 @@ After installing dependencies and setting up Firebase, you can either:
 
 **Option 1: Use the seed file** (recommended for testing)
 ```bash
-npm run seed:full
+npm run seed
 ```
 This creates an admin account: `admin@highschool.edu` (password: `password123`)
 

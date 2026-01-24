@@ -10,7 +10,7 @@
     "backup:monthly": "node scripts/backup-now.js monthly",
     "backup:list": "node scripts/backup-list.js",
     "backup:restore": "node scripts/backup-restore.js",
-    "indexes:guide": "node scripts/create-indexes.js"
+    "indexes:deploy": "node scripts/deploy-indexes-api.js"
   },
   "keywords": [],
   "author": "",
