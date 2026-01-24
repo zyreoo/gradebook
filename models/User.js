@@ -155,15 +155,12 @@ class User {
 
 
     static async addGrade({studentId, studentName, grade, teacherId, teacherName, subject, date, reason = '', teacherRole = 'teacher', ipAddress = null}){
-        
-        // If date is provided, use it; otherwise use current date
+
         let gradeDate = new Date();
         if (date) {
-            // If date is a string, parse it
             if (typeof date === 'string') {
                 gradeDate = new Date(date);
             } else if (date.toDate) {
-                // If it's a Firestore timestamp, convert it
                 gradeDate = date.toDate();
             } else {
                 gradeDate = date;
@@ -183,11 +180,9 @@ class User {
 
         const gradeRef = await db.collection('grades').add(gradeData);
 
-        // Get student's schoolId for audit log
         const student = await this.findbyId(studentId);
         const schoolId = student?.schoolId || null;
 
-        // Create audit log entry
         try {
             await AuditLog.create({
                 action: 'CREATE',
@@ -205,7 +200,6 @@ class User {
             });
         } catch (auditError) {
             console.error('Failed to create audit log for grade creation:', auditError);
-            // Don't fail the operation if audit log fails, but log the error
         }
 
         return { id: gradeRef.id, ...gradeData}
@@ -223,9 +217,8 @@ class User {
         const grades = snapshot.docs.map(doc => ({
             id: doc.id, 
             ...doc.data()
-        })); 
+        }));
 
-        // Sort by createdAt in JavaScript (descending - newest first)
         return grades.sort((a, b) => {
             const dateA = a.createdAt?.toDate?.() || new Date(0);
             const dateB = b.createdAt?.toDate?.() || new Date(0);
@@ -250,11 +243,9 @@ class User {
 
         const absenceRef = await db.collection('absences').add(absenceData);
 
-        // Get student's schoolId for audit log
         const student = await this.findbyId(studentId);
         const schoolId = student?.schoolId || null;
 
-        // Create audit log entry
         try {
             await AuditLog.create({
                 action: 'CREATE',
@@ -289,9 +280,8 @@ class User {
         const absences = snapshot.docs.map(doc => ({
             id: doc.id, 
             ...doc.data()
-        })); 
+        }));
 
-        // Sort by date in descending order (newest first)
         return absences.sort((a, b) => {
             const dateA = a.date?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
             const dateB = b.date?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
@@ -309,7 +299,6 @@ class User {
             throw new Error('Absence not found');
         }
 
-        // Store old data for audit log
         const oldData = { ...absenceDoc.data() };
 
         const absenceData = {
@@ -324,15 +313,12 @@ class User {
 
         await absenceRef.update(absenceData);
 
-        // Create new data object for audit
         const newData = { ...oldData, ...absenceData };
 
-        // Get student's schoolId for audit log
         const studentId = oldData.studentId;
         const student = await this.findbyId(studentId);
         const schoolId = student?.schoolId || null;
 
-        // Create audit log entry
         try {
             await AuditLog.create({
                 action: 'UPDATE',
@@ -365,18 +351,14 @@ class User {
             throw new Error('Absence not found');
         }
 
-        // Store old data for audit log
         const oldData = { ...absenceDoc.data() };
         const studentId = oldData.studentId;
 
-        // Get student's schoolId for audit log
         const student = await this.findbyId(studentId);
         const schoolId = student?.schoolId || null;
 
-        // Delete the absence
-        await absenceRef.delete(); 
+        await absenceRef.delete();
 
-        // Create audit log entry
         try {
             await AuditLog.create({
                 action: 'DELETE',
@@ -411,7 +393,6 @@ class User {
             throw new Error('Grade not found');
         }
 
-        // Store old data for audit log
         const oldData = { ...gradeDoc.data() };
 
         const gradeData = {
@@ -424,15 +405,12 @@ class User {
 
         await gradeRef.update(gradeData);
 
-        // Create new data object for audit
         const newData = { ...oldData, ...gradeData };
 
-        // Get student's schoolId for audit log
         const studentId = oldData.studentId;
         const student = await this.findbyId(studentId);
         const schoolId = student?.schoolId || null;
 
-        // Create audit log entry
         try {
             await AuditLog.create({
                 action: 'UPDATE',
@@ -505,7 +483,6 @@ class User {
     }
 
     static async _handleParentEmailUpdate(updates, currentUser, updateData) {
-        // Handle clearing parent association
         if (!updates.parentEmail || updates.parentEmail.trim() === '') {
             updateData.parentId = null;
             updateData.parentEmail = null;
@@ -600,18 +577,14 @@ class User {
             throw new Error('Grade not found');
         }
 
-        // Store old data for audit log
         const oldData = { ...gradeDoc.data() };
         const studentId = oldData.studentId;
 
-        // Get student's schoolId for audit log
         const student = await this.findbyId(studentId);
         const schoolId = student?.schoolId || null;
 
-        // Delete the grade
-        await gradeRef.delete(); 
+        await gradeRef.delete();
 
-        // Create audit log entry
         try {
             await AuditLog.create({
                 action: 'DELETE',
@@ -636,22 +609,19 @@ class User {
 
     static _incrementClassYear(classYear) {
         if (!classYear) return null;
-        
-        // Handle numeric: "5" -> "6"
+
         if (/^\d+$/.test(classYear)) {
             const num = Number.parseInt(classYear);
             return (num + 1).toString();
         }
-        
-        // Handle class names: "9A" -> "10A", "10B" -> "11B"
+
         const match = classYear.match(/^(\d+)([A-Z])?$/);
         if (match) {
             const num = Number.parseInt(match[1]);
             const letter = match[2] || '';
             return (num + 1).toString() + letter;
         }
-        
-        // Fallback: can't parse, return as is
+
         return classYear;
     }
 

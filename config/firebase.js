@@ -7,7 +7,6 @@ try {
         let serviceAccount;
 
         if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-            // Vercel/serverless: Use environment variable
             try {
                 serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             } catch (parseError) {
@@ -16,7 +15,6 @@ try {
                 throw new Error(errorMsg);
             }
         } else {
-            // Local development: Use file
             try {
                 serviceAccount = require('../firebase-service-account.json');
             } catch (requireError) {
@@ -36,7 +34,6 @@ try {
 } catch (error) {
     console.error('CRITICAL: Firebase initialization failed:', error.message);
     console.error('Stack:', error.stack);
-    // Don't throw here - let it be handled by the caller
     throw error;
 }
 

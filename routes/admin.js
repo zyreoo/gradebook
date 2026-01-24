@@ -3,7 +3,6 @@ const router = express.Router();
 const School = require('../models/School');
 const User = require('../models/User');
 
-// Helper functions for user creation
 function respondWithError(res, req, message, statusCode = 400) {
     if (req.headers.accept?.includes('application/json')) {
         return res.status(statusCode).json({ success: false, error: message });
@@ -177,7 +176,6 @@ async function validateRoleSpecificFields(role, req, schoolId) {
     return null;
 }
 
-// Helper functions for user updates
 function validateUpdateFields(data) {
     const { uid, name, email, role } = data;
     
@@ -266,28 +264,23 @@ router.get('/dashboard', async (req, res) => {
         explicitClasses.forEach(cls => allClassesSet.add(cls));
         implicitClasses.forEach(cls => allClassesSet.add(cls));
         
-        // Sort classes numerically (e.g., "5" before "10", "9A" before "10A")
         const compareClasses = (a, b) => {
-            // Extract numeric part and optional letter suffix
             const matchA = a.match(/^(\d+)([A-Z])?$/);
             const matchB = b.match(/^(\d+)([A-Z])?$/);
-            
-            // If either doesn't match the pattern, fall back to alphabetical
+
             if (!matchA || !matchB) {
                 return a.localeCompare(b);
             }
-            
+
             const numA = Number.parseInt(matchA[1]);
             const numB = Number.parseInt(matchB[1]);
             const letterA = matchA[2] || '';
             const letterB = matchB[2] || '';
-            
-            // Compare by number first
+
             if (numA !== numB) {
                 return numA - numB;
             }
-            
-            // If numbers are equal, compare by letter (empty string comes first)
+
             if (letterA === letterB) {
                 return 0;
             }
@@ -307,7 +300,7 @@ router.get('/dashboard', async (req, res) => {
             school: school,
             teachers: teachers,
             students: students,
-            allClasses: allClasses, // Pass all classes to the view
+            allClasses: allClasses,
             error: req.query.error || null,
             success: req.query.success || null
         });
@@ -361,7 +354,6 @@ router.post('/remove-subject-from-class', async (req, res) => {
 
 router.post('/create-user', async (req, res) => {
     try {
-        // Check authentication
         const authResponse = checkAuthAndRespond(res, req);
         if (authResponse) {
             return authResponse;
@@ -378,29 +370,24 @@ router.post('/create-user', async (req, res) => {
             subjects = [];
         }
 
-        // Basic field validation
         const basicError = validateBasicFields(req.body);
         if (basicError) {
             return respondWithError(res, req, basicError);
         }
 
-        // Role-specific validation
         const roleError = await validateRoleSpecificFields(role, req, schoolId);
         if (roleError) {
             return respondWithError(res, req, roleError);
         }
 
-        // Check if user exists
         const userExistsError = await checkUserExists(req.body.email);
         if (userExistsError) {
             return respondWithError(res, req, userExistsError);
         }
 
-        // Create user
         const userData = prepareUserData({ ...req.body, subjects }, schoolId);
         await User.create(userData);
 
-        // Generate success message and respond
         const successMsg = generateSuccessMessage(role, req.body.name, parentEmail);
         const additionalData = {
             user: { 
@@ -462,7 +449,6 @@ router.post('/add-subject', async (req, res) => {
     }
 });
 
-// Remove Subject
 router.post('/remove-subject', async (req, res) => {
     try {
         if (!req.session.userId || req.session.userRole !== 'school_admin') {
@@ -504,7 +490,6 @@ router.post('/remove-subject', async (req, res) => {
     }
 });
 
-// Check Subject Usage (AJAX endpoint)
 router.post('/check-subject-usage', async (req, res) => {
     try {
         if (!req.session.userId || req.session.userRole !== 'school_admin') {
@@ -536,8 +521,7 @@ router.post('/assign-teacher', async (req, res) => {
 
         const { classYear, teacherId } = req.body;
         const schoolId = req.session.schoolId;
-        
-        // Handle subjects - can be an array or a single value
+
         let subjects = req.body.subjects || [];
         if (!Array.isArray(subjects)) {
             subjects = subjects ? [subjects] : [];
@@ -560,7 +544,6 @@ router.post('/assign-teacher', async (req, res) => {
     }
 });
 
-// Remove teacher from class
 router.post('/remove-teacher-assignment', async (req, res) => {
     try {
         if (!req.session.userId || req.session.userRole !== 'school_admin') {
@@ -612,7 +595,6 @@ router.post('/assign-teacher-ajax', async (req, res) => {
             });
         }
 
-        // Handle subjects - can be an array or a single value
         let subjectArray = subjects || [];
         if (!Array.isArray(subjectArray)) {
             subjectArray = subjectArray ? [subjectArray] : [];
@@ -749,9 +731,8 @@ router.post('/assign-classmaster' , async (req,res) => {
             return res.redirect('/admin/dashboard?error=' + encodeURIComponent(errorMsg));
         }
 
-        // Capitalize class name to match how classes are stored
         const capitalizedClassName = (className || '').trim().toUpperCase();
-        
+
         await School.assignClassmaster(schoolId, capitalizedClassName, teacherId);
         
         if (req.headers.accept?.includes('application/json')) {
@@ -819,7 +800,6 @@ router.post('/remove-classmaster', async (req, res) =>{
 }); 
 router.post('/update-user', async (req, res) => {
     try {
-        // Check authentication
         if (!checkAuthentication(req)) {
             if (req.headers.accept?.includes('application/json')) {
                 return res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -830,25 +810,21 @@ router.post('/update-user', async (req, res) => {
         const { uid, email, role, classYear, subjects } = req.body;
         const schoolId = req.session.schoolId;
 
-        // Validate required fields
         const fieldError = validateUpdateFields(req.body);
         if (fieldError) {
             return respondWithError(res, req, fieldError);
         }
 
-        // Check if user exists
         const { error: userError, user: currentUser } = await validateUserExists(uid);
         if (userError) {
             return respondWithError(res, req, userError, 404);
         }
 
-        // Validate email change
         const emailError = await validateEmailChange(email, currentUser.email, uid);
         if (emailError) {
             return respondWithError(res, req, emailError);
         }
 
-        // Role-specific validation
         if (role === 'student') {
             const classError = await validateStudentClassYear(classYear, schoolId);
             if (classError) {
@@ -863,11 +839,9 @@ router.post('/update-user', async (req, res) => {
             }
         }
 
-        // Prepare and apply updates
         const updates = prepareUpdateData(req.body, role);
         await User.update(uid, updates);
 
-        // Respond with success
         const successMsg = 'User updated successfully!';
         const additionalData = {
             user: { 
@@ -899,7 +873,6 @@ router.post('/advance-academic-year', async (req, res) => {
         const schoolId = req.session.schoolId;
         const { confirmText } = req.body;
 
-        // Require confirmation text
         if (confirmText !== 'ADVANCE YEAR') {
             const errorMsg = 'Confirmation text must be "ADVANCE YEAR"';
             if (req.headers.accept?.includes('application/json')) {

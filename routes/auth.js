@@ -55,7 +55,6 @@ router.post('/admin/register', async (req, res) => {
 }); 
 
 
-// GET admin login page
 router.get('/admin/login', (req, res) => {
     res.render('adminlogin', { 
         error: req.query.error || null,
@@ -64,7 +63,6 @@ router.get('/admin/login', (req, res) => {
 });
 
 
-// POST admin login
 router.post('/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -78,7 +76,6 @@ router.post('/admin/login', async (req, res) => {
             return res.redirect('/auth/admin/login?error=' + encodeURIComponent('Invalid email or password')); 
         }
 
-        // Check if user is actually a school admin
         if (user.role !== 'school_admin') {
             return res.redirect('/auth/admin/login?error=' + encodeURIComponent('Access denied. School administrators only.')); 
         }
@@ -89,7 +86,6 @@ router.post('/admin/login', async (req, res) => {
             return res.redirect('/auth/admin/login?error=' + encodeURIComponent('Invalid email or password')); 
         }
 
-        // Generate and send OTP for admin (2FA required)
         const otpResult = await OTP.create(user.uid, user.email);
         const emailResult = await emailService.sendOTP(user.email, otpResult.code, user.name);
 
@@ -98,7 +94,6 @@ router.post('/admin/login', async (req, res) => {
             return res.redirect('/auth/admin/login?error=' + encodeURIComponent('Failed to send verification code. Please try again.'));
         }
 
-        // Store user info in temporary session for OTP verification
         req.session.pendingUserId = user.uid;
         req.session.pendingUserEmail = user.email;
         req.session.pendingUserName = user.name;
@@ -141,11 +136,9 @@ router.post('/login', async (req, res) => {
             return res.redirect('/auth/login?error=' + encodeURIComponent('Invalid email or password')); 
         }
 
-        // Check if 2FA is required for this role
         const requires2FA = user.role === 'school_admin' || user.role === 'teacher';
 
         if (requires2FA) {
-            // Generate and send OTP
             const otpResult = await OTP.create(user.uid, user.email);
             const emailResult = await emailService.sendOTP(user.email, otpResult.code, user.name);
 
@@ -154,7 +147,6 @@ router.post('/login', async (req, res) => {
                 return res.redirect('/auth/login?error=' + encodeURIComponent('Failed to send verification code. Please try again.'));
             }
 
-            // Store user info in temporary session for OTP verification
             req.session.pendingUserId = user.uid;
             req.session.pendingUserEmail = user.email;
             req.session.pendingUserName = user.name;
@@ -164,7 +156,6 @@ router.post('/login', async (req, res) => {
             return res.redirect('/auth/verify-otp');
         }
 
-        // For students and parents, complete login without 2FA
         req.session.userId = user.uid;
         req.session.userEmail = user.email;
         req.session.userName = user.name;
@@ -181,7 +172,6 @@ router.post('/login', async (req, res) => {
 
 
 router.get('/verify-otp', (req, res) => {
-    // Check if user is in pending state
     if (!req.session.pendingUserId) {
         return res.redirect('/auth/login');
     }
@@ -205,31 +195,26 @@ router.post('/verify-otp', async (req, res) => {
             return res.redirect('/auth/verify-otp?error=' + encodeURIComponent('Please enter a valid 6-digit code'));
         }
 
-        // Verify OTP
         const verifyResult = await OTP.verify(req.session.pendingUserId, code);
 
         if (!verifyResult.success) {
             return res.redirect('/auth/verify-otp?error=' + encodeURIComponent(verifyResult.error));
         }
 
-        // OTP verified successfully - complete login
         req.session.userId = req.session.pendingUserId;
         req.session.userEmail = req.session.pendingUserEmail;
         req.session.userName = req.session.pendingUserName;
         req.session.userRole = req.session.pendingUserRole;
         req.session.schoolId = req.session.pendingSchoolId;
 
-        // Clean up pending session data
         delete req.session.pendingUserId;
         delete req.session.pendingUserEmail;
         delete req.session.pendingUserName;
         delete req.session.pendingUserRole;
         delete req.session.pendingSchoolId;
 
-        // Clean up old OTP codes for this user
         await OTP.cleanup(req.session.userId);
 
-        // Redirect based on role
         if (req.session.userRole === 'school_admin') {
             return res.redirect('/admin/dashboard');
         }
@@ -252,10 +237,8 @@ router.post('/resend-otp', async (req, res) => {
         const email = req.session.pendingUserEmail;
         const name = req.session.pendingUserName;
 
-        // Clean up old codes
         await OTP.cleanup(userId);
 
-        // Generate and send new OTP
         const otpResult = await OTP.create(userId, email);
         const emailResult = await emailService.sendOTP(email, otpResult.code, name);
 

@@ -1,27 +1,6 @@
 const { db } = require('../config/firebase');
 
-/**
- * AuditLog Model - Immutable audit trail for all grade and absence modifications
- * Implements Article 16 compliance requirements
- */
 class AuditLog {
-    /**
-     * Creates an audit log entry
-     * @param {Object} params
-     * @param {string} params.action - Type of action: 'CREATE', 'UPDATE', 'DELETE'
-     * @param {string} params.entityType - Type of entity: 'GRADE', 'ABSENCE'
-     * @param {string} params.entityId - ID of the grade/absence being modified
-     * @param {string} params.userId - ID of user performing the action
-     * @param {string} params.userName - Name of user performing the action
-     * @param {string} params.userRole - Role of user (teacher, school_admin, etc.)
-     * @param {Object} params.oldData - Previous state (null for CREATE)
-     * @param {Object} params.newData - New state (null for DELETE)
-     * @param {string} params.reason - Reason for the change (optional)
-     * @param {string} params.schoolId - School ID for filtering
-     * @param {string} params.studentId - Student ID for filtering
-     * @param {string} params.ipAddress - IP address of the user (optional)
-     * @returns {Promise<Object>} The created audit log entry
-     */
     static async create({
         action,
         entityType,
@@ -36,49 +15,35 @@ class AuditLog {
         studentId = null,
         ipAddress = null
     }) {
-        // Validate required fields
         if (!action || !entityType || !entityId || !userId || !userName) {
             throw new Error('Missing required audit log fields');
         }
 
-        // Validate action type
         const validActions = ['CREATE', 'UPDATE', 'DELETE'];
         if (!validActions.includes(action)) {
             throw new Error(`Invalid action type: ${action}`);
         }
 
-        // Validate entity type
         const validEntityTypes = ['GRADE', 'ABSENCE'];
         if (!validEntityTypes.includes(entityType)) {
             throw new Error(`Invalid entity type: ${entityType}`);
         }
 
         const auditData = {
-            // Action information
             action,
             entityType,
             entityId,
-
-            // User information
             userId,
             userName,
             userRole,
-
-            // Data changes
-            oldData: oldData ? JSON.parse(JSON.stringify(oldData)) : null, // Deep clone
-            newData: newData ? JSON.parse(JSON.stringify(newData)) : null, // Deep clone
-            
-            // Additional context
+            oldData: oldData ? JSON.parse(JSON.stringify(oldData)) : null,
+            newData: newData ? JSON.parse(JSON.stringify(newData)) : null,
             reason: reason || '',
             schoolId,
             studentId,
             ipAddress,
-
-            // Timestamp (immutable)
             timestamp: new Date(),
             timestampMs: Date.now(),
-
-            // Integrity check (simple hash for verification)
             checksum: this._generateChecksum({
                 action,
                 entityType,
@@ -95,12 +60,6 @@ class AuditLog {
         return { id: auditRef.id, ...auditData };
     }
 
-    /**
-     * Get audit logs for a specific entity
-     * @param {string} entityType - 'GRADE' or 'ABSENCE'
-     * @param {string} entityId - ID of the entity
-     * @returns {Promise<Array>} Array of audit log entries
-     */
     static async getByEntity(entityType, entityId) {
         const snapshot = await db.collection('audit_logs')
             .where('entityType', '==', entityType)
@@ -118,16 +77,6 @@ class AuditLog {
         }));
     }
 
-    /**
-     * Get audit logs for a specific student
-     * @param {string} studentId - Student ID
-     * @param {Object} options - Query options
-     * @param {string} options.entityType - Filter by entity type
-     * @param {Date} options.startDate - Filter from this date
-     * @param {Date} options.endDate - Filter to this date
-     * @param {number} options.limit - Max number of results
-     * @returns {Promise<Array>} Array of audit log entries
-     */
     static async getByStudent(studentId, options = {}) {
         let query = db.collection('audit_logs')
             .where('studentId', '==', studentId);
@@ -162,12 +111,6 @@ class AuditLog {
         }));
     }
 
-    /**
-     * Get audit logs for a specific school
-     * @param {string} schoolId - School ID
-     * @param {Object} options - Query options
-     * @returns {Promise<Array>} Array of audit log entries
-     */
     static async getBySchool(schoolId, options = {}) {
         let query = db.collection('audit_logs')
             .where('schoolId', '==', schoolId);
@@ -206,12 +149,6 @@ class AuditLog {
         }));
     }
 
-    /**
-     * Get audit logs by user (who made the changes)
-     * @param {string} userId - User ID
-     * @param {Object} options - Query options
-     * @returns {Promise<Array>} Array of audit log entries
-     */
     static async getByUser(userId, options = {}) {
         let query = db.collection('audit_logs')
             .where('userId', '==', userId);
@@ -242,12 +179,6 @@ class AuditLog {
         }));
     }
 
-    /**
-     * Get recent audit logs across the system
-     * @param {number} limit - Maximum number of results
-     * @param {Object} filters - Optional filters
-     * @returns {Promise<Array>} Array of audit log entries
-     */
     static async getRecent(limit = 50, filters = {}) {
         let query = db.collection('audit_logs');
 
@@ -277,12 +208,6 @@ class AuditLog {
         }));
     }
 
-    /**
-     * Get complete history for a specific grade or absence with diff
-     * @param {string} entityType - 'GRADE' or 'ABSENCE'
-     * @param {string} entityId - ID of the entity
-     * @returns {Promise<Object>} History with changes timeline
-     */
     static async getEntityHistory(entityType, entityId) {
         const logs = await this.getByEntity(entityType, entityId);
 
@@ -295,12 +220,10 @@ class AuditLog {
             };
         }
 
-        // Build a timeline with changes
         const timeline = logs.map((log, index) => {
             const changes = [];
-            
+
             if (log.action === 'UPDATE' && log.oldData && log.newData) {
-                // Calculate what changed
                 const oldData = log.oldData;
                 const newData = log.newData;
                 
@@ -318,7 +241,7 @@ class AuditLog {
             return {
                 ...log,
                 changes,
-                sequenceNumber: logs.length - index // Newest = 1
+                sequenceNumber: logs.length - index
             };
         });
 
@@ -334,11 +257,6 @@ class AuditLog {
         };
     }
 
-    /**
-     * Verify audit log integrity
-     * @param {string} auditLogId - Audit log entry ID
-     * @returns {Promise<Object>} Verification result
-     */
     static async verifyIntegrity(auditLogId) {
         const doc = await db.collection('audit_logs').doc(auditLogId).get();
 
@@ -371,28 +289,17 @@ class AuditLog {
         };
     }
 
-    /**
-     * Generate a simple checksum for integrity verification
-     * @private
-     */
     static _generateChecksum(data) {
         const str = JSON.stringify(data);
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
+            hash = hash & hash;
         }
         return hash.toString(36);
     }
 
-    /**
-     * Get audit statistics for a school
-     * @param {string} schoolId - School ID
-     * @param {Date} startDate - Start date for stats
-     * @param {Date} endDate - End date for stats
-     * @returns {Promise<Object>} Statistics object
-     */
     static async getStatistics(schoolId, startDate = null, endDate = null) {
         let query = db.collection('audit_logs')
             .where('schoolId', '==', schoolId);
@@ -427,17 +334,10 @@ class AuditLog {
         };
 
         logs.forEach(log => {
-            // Count by action
             stats.byAction[log.action] = (stats.byAction[log.action] || 0) + 1;
-
-            // Count by entity type
             stats.byEntityType[log.entityType] = (stats.byEntityType[log.entityType] || 0) + 1;
-
-            // Count by user
             const userKey = `${log.userName} (${log.userId})`;
             stats.byUser[userKey] = (stats.byUser[userKey] || 0) + 1;
-
-            // Count by date
             const dateKey = log.timestamp.toDate().toISOString().split('T')[0];
             stats.byDate[dateKey] = (stats.byDate[dateKey] || 0) + 1;
         });

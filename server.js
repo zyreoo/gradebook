@@ -6,7 +6,6 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Firebase - fail fast if it doesn't work
 try {
     require('./config/firebase');
     console.log('✓ Firebase initialized successfully');
@@ -14,11 +13,9 @@ try {
     console.error('CRITICAL: Failed to initialize Firebase');
     console.error('Error:', error.message);
     console.error('Stack:', error.stack);
-    // In serverless, we want to fail fast - the app won't work without Firebase
     throw error;
 }
 
-// Initialize Email Service for 2FA
 const emailService = require('./services/emailService');
 (async () => {
     if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
@@ -36,7 +33,6 @@ const emailService = require('./services/emailService');
     }
 })();
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
@@ -49,8 +45,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    cookie: { 
-        maxAge: 72 * 60 * 60 * 1000 // 72 hours
+    cookie: {
+        maxAge: 72 * 60 * 60 * 1000
     }
 }))
 
@@ -66,9 +62,7 @@ const { validateHeaderName } = require('node:http');
 
 app.use('/auth', authRoutes);
 
-// Apply 2FA check to protected routes (except auth routes)
 app.use((req, res, next) => {
-    // Skip 2FA check for auth routes and static files
     if (req.path.startsWith('/auth') || req.path.startsWith('/styles.css')) {
         return next();
     }
@@ -78,7 +72,6 @@ app.use((req, res, next) => {
 
 app.use('/admin', adminRoutes);
 
-// Helper functions for dashboard
 function createUserData(session) {
     return {
         name: session.userName,
@@ -335,7 +328,6 @@ async function handleParentDashboard(req, res, userData) {
     }
 }
 
-// Helper functions for student detail view
 function groupGradesBySubjectWithIds(grades) {
                 const gradesBySubject = {}; 
 
@@ -443,7 +435,6 @@ async function validateStudentAccess(studentId, schoolId, teacherId) {
     return { error: null, student };
 }
 
-// Helper functions for grade management
 function buildRedirectUrl(classYear, basePath = '/students') {
     return classYear ? `/class/${classYear}` : basePath;
 }
@@ -478,6 +469,14 @@ async function validateTeacherSubjectAccess(teacherId, subject) {
     if (!teacher) {
         return { error: 'Teacher not found', teacher: null };
     }
+
+    if (teacher.role === 'school_admin') {
+        return { error: 'Access denied. School administrators cannot modify grades or absences.', teacher: null };
+    }
+
+    if (teacher.role !== 'teacher') {
+        return { error: 'Access denied. Only teachers can modify grades and absences.', teacher: null };
+    }
     
     const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
     
@@ -507,7 +506,6 @@ async function validateStudentForGrade(studentId, schoolId) {
     return { error: null, student };
 }
 
-// Helper functions for bulk grade operations
 function parseGradesData(grades) {
     if (typeof grades === 'string') {
         try {
@@ -588,7 +586,6 @@ function formatBulkGradeResponse(results) {
     return { success: false, error: 'Failed to add grades. Please try again.', results };
 }
 
-// Helper functions for bulk absence operations
 function parseAbsencesData(absences) {
     if (typeof absences === 'string') {
         try {
@@ -670,7 +667,6 @@ function formatBulkAbsenceResponse(results) {
     return { success: false, error: 'Failed to record absences. Please try again.', results };
 }
 
-// Helper functions for grade editing
 function buildEditRedirectUrl(studentId, classYear) {
     if (studentId) {
         return `/student/${studentId}`;
@@ -730,6 +726,17 @@ async function validateGradeAccess(gradeData, schoolId) {
 async function validateGradeEditAuthorization(teacherId, gradeSubject) {
     const User = require('./models/User');
     const teacher = await User.findbyId(teacherId);
+    
+    // Article 19: School admins cannot modify grades/absences
+    if (!teacher || teacher.role === 'school_admin') {
+        return 'Access denied. School administrators cannot modify grades.';
+    }
+    
+    // Only teachers can edit grades
+    if (teacher.role !== 'teacher') {
+        return 'Access denied. Only teachers can edit grades.';
+    }
+    
     const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
     
     if (!teacherSubjects.includes(gradeSubject)) {
@@ -742,6 +749,15 @@ async function validateGradeEditAuthorization(teacherId, gradeSubject) {
 async function validateGradeDeleteAuthorization(teacherId, gradeSubject) {
     const User = require('./models/User');
     const teacher = await User.findbyId(teacherId);
+
+    if (!teacher || teacher.role === 'school_admin') {
+        return 'Access denied. School administrators cannot delete grades.';
+    }
+
+    if (teacher.role !== 'teacher') {
+        return 'Access denied. Only teachers can delete grades.';
+    }
+    
     const teacherSubjects = teacher.subjects || (teacher.subject ? [teacher.subject] : []);
     
     if (!teacherSubjects.includes(gradeSubject)) {
@@ -790,7 +806,19 @@ async function validateAbsenceAccess(absence, schoolId) {
 }
 
 async function validateClassmasterAuthorization(schoolId, classYear, teacherId) {
+    const User = require('./models/User');
     const School = require('./models/School');
+    
+    const teacher = await User.findbyId(teacherId);
+
+    if (!teacher || teacher.role === 'school_admin') {
+        return 'Access denied. School administrators cannot modify absences.';
+    }
+
+    if (teacher.role !== 'teacher') {
+        return 'Access denied. Only teachers can modify absences.';
+    }
+    
     const classmasterId = await School.getClassmaster(schoolId, classYear);
     
     if (classmasterId !== teacherId) {
@@ -846,9 +874,8 @@ app.get('/class/:classYear', async (req, res) => {
         const classYear = req.params.classYear;
         const schoolId = req.session.schoolId;
         const teacherId = req.session.userId;
-        const viewMode = req.query.view; // 'classmaster' or 'teacher'
+        const viewMode = req.query.view;
 
-        // Verify teacher is assigned to this class
         const schoolData = await School.findById(schoolId);
         const classTeachers = schoolData?.classYearTeachers?.[classYear] || [];
         

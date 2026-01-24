@@ -16,14 +16,10 @@ class BackupService {
         ];
     }
 
-    /**
-     * Create backup directory if it doesn't exist
-     */
     async ensureBackupDirectory() {
         try {
             await fs.mkdir(this.backupDir, { recursive: true });
-            
-            // Create subdirectories for different backup types
+
             await fs.mkdir(path.join(this.backupDir, 'daily'), { recursive: true });
             await fs.mkdir(path.join(this.backupDir, 'monthly'), { recursive: true });
             
@@ -34,9 +30,6 @@ class BackupService {
         }
     }
 
-    /**
-     * Export a single collection
-     */
     async exportCollection(collectionName) {
         const data = [];
         const snapshot = await db.collection(collectionName).get();
@@ -51,12 +44,8 @@ class BackupService {
         return data;
     }
 
-    /**
-     * Serialize Firestore data (handle Timestamps, etc.)
-     */
     serializeData(data) {
         return JSON.stringify(data, (key, value) => {
-            // Convert Firestore Timestamps to ISO strings
             if (value && typeof value === 'object' && value._seconds !== undefined) {
                 return new Date(value._seconds * 1000).toISOString();
             }
@@ -64,9 +53,6 @@ class BackupService {
         }, 2);
     }
 
-    /**
-     * Create a full backup of all collections
-     */
     async createFullBackup(backupType = 'daily') {
         try {
             await this.ensureBackupDirectory();
@@ -88,7 +74,6 @@ class BackupService {
                 backupData.collections[collectionName] = await this.exportCollection(collectionName);
             }
 
-            // Count total documents
             const totalDocs = Object.values(backupData.collections)
                 .reduce((sum, collection) => sum + collection.length, 0);
 
@@ -134,28 +119,20 @@ class BackupService {
         return this.createFullBackup('daily');
     }
 
-    /**
-     * Create monthly backup
-     */
     async createMonthlyBackup() {
         return this.createFullBackup('monthly');
     }
 
-    /**
-     * Clean up old backups (keep last N backups)
-     */
     async cleanupOldBackups(backupType = 'daily', keepCount = 30) {
         try {
             const backupTypeDir = path.join(this.backupDir, backupType);
             const files = await fs.readdir(backupTypeDir);
-            
-            // Filter backup files and sort by date (newest first)
+
             const backupFiles = files
                 .filter(f => f.startsWith('backup-') && f.endsWith('.json'))
                 .sort((a, b) => a.localeCompare(b))
                 .reverse();
 
-            // Delete old backups
             if (backupFiles.length > keepCount) {
                 const filesToDelete = backupFiles.slice(keepCount);
                 
@@ -185,9 +162,6 @@ class BackupService {
         }
     }
 
-    /**
-     * Restore from backup
-     */
     async restoreFromBackup(backupPath) {
         try {
             console.log(`Restoring from backup: ${backupPath}`);
@@ -201,7 +175,6 @@ class BackupService {
 
             let restoredCount = 0;
 
-            // Restore each collection
             for (const [collectionName, documents] of Object.entries(backupData.collections)) {
                 console.log(`  Restoring ${collectionName} (${documents.length} documents)...`);
                 
@@ -215,7 +188,6 @@ class BackupService {
                     batchCount++;
                     restoredCount++;
 
-                    // Firestore batch limit is 500
                     if (batchCount === 500) {
                         await batch.commit();
                         batchCount = 0;
@@ -243,9 +215,6 @@ class BackupService {
         }
     }
 
-    /**
-     * List available backups
-     */
     async listBackups() {
         try {
             const backups = {
@@ -274,7 +243,6 @@ class BackupService {
                         }
                     }
                 } catch (error) {
-                    // Directory might not exist
                     console.warn(`No ${type} backups found`);
                 }
             }
@@ -287,9 +255,6 @@ class BackupService {
         }
     }
 
-    /**
-     * Get backup statistics
-     */
     async getBackupStats() {
         const backups = await this.listBackups();
         

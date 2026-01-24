@@ -1,6 +1,3 @@
-/**
- * Generate overall feedback based on average grade
- */
 function generateOverallFeedback(overallAvg, totalGrades) {
     if (totalGrades === 0) {
         return {
@@ -64,9 +61,6 @@ function generateOverallFeedback(overallAvg, totalGrades) {
     };
 }
 
-/**
- * Generate feedback based on attendance
- */
 function generateAttendanceFeedback(totalAbsences, unmotivatedAbsences, motivatedAbsences, currentTone) {
     const recommendations = [];
 
@@ -91,9 +85,6 @@ function generateAttendanceFeedback(totalAbsences, unmotivatedAbsences, motivate
     return { recommendations, tone: currentTone };
 }
 
-/**
- * Generate feedback for a single subject
- */
 function generateSubjectFeedback(subject, absencesBySubject) {
     const subjectFeedback = {
         name: subject.name,
@@ -132,9 +123,6 @@ function generateSubjectFeedback(subject, absencesBySubject) {
     return subjectFeedback;
 }
 
-/**
- * Analyze subject variance and generate recommendations
- */
 function analyzeSubjectVariance(subjects, overallAvg) {
     const subjectsWithGrades = subjects.filter(s => s.hasGrades);
     
@@ -157,9 +145,6 @@ function analyzeSubjectVariance(subjects, overallAvg) {
     return recommendations;
 }
 
-/**
- * Decision tree for generating student feedback based on grades and attendance
- */
 function generateStudentFeedback(stats, subjects, absencesBySubject) {
     const feedback = {
         overall: '', 
@@ -172,9 +157,8 @@ function generateStudentFeedback(stats, subjects, absencesBySubject) {
     const totalGrades = stats.totalGrades || 0;
     const unmotivatedAbsences = stats.unmotivatedAbsences || 0;
     const motivatedAbsences = stats.motivatedAbsences || 0; 
-    const totalAbsences = stats.totalAbsences || 0; 
+    const totalAbsences = stats.totalAbsences || 0;
 
-    // Generate overall feedback
     const overallFeedback = generateOverallFeedback(overallAvg, totalGrades);
     feedback.overall = overallFeedback.overall;
     feedback.tone = overallFeedback.tone;
@@ -190,19 +174,16 @@ function generateStudentFeedback(stats, subjects, absencesBySubject) {
     feedback.recommendations.push(...attendanceFeedback.recommendations);
     feedback.tone = attendanceFeedback.tone;
 
-    // Generate subject-specific feedback
     subjects.forEach(subject => {
         if (subject.hasGrades) {
             feedback.subjects.push(generateSubjectFeedback(subject, absencesBySubject));
         }
     });
 
-    // Additional recommendations
     if (totalGrades < 3 && stats.totalSubjects > 0) {
         feedback.recommendations.push("More grades will be recorded soon. This will give a better picture of your progress.");
     }
 
-    // Analyze subject variance
     const varianceRecommendations = analyzeSubjectVariance(subjects, overallAvg);
     feedback.recommendations.push(...varianceRecommendations);
 

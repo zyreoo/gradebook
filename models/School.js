@@ -6,7 +6,6 @@ class School {
     static async create ({name, email, password, schoolName, adress}){
         const hashedpassword = await bcrypt.hash(password, 10); 
 
-        // Capitalize each word of the school name
         const formattedSchoolName = schoolName
             .split(' ')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -113,7 +112,6 @@ class School {
         return snapshot.docs.map(doc => doc.data()); 
     }
 
-    // Subject Management Methods
     static async addSubject(schoolId, subjectName) {
         const trimmedSubject = subjectName.trim();
         
@@ -121,7 +119,6 @@ class School {
             throw new Error('Subject name cannot be empty');
         }
 
-        // Capitalize first letter of each word (e.g., "mathematics" -> "Mathematics", "physical education" -> "Physical Education")
         const capitalized = trimmedSubject
             .split(' ')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -136,8 +133,7 @@ class School {
 
         const schoolData = doc.data();
         const subjects = schoolData.subjects || [];
-        
-        // Check for duplicates (case-insensitive)
+
         if (subjects.some(s => s.toLowerCase() === capitalized.toLowerCase())) {
             throw new Error('Subject already exists');
         }
@@ -200,9 +196,8 @@ class School {
         }
 
         const schoolData = doc.data(); 
-        const masterSubjects = schoolData.subjects || []; 
-        
-        // Validate subject exists in master list
+        const masterSubjects = schoolData.subjects || [];
+
         if (!masterSubjects.includes(subjectName)) {
             throw new Error('Subject does not exist in school master list');
         }
@@ -210,7 +205,6 @@ class School {
         const classYearSubjects = schoolData.classYearSubjects || {};
         const yearSubjects = classYearSubjects[classYear] || [];
 
-        // Check for duplicates
         if (yearSubjects.includes(subjectName)){
             throw new Error('Subject already assigned to this class year');
         }
@@ -249,8 +243,6 @@ class School {
         return classYearSubjects[classYear] || [];
     }
 
-
-    // Teacher Assignment Methods with Subject Support
     static async assignTeacherToClass(schoolId, classYear, teacherId, subjects = []) {
         const schoolRef = db.collection("schools").doc(schoolId);
         const doc = await schoolRef.get();
@@ -262,21 +254,18 @@ class School {
         const schoolData = doc.data();
         const classYearTeachers = schoolData.classYearTeachers || {};
         const teacherAssignments = schoolData.teacherAssignments || {};
-        
-        // Initialize class year arrays if they don't exist
+
         if (!classYearTeachers[classYear]) {
             classYearTeachers[classYear] = [];
         }
         if (!teacherAssignments[classYear]) {
             teacherAssignments[classYear] = {};
         }
-        
-        // Check if teacher is already assigned to this class
+
         if (!classYearTeachers[classYear].includes(teacherId)) {
             classYearTeachers[classYear].push(teacherId);
         }
-        
-        // Store subject-specific assignment
+
         teacherAssignments[classYear][teacherId] = {
             subjects: subjects || []
         };
@@ -306,7 +295,6 @@ class School {
             classYearTeachers[classYear] = classYearTeachers[classYear].filter(id => id !== teacherId);
         }
 
-        // Remove from teacherAssignments
         if (teacherAssignments[classYear]?.[teacherId]) {
             delete teacherAssignments[classYear][teacherId];
         }
@@ -345,10 +333,9 @@ class School {
 
 
     static async addClass(schoolId, className){
-        const trimmed = (className || '').trim(); 
+        const trimmed = (className || '').trim();
         if (!trimmed) throw new Error('Class name cannot be empty');
 
-        // Capitalize the class name (e.g., "9a" -> "9A", "10b" -> "10B")
         const capitalized = trimmed.toUpperCase();
 
         const schoolRef = db.collection('schools').doc(schoolId); 
@@ -357,11 +344,8 @@ class School {
         if(!doc.exists) throw new Error('School not found');
 
         const data = doc.data();
-        const classes = data.classes || []; 
+        const classes = data.classes || [];
 
-        // Check if class already exists in explicit classes
-        // If it only exists as implicit (auto-created through teacher assignments),
-        // we'll add it to explicit classes to convert it to explicit
         if(classes.some(c => c.toLowerCase() === capitalized.toLowerCase())){
             throw new Error('Class already exists');
         }
@@ -385,22 +369,17 @@ class School {
         const classYearTeachers = data.classYearTeachers || {};
         const teacherAssignments = data.teacherAssignments || {};
         const classMasters = data.classMasters || {};
-        
-        // Normalize class name for comparison (uppercase)
+
         const normalizedClassName = (className || '').trim().toUpperCase();
-        
-        // Find the actual class name key (might be different case)
+
         const actualClassName = Object.keys(classYearTeachers).find(
             key => key.toUpperCase() === normalizedClassName
         ) || normalizedClassName;
-        
-        // Remove from explicit classes array
+
         const updated = classes.filter(c => c !== className && c !== actualClassName);
-        
-        // Prepare update object
+
         const updateData = { classes: updated };
-        
-        // Remove from classYearTeachers if it exists
+
         if (classYearTeachers[actualClassName]) {
             delete classYearTeachers[actualClassName];
             updateData.classYearTeachers = classYearTeachers;
@@ -411,8 +390,7 @@ class School {
             delete teacherAssignments[actualClassName];
             updateData.teacherAssignments = teacherAssignments;
         }
-        
-        // Remove from classMasters if it exists (check both exact and uppercase)
+
         const classMasterKeys = Object.keys(classMasters);
         const classMasterKey = classMasterKeys.find(
             key => key.toUpperCase() === normalizedClassName
@@ -423,8 +401,7 @@ class School {
         }
 
         await schoolRef.update(updateData);
-        
-        // Update all students who have this classYear - set it to null
+
         const User = require('./User');
         const allStudents = await User.getUserByRoleAndSchool('student', schoolId);
         const studentsToUpdate = allStudents.filter(student => {

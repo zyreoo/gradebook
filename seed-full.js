@@ -2,7 +2,6 @@ const School = require('./models/School');
 const User = require('./models/User');
 require('./config/firebase');
 
-// Single school with 10 teachers all teaching the same class (10A)
 const schools = [
     {
         name: 'Principal Smith',
@@ -11,7 +10,7 @@ const schools = [
         schoolName: 'Central High School',
         adress: '123 Education Street, Springfield, IL 62701',
         classMasters: [
-            { class: '10A', teacherEmail: 'maria.popescu@highschool.edu' } // Mathematics teacher is classmaster
+            { class: '10A', teacherEmail: 'maria.popescu@highschool.edu' }
         ],
         teachers: [
             { 
@@ -499,8 +498,7 @@ async function seedDatabase() {
             const schoolData = schools[i];
             console.log(`\n📚 School: ${schoolData.schoolName}`);
             console.log('━'.repeat(60));
-            
-            // Check if school admin already exists
+
             const existingAdmin = await User.findbyEmail(schoolData.email);
             let schoolId;
 
@@ -513,7 +511,6 @@ async function seedDatabase() {
                 }
                 console.log(`   Using existing school ID: ${schoolId}`);
             } else {
-                // Create school and admin
                 const result = await School.create({
                     name: schoolData.name,
                     email: schoolData.email,
@@ -528,7 +525,6 @@ async function seedDatabase() {
                 console.log(`✅ Admin created: ${result.admin.name} (${result.admin.email})`);
             }
 
-            // Add all subjects to school
             console.log(`\n📚 Adding subjects to school...`);
             const allSubjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'History', 'Geography', 'Romanian', 'French', 'Physical Education'];
             for (const subject of allSubjects) {
@@ -544,10 +540,9 @@ async function seedDatabase() {
                 }
             }
 
-            // Add Teachers
             console.log(`\n👨‍🏫 Adding ${schoolData.teachers.length} teachers...`);
-            const teacherMap = {}; // Store teacher UIDs for class assignment
-            
+            const teacherMap = {};
+
             for (const teacher of schoolData.teachers) {
                 const existingTeacher = await User.findbyEmail(teacher.email);
                 if (existingTeacher) {
@@ -569,7 +564,6 @@ async function seedDatabase() {
                 console.log(`   ✅ ${teacher.name} (${teacher.email}) - Subjects: ${teacher.subjects.join(', ')}`);
             }
 
-            // Assign Teachers to Classes with specific subjects
             console.log(`\n📋 Assigning all teachers to Class 10A...`);
             for (const teacher of schoolData.teachers) {
                 const teacherUid = teacherMap[teacher.email];
@@ -586,7 +580,6 @@ async function seedDatabase() {
                 }
             }
 
-            // Assign Classmaster
             if (schoolData.classMasters && schoolData.classMasters.length > 0) {
                 console.log(`\n👔 Assigning classmaster...`);
                 for (const classMaster of schoolData.classMasters) {
@@ -602,10 +595,9 @@ async function seedDatabase() {
                 }
             }
 
-            // Add Students
             console.log(`\n👨‍🎓 Adding ${schoolData.students.length} students...`);
-            const studentMap = {}; // Store student UIDs for adding grades/absences
-            
+            const studentMap = {};
+
             for (const student of schoolData.students) {
                 const existingStudent = await User.findbyEmail(student.email);
                 let studentUid;
@@ -630,7 +622,6 @@ async function seedDatabase() {
                 studentMap[student.email] = studentUid;
             }
 
-            // Add Grades and Absences for students
             console.log(`\n📝 Adding grades and absences...`);
             for (const student of schoolData.students) {
                 const studentUid = studentMap[student.email];
@@ -638,11 +629,9 @@ async function seedDatabase() {
 
                 if (student.grades || student.absences) {
                     console.log(`\n📝 Adding grades and absences for ${student.name}...`);
-                
-                    // Add grades
+
                     if (student.grades && student.grades.length > 0) {
                         for (const gradeData of student.grades) {
-                            // Find teacher who teaches this subject
                             const teacherForSubject = schoolData.teachers.find(t => 
                                 t.subjects.includes(gradeData.subject)
                             );
@@ -667,10 +656,8 @@ async function seedDatabase() {
                         }
                     }
 
-                    // Add absences
                     if (student.absences && student.absences.length > 0) {
                         for (const absenceData of student.absences) {
-                            // Find teacher who teaches this subject
                             const teacherForSubject = schoolData.teachers.find(t => 
                                 t.subjects.includes(absenceData.subject)
                             );
