@@ -47,6 +47,21 @@ body {
     max-width: 420px;
 }
 
+/* OTP input on verify-otp page */
+.otp-input {
+    text-align: center;
+    letter-spacing: 8px;
+    font-size: 32px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+/* Long email display - wrap to multiple lines */
+.email-display {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
 .login-card,
 .dashboard {
     background: var(--card);
@@ -297,6 +312,8 @@ h2 {
     margin-bottom: 8px;
     font-size: 17px;
     color: var(--text-dim);
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .user-info p:last-child {
@@ -365,6 +382,9 @@ body:has(.dashboard-container) {
 .dashboard-header .user-info p {
     margin-bottom: 0;
     font-size: 14px;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* Sections */
@@ -1171,8 +1191,13 @@ body:has(.students-list) .container {
 
     .login-card,
     .dashboard {
-        padding: 24px 20px;
+        padding: 24px 16px;
         border-radius: var(--radius-md);
+    }
+
+    .otp-input {
+        font-size: 24px;
+        letter-spacing: 4px;
     }
 
     .dashboard-container {
