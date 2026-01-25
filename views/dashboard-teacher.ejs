@@ -1,35 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - Online Gradebook</title>
+    <title>Panou Profesor - Catalog Online</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="dashboard-container">
         <div class="dashboard-header">
-            <h1>Teacher Dashboard</h1>
+            <h1>Panou Profesor</h1>
             <div class="user-info">
-                <p><strong>Welcome, <%= user.name %>!</strong></p>
+                <p><strong>Bine ai venit, <%= user.name %>!</strong></p>
                 <p>Email: <%= user.email %></p>
-                <p>Role: <%= user.role %></p>
+                <p>Rol: <%= user.role %></p>
             </div>
         </div>
 
         <div class="section">
-            <h2>My Classes (<%= assignedClasses.length %>)</h2>
+            <h2>Clasele Mele (<%= assignedClasses.length %>)</h2>
             <% if (assignedClasses.length === 0) { %>
                 <div class="empty-state">
-                    <p>No classes assigned yet. Contact your school administrator to assign you to classes.</p>
+                    <p>Nicio clasă alocată încă. Contactează administratorul școlii pentru a fi alocat la clase.</p>
                 </div>
             <% } else { %>
                 <div class="action-grid">
                     <% assignedClasses.forEach(function(classYear) { %>
                         <a href="/class/<%= classYear %>?view=teacher" class="action-card">
                             <div class="action-icon"><%= classYear.charAt(0).toUpperCase() %></div>
-                            <h3>Class <%= classYear %></h3>
-                            <p>View students and manage grades</p>
+                            <h3>Clasa <%= classYear %></h3>
+                            <p>Vizualizează elevii și gestionează notele</p>
                         </a>
                     <% }); %>
                 </div>
@@ -38,14 +38,14 @@
 
         <% if (classmasterClasses && classmasterClasses.length > 0) { %>
             <div class="section classmaster-section">
-                <h2>My Classmaster Classes (<%= classmasterClasses.length %>)</h2>
-                <p class="helper">As classmaster, you can view all student grades and motivate absences.</p>
+                <h2>Clasele Mele Diriginte (<%= classmasterClasses.length %>)</h2>
+                <p class="helper">Ca diriginte, poți vizualiza toate notele elevilor și motiva absențele.</p>
                 <div class="action-grid">
                     <% classmasterClasses.forEach(function(className) { %>
                         <a href="/class/<%= className %>?view=classmaster" class="action-card classmaster-card">
-                            <div class="action-icon">CM</div>
-                            <h3>Class <%= className %></h3>
-                            <p>Classmaster View - All grades & absences</p>
+                            <div class="action-icon">DIR</div>
+                            <h3>Clasa <%= className %></h3>
+                            <p>Vedere Diriginte - Toate notele & absențele</p>
                         </a>
                     <% }); %>
                 </div>
@@ -54,7 +54,7 @@
 
         <div class="dashboard-footer">
             <form action="/auth/logout" method="GET">
-                <button type="submit" class="btn-primary">Logout</button>
+                <button type="submit" class="btn-primary">Deconectare</button>
             </form>
         </div>
     </div>

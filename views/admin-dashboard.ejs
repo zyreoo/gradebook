@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panou Administrator - <%= school.name %></title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><%= school.name %></h1>
+            <div class="user-info">
+                <p><strong>Nume:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Rol:</strong> Administrator Școală</p>
+            </div>
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="section">
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-value"><%= teachers.length %></div>
+                    <div class="stat-label">Profesori</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value"><%= students.length %></div>
+                    <div class="stat-label">Elevi</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value"><%= (school.subjects || []).length %></div>
+                    <div class="stat-label">Materii</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message"><%= error %></div>
+        <% } %>
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message"><%= success %></div>
+        <% } %>
+
+        <!-- Quick Navigation -->
+        <div class="section">
+            <h2>Navigare Rapidă</h2>
+            <div class="grid-two">
+                <a href="/admin/subjects" class="nav-card">
+                    <h3>Materii</h3>
+                    <p>Gestionează catalogul de materii</p>
+                    <span class="badge"><%= (school.subjects || []).length %></span>
+                </a>
+                <a href="/admin/classes" class="nav-card">
+                    <h3>Clase</h3>
+                    <p>Vizualizează și gestionează toate clasele</p>
+                    <span class="badge"><%= (typeof allClasses !== 'undefined' ? allClasses : []).length %></span>
+                </a>
+                <a href="/admin/add-user" class="nav-card">
+                    <h3>Adaugă Utilizator</h3>
+                    <p>Creează profesori sau elevi</p>
+                </a>
+                <a href="/admin/teacher-assignments" class="nav-card">
+                    <h3>Alocări Profesori</h3>
+                    <p>Alocă profesori la clase</p>
+                </a>
+                <a href="/admin/people" class="nav-card">
+                    <h3>Persoane</h3>
+                    <p>Vizualizează toți profesorii și elevii</p>
+                    <span class="badge"><%= teachers.length + students.length %></span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Academic Year Management Section -->
+        <section class="section" style="border: 2px solid var(--error); padding: 20px; border-radius: 8px; background: rgba(248, 113, 113, 0.05); margin-bottom: 40px;">
+            <h2 style="color: var(--error);">⚠️ Gestionare An Școlar</h2>
+            <p class="helper" style="margin-bottom: 16px;">Avansează toți elevii la următorul nivel de clasă și șterge toate înregistrările academice pentru anul nou. Această acțiune este <strong>ireversibilă</strong>.</p>
+            <button type="button" class="danger-btn" onclick="showAdvanceYearModal()" style="margin-top: 12px; padding: 12px 24px; font-size: 15px;">
+                Avansează Anul Școlar
+            </button>
+        </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Deconectare</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Advance Academic Year Modal -->
+    <div id="advanceYearModal" class="modal">
+        <div class="modal-content" style="max-width: 550px;">
+            <h3 style="color: var(--error);">⚠️ Avansează Anul Școlar</h3>
+            <div style="background: rgba(248, 113, 113, 0.1); border-left: 4px solid var(--error); padding: 16px; margin: 16px 0; border-radius: 4px;">
+                <p style="margin: 0 0 12px 0; font-weight: 600;">Această acțiune va:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Avansa toți elevii cu un nivel de clasă (ex: Clasa a 5-a → Clasa a 6-a, 9A → 10A)</li>
+                    <li><strong>Șterge permanent TOATE notele</strong> pentru toți elevii</li>
+                    <li><strong>Șterge permanent TOATE absențele</strong> pentru toți elevii</li>
+                    <li>Această acțiune <strong>nu poate fi anulată</strong></li>
+                </ul>
+            </div>
+            <p style="margin: 16px 0;"><strong>Elevi afectați: <%= students.length %></strong></p>
+            <p style="margin-bottom: 20px; color: var(--text-dim);">Pentru a confirma, scrie <strong style="color: var(--error);">AVANSEAZA AN</strong> în câmpul de mai jos:</p>
+            <form id="advanceYearForm" onsubmit="handleAdvanceYear(event)">
+                <div class="field" style="margin-bottom: 20px;">
+                    <label for="confirm-text">Confirmare</label>
+                    <input type="text" id="confirm-text" name="confirmText" placeholder="Scrie: AVANSEAZA AN" required style="text-transform: uppercase;">
+                </div>
+                <div class="modal-actions">
+                    <button class="ghost-btn" type="button" onclick="closeAdvanceYearModal()">Anulează</button>
+                    <button class="danger-btn" type="submit">Avansează Anul Școlar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showAdvanceYearModal() {
+            const modal = document.getElementById('advanceYearModal');
+            modal.classList.add('active');
+            document.getElementById('confirm-text').focus();
+        }
+
+        function closeAdvanceYearModal() {
+            const modal = document.getElementById('advanceYearModal');
+            const form = document.getElementById('advanceYearForm');
+            modal.classList.remove('active');
+            form.reset();
+        }
+
+        async function handleAdvanceYear(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            data.confirmText = data.confirmText.toUpperCase().trim();
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Se procesează...';
+            
+            try {
+                const response = await fetch('/admin/advance-academic-year', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    closeAdvanceYearModal();
+                    alert(`✅ ${result.message}\n\n- ${result.studentsUpdated} elevi avansați\n- ${result.gradesDeleted} note șterse\n- ${result.absencesDeleted || 0} absențe șterse`);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert(`❌ ${result.error || 'Eroare la avansarea anului școlar'}`);
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Advance year error:', error);
+                alert('❌ A apărut o eroare. Te rog încearcă din nou.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+            }
+        }
+
+        window.addEventListener('click', (e) => {
+            const advanceModal = document.getElementById('advanceYearModal');
+            if (e.target === advanceModal) closeAdvanceYearModal();
+        });
+    </script>
+</body>
+</html>

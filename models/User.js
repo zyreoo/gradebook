@@ -6,7 +6,7 @@ const AuditLog = require('./AuditLog');
 
 class User {
 
-    static async create({name, email, password, role = "student", subject, subjects, schoolId, classYear, parentEmail, parentPassword}){
+    static async create({name, email, password, role = "student", subject, subjects, schoolId, classYear, parentEmail, parentPassword, cnp, fathersName, mothersName, address, matricolNumber, parentPhone, placeOfBirth, birthDate, otherMentions}){
 
 
         const hashedpassword = await bcrypt.hash(password, 10); 
@@ -38,6 +38,19 @@ class User {
             createdAt: new Date(),
             updatedAt: new Date()
         };
+
+        // Student-only fields
+        if (role === 'student') {
+            userData.cnp = cnp || null;
+            userData.fathersName = fathersName || null;
+            userData.mothersName = mothersName || null;
+            userData.address = address || null;
+            userData.matricolNumber = matricolNumber || null;
+            userData.parentPhone = parentPhone || null;
+            userData.placeOfBirth = placeOfBirth || null;
+            userData.birthDate = birthDate || null;
+            userData.otherMentions = otherMentions || null;
+        }
 
 
         let parentId = null; 

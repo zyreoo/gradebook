@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Materii - <%= school.name %></title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><%= school.name %> - Materii</h1>
+            <div class="user-info">
+                <p><strong>Nume:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Rol:</strong> Administrator Școală</p>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="section-nav-admin">
+            <a href="/admin/dashboard">Panou</a>
+            <a href="/admin/subjects" class="active">Materii</a>
+            <a href="/admin/classes">Clase</a>
+            <a href="/admin/add-user">Adaugă Utilizator</a>
+            <a href="/admin/teacher-assignments">Alocări Profesori</a>
+            <a href="/admin/people">Persoane</a>
+        </div>
+
+        <!-- Messages -->
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message"><%= error %></div>
+        <% } %>
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message"><%= success %></div>
+        <% } %>
+
+        <!-- Subject Library Section -->
+        <section class="section">
+            <h2>Bibliotecă Materii</h2>
+            <p class="helper" style="margin-bottom: 16px;">Păstrează catalogul ordonat. Elimină materiile nefolosite sau adaugă altele noi.</p>
+
+            <% if (school.subjects && school.subjects.length > 0) { %>
+                <div class="pill-rail">
+                    <% school.subjects.forEach(function(subject) { %>
+                        <div class="pill"> 
+                            <span><%= subject %></span>
+                            <button type="button" onclick="confirmRemoveSubject('<%= subject %>')" aria-label="Elimină <%= subject %>">×</button>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="muted-box">Nicio materie încă. Adaugă prima materie mai jos.</div>
+            <% } %>
+
+            <form action="/admin/add-subject" method="POST" onsubmit="return validateSubjectForm()" style="margin-top: 18px;">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="subjectName">Adaugă o materie</label>
+                        <input id="subjectName" name="subjectName" type="text" placeholder="ex: Matematică, Chimie" maxlength="50" required>
+                    </div>
+                    <div class="field" style="align-self: flex-end;">
+                        <button class="btn-primary" type="submit">Adaugă Materie</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Deconectare</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Subject Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>Confirmă Ștergerea Materiei</h3>
+            <p id="modal-message"></p>
+            <div class="modal-actions">
+                <button class="ghost-btn" type="button" onclick="closeModal()">Anulează</button>
+                <button class="danger-btn" type="button" onclick="deleteSubject()">Șterge Materia</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script type="application/json" id="school-subjects-data">
+        <%- JSON.stringify(school.subjects || []) %>
+    </script>
+    <script>
+        let subjectToDelete = null;
+        const schoolSubjects = JSON.parse(document.getElementById('school-subjects-data').textContent);
+
+        async function handleFormSubmit(event, form) {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton?.textContent;
+            const originalDisabled = submitButton?.disabled;
+            
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    alert(`❌ Eroare: ${result.error || 'Operațiunea a eșuat'}`);
+                    if (submitButton) {
+                        submitButton.disabled = originalDisabled;
+                        if (originalText) submitButton.textContent = originalText;
+                    }
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                alert('❌ A apărut o eroare. Te rog încearcă din nou.');
+                if (submitButton) {
+                    submitButton.disabled = originalDisabled;
+                    if (originalText) submitButton.textContent = originalText;
+                }
+            }
+        }
+
+        function validateSubjectForm() {
+            const subjectName = document.getElementById('subjectName').value.trim();
+            if (!subjectName) {
+                alert('⚠️ Te rog introdu numele materiei');
+                return false;
+            }
+            if (schoolSubjects.some(s => s.toLowerCase() === subjectName.toLowerCase())) {
+                alert('⚠️ Această materie există deja');
+                return false;
+            }
+            return true;
+        }
+
+        async function confirmRemoveSubject(subjectName) {
+            subjectToDelete = subjectName;
+            try {
+                const response = await fetch('/admin/check-subject-usage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subjectName })
+                });
+                const data = await response.json();
+                const message = document.getElementById('modal-message');
+                if (data.inUse && data.count > 0) {
+                    message.innerHTML = `Atenție: Această materie este în prezent alocată la <strong>${data.count} profesor(i)</strong>. Ștergerea ei nu va afecta alocările existente ale profesorilor, dar materia nu va mai fi disponibilă pentru alocări noi.<br><br>Ești sigur că vrei să ștergi "<strong>${subjectName}</strong>"?`;
+                } else {
+                    message.innerHTML = `Ești sigur că vrei să ștergi "<strong>${subjectName}</strong>"?`;
+                }
+                document.getElementById('deleteModal').classList.add('active');
+            } catch (err) {
+                console.error('Error checking subject usage:', err);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            subjectToDelete = null;
+        }
+
+        async function deleteSubject() {
+            if (!subjectToDelete) return;
+            
+            const deleteBtn = document.querySelector('#deleteModal .danger-btn');
+            const originalText = deleteBtn.textContent;
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Se șterge...';
+
+            try {
+                const response = await fetch('/admin/remove-subject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ subjectName: subjectToDelete })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeModal();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    console.error('Delete subject error:', result.error || 'Failed to delete subject');
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Delete subject error:', error);
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = originalText;
+            }
+        }
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('deleteModal');
+            if (e.target === modal) closeModal();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const addSubjectForm = document.querySelector('form[action="/admin/add-subject"]');
+            if (addSubjectForm) {
+                addSubjectForm.addEventListener('submit', (e) => {
+                    if (!validateSubjectForm()) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    handleFormSubmit(e, addSubjectForm);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

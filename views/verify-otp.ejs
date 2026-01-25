@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Code - Online Gradebook</title>
+    <title>Verificare Cod - Catalog Online</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="container">
         <div class="login-card">
-            <h1>Verification Required</h1>
+            <h1>Verificare Necesară</h1>
             <p class="email-display" style="color: var(--text-dim); margin-top: 28px; margin-bottom: 32px;">
-                We sent a 6-digit code to <strong><%= email %></strong>
+                Am trimis un cod de 6 cifre la <strong><%= email %></strong>
             </p>
 
             <% if (error) { %>
@@ -24,7 +24,7 @@
 
             <form action="/auth/verify-otp" method="POST" id="verifyForm">
                 <div class="form-group">
-                    <label for="code">Verification Code</label>
+                    <label for="code">Cod de Verificare</label>
                     <input 
                         type="text" 
                         id="code" 
@@ -39,18 +39,18 @@
                         autofocus
                     >
                     <small style="color: var(--text-dim); font-size: 15px; display: block; margin-top: 8px;">
-                        Code expires in 15 minutes — submits automatically at 6 digits
+                        Codul expiră în 15 minute — se trimite automat la 6 cifre
                     </small>
                 </div>
 
                 <button type="submit" class="btn-primary" id="verifyBtn" style="width: 100%;">
-                    Verify Code
+                    Verifică Codul
                 </button>
             </form>
 
             <div style="text-align: center; margin-top: 24px;">
                 <p style="color: var(--text-dim); font-size: 15px; margin-bottom: 12px;">
-                    Didn't receive the code?
+                    Nu ai primit codul?
                 </p>
                 <button 
                     id="resendBtn" 
@@ -58,14 +58,14 @@
                     style="width: 100%;"
                     onclick="resendOTP()"
                 >
-                    Resend Code
+                    Retrimite Codul
                 </button>
                 <div id="resendMessage" style="margin-top: 12px; font-size: 15px;"></div>
             </div>
 
             <div style="text-align: center; margin-top: 32px;">
                 <a href="/auth/login" style="color: var(--accent); text-decoration: none; font-size: 15px;">
-                    ← Back to Login
+                    ← Înapoi la Autentificare
                 </a>
             </div>
         </div>
@@ -87,7 +87,7 @@
             }
             window._otpSubmitting = true;
             verifyBtn.disabled = true;
-            verifyBtn.textContent = 'Verifying…';
+            verifyBtn.textContent = 'Se verifică…';
             form.submit();
         });
 
@@ -108,7 +108,7 @@
             const message = document.getElementById('resendMessage');
             
             btn.disabled = true;
-            btn.textContent = 'Sending...';
+            btn.textContent = 'Se trimite...';
             message.textContent = '';
             
             try {
@@ -127,27 +127,27 @@
                     // Disable button for 30 seconds
                     let countdown = 30;
                     const interval = setInterval(() => {
-                        btn.textContent = `Resend Code (${countdown}s)`;
+                        btn.textContent = `Retrimite Codul (${countdown}s)`;
                         countdown--;
                         
                         if (countdown < 0) {
                             clearInterval(interval);
                             btn.disabled = false;
-                            btn.textContent = 'Resend Code';
+                            btn.textContent = 'Retrimite Codul';
                         }
                     }, 1000);
                 } else {
                     message.style.color = 'var(--error)';
                     message.textContent = data.error;
                     btn.disabled = false;
-                    btn.textContent = 'Resend Code';
+                    btn.textContent = 'Retrimite Codul';
                 }
             } catch (error) {
                 console.error('Resend error:', error);
                 message.style.color = 'var(--error)';
-                message.textContent = 'Failed to resend code';
+                message.textContent = 'Eroare la retrimite cod';
                 btn.disabled = false;
-                btn.textContent = 'Resend Code';
+                btn.textContent = 'Retrimite Codul';
             }
         }
 

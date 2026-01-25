@@ -2,19 +2,20 @@ const express = require('express');
 const router = express.Router();
 const School = require('../models/School');
 const User = require('../models/User');
+const { validateCNP } = require('../utils/validateCNP');
 
-function respondWithError(res, req, message, statusCode = 400) {
+function respondWithError(res, req, message, statusCode = 400, redirectPath = '/admin/dashboard') {
     if (req.headers.accept?.includes('application/json')) {
         return res.status(statusCode).json({ success: false, error: message });
     }
-    return res.redirect('/admin/dashboard?error=' + encodeURIComponent(message));
+    return res.redirect(redirectPath + '?error=' + encodeURIComponent(message));
 }
 
-function respondWithSuccess(res, req, message, additionalData = {}) {
+function respondWithSuccess(res, req, message, additionalData = {}, redirectPath = '/admin/dashboard') {
     if (req.headers.accept?.includes('application/json')) {
         return res.json({ success: true, message, ...additionalData });
     }
-    return res.redirect('/admin/dashboard?success=' + encodeURIComponent(message));
+    return res.redirect(redirectPath + '?success=' + encodeURIComponent(message));
 }
 
 function checkAuthentication(req) {
@@ -44,10 +45,19 @@ function validateBasicFields(data) {
 }
 
 function validateStudentFields(data) {
-    const { classYear, parentEmail, parentPassword } = data;
+    const { classYear, parentEmail, parentPassword, cnp } = data;
     
     if (!classYear) {
         return 'Please select a grade level for the student';
+    }
+    
+    if (!cnp || !String(cnp).trim()) {
+        return 'CNP (Cod Numeric Personal) is required for students';
+    }
+    
+    const cnpResult = validateCNP(String(cnp).trim());
+    if (!cnpResult.valid) {
+        return cnpResult.error || 'CNP is invalid';
     }
     
     if (parentEmail && !parentPassword) {
@@ -102,7 +112,7 @@ async function checkUserExists(email) {
 }
 
 function prepareUserData(data, schoolId) {
-    const { name, email, password, role, classYear, parentEmail, parentPassword } = data;
+    const { name, email, password, role, classYear, parentEmail, parentPassword, cnp, fathersName, mothersName, address, matricolNumber, parentPhone, placeOfBirth, birthDate, otherMentions } = data;
     let subjects;
     if (Array.isArray(data.subjects)) {
         subjects = data.subjects;
@@ -112,7 +122,7 @@ function prepareUserData(data, schoolId) {
         subjects = [];
     }
     
-    return {
+    const base = {
         name,
         email,
         password,
@@ -123,6 +133,20 @@ function prepareUserData(data, schoolId) {
         parentEmail: role === 'student' ? (parentEmail || null) : null,
         parentPassword: role === 'student' ? (parentPassword || null) : null
     };
+    
+    if (role === 'student') {
+        base.cnp = cnp ? String(cnp).trim() : null;
+        base.fathersName = fathersName ? String(fathersName).trim() : null;
+        base.mothersName = mothersName ? String(mothersName).trim() : null;
+        base.address = address ? String(address).trim() : null;
+        base.matricolNumber = matricolNumber ? String(matricolNumber).trim() : null;
+        base.parentPhone = parentPhone ? String(parentPhone).trim() : null;
+        base.placeOfBirth = placeOfBirth ? String(placeOfBirth).trim() : null;
+        base.birthDate = birthDate ? String(birthDate).trim() : null;
+        base.otherMentions = otherMentions ? String(otherMentions).trim() : null;
+    }
+    
+    return base;
 }
 
 function generateSuccessMessage(role, name, parentEmail) {
@@ -223,7 +247,7 @@ async function validateStudentClassYear(classYear, schoolId) {
 }
 
 function prepareUpdateData(data, role) {
-    const { name, email, classYear, subjects, parentEmail } = data;
+    const { name, email, classYear, subjects, parentEmail, cnp, fathersName, mothersName, address, matricolNumber, parentPhone, placeOfBirth, birthDate, otherMentions } = data;
     const updates = { name, email };
     
     if (role === 'student') {
@@ -231,6 +255,15 @@ function prepareUpdateData(data, role) {
         if (parentEmail !== undefined) {
             updates.parentEmail = parentEmail || null;
         }
+        if (cnp !== undefined) updates.cnp = cnp ? String(cnp).trim() : null;
+        if (fathersName !== undefined) updates.fathersName = fathersName ? String(fathersName).trim() : null;
+        if (mothersName !== undefined) updates.mothersName = mothersName ? String(mothersName).trim() : null;
+        if (address !== undefined) updates.address = address ? String(address).trim() : null;
+        if (matricolNumber !== undefined) updates.matricolNumber = matricolNumber ? String(matricolNumber).trim() : null;
+        if (parentPhone !== undefined) updates.parentPhone = parentPhone ? String(parentPhone).trim() : null;
+        if (placeOfBirth !== undefined) updates.placeOfBirth = placeOfBirth ? String(placeOfBirth).trim() : null;
+        if (birthDate !== undefined) updates.birthDate = birthDate ? String(birthDate).trim() : null;
+        if (otherMentions !== undefined) updates.otherMentions = otherMentions ? String(otherMentions).trim() : null;
     } else if (role === 'teacher') {
         updates.subjects = subjects || [];
     }
@@ -238,6 +271,48 @@ function prepareUpdateData(data, role) {
     return updates;
 }
 
+
+// Helper function to get common admin data
+async function getAdminData(schoolId) {
+    const school = await School.findById(schoolId);
+    const teachers = await School.getSchoolUsers(schoolId, 'teacher');
+    const students = await School.getSchoolUsers(schoolId, 'student');
+    const explicitClasses = school.classes || [];
+    const implicitClasses = school.classYearTeachers ? Object.keys(school.classYearTeachers) : [];
+    
+    const allClassesSet = new Set();
+    explicitClasses.forEach(cls => allClassesSet.add(cls));
+    implicitClasses.forEach(cls => allClassesSet.add(cls));
+    
+    const compareClasses = (a, b) => {
+        const matchA = a.match(/^(\d+)([A-Z])?$/);
+        const matchB = b.match(/^(\d+)([A-Z])?$/);
+
+        if (!matchA || !matchB) {
+            return a.localeCompare(b);
+        }
+
+        const numA = Number.parseInt(matchA[1]);
+        const numB = Number.parseInt(matchB[1]);
+        const letterA = matchA[2] || '';
+        const letterB = matchB[2] || '';
+
+        if (numA !== numB) {
+            return numA - numB;
+        }
+
+        if (letterA === letterB) {
+            return 0;
+        }
+        if (letterA === '') return -1;
+        if (letterB === '') return 1;
+        return letterA.localeCompare(letterB);
+    };
+    
+    const allClasses = Array.from(allClassesSet).sort(compareClasses);
+
+    return { school, teachers, students, allClasses };
+}
 
 router.get('/dashboard', async (req, res) => {
     try {
@@ -254,44 +329,9 @@ router.get('/dashboard', async (req, res) => {
             return res.redirect('/auth/login?error=' + encodeURIComponent('School information not found'));
         }
 
-        const school = await School.findById(schoolId);
-        const teachers = await School.getSchoolUsers(schoolId, 'teacher');
-        const students = await School.getSchoolUsers(schoolId, 'student');
-        const explicitClasses = school.classes || [];
-        const implicitClasses = school.classYearTeachers ? Object.keys(school.classYearTeachers) : [];
-        
-        const allClassesSet = new Set();
-        explicitClasses.forEach(cls => allClassesSet.add(cls));
-        implicitClasses.forEach(cls => allClassesSet.add(cls));
-        
-        const compareClasses = (a, b) => {
-            const matchA = a.match(/^(\d+)([A-Z])?$/);
-            const matchB = b.match(/^(\d+)([A-Z])?$/);
+        const { school, teachers, students, allClasses } = await getAdminData(schoolId);
 
-            if (!matchA || !matchB) {
-                return a.localeCompare(b);
-            }
-
-            const numA = Number.parseInt(matchA[1]);
-            const numB = Number.parseInt(matchB[1]);
-            const letterA = matchA[2] || '';
-            const letterB = matchB[2] || '';
-
-            if (numA !== numB) {
-                return numA - numB;
-            }
-
-            if (letterA === letterB) {
-                return 0;
-            }
-            if (letterA === '') return -1;
-            if (letterB === '') return 1;
-            return letterA.localeCompare(letterB);
-        };
-        
-        const allClasses = Array.from(allClassesSet).sort(compareClasses);
-
-        res.render('admin', {
+        res.render('admin-dashboard', {
             user: {
                 name: req.session.userName,
                 email: req.session.userEmail,
@@ -307,6 +347,186 @@ router.get('/dashboard', async (req, res) => {
     } catch (error) {
         console.error('Admin dashboard error:', error);
         res.redirect('/auth/login?error=' + encodeURIComponent('Failed to load admin dashboard'));
+    }
+});
+
+router.get('/subjects', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
+        }
+
+        if (req.session.userRole !== 'school_admin') {
+            return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. School admins only.'));
+        }
+
+        const schoolId = req.session.schoolId;
+        if (!schoolId) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('School information not found'));
+        }
+
+        const { school, teachers, students, allClasses } = await getAdminData(schoolId);
+
+        res.render('admin-subjects', {
+            user: {
+                name: req.session.userName,
+                email: req.session.userEmail,
+                role: req.session.userRole
+            },
+            school: school,
+            teachers: teachers,
+            students: students,
+            allClasses: allClasses,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Admin subjects error:', error);
+        res.redirect('/auth/login?error=' + encodeURIComponent('Failed to load subjects'));
+    }
+});
+
+router.get('/classes', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
+        }
+
+        if (req.session.userRole !== 'school_admin') {
+            return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. School admins only.'));
+        }
+
+        const schoolId = req.session.schoolId;
+        if (!schoolId) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('School information not found'));
+        }
+
+        const { school, teachers, students, allClasses } = await getAdminData(schoolId);
+
+        res.render('admin-classes', {
+            user: {
+                name: req.session.userName,
+                email: req.session.userEmail,
+                role: req.session.userRole
+            },
+            school: school,
+            teachers: teachers,
+            students: students,
+            allClasses: allClasses,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Admin classes error:', error);
+        res.redirect('/auth/login?error=' + encodeURIComponent('Failed to load classes'));
+    }
+});
+
+router.get('/add-user', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
+        }
+
+        if (req.session.userRole !== 'school_admin') {
+            return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. School admins only.'));
+        }
+
+        const schoolId = req.session.schoolId;
+        if (!schoolId) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('School information not found'));
+        }
+
+        const { school, teachers, students, allClasses } = await getAdminData(schoolId);
+
+        res.render('admin-add-user', {
+            user: {
+                name: req.session.userName,
+                email: req.session.userEmail,
+                role: req.session.userRole
+            },
+            school: school,
+            teachers: teachers,
+            students: students,
+            allClasses: allClasses,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Admin add user error:', error);
+        res.redirect('/auth/login?error=' + encodeURIComponent('Failed to load add user page'));
+    }
+});
+
+router.get('/teacher-assignments', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
+        }
+
+        if (req.session.userRole !== 'school_admin') {
+            return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. School admins only.'));
+        }
+
+        const schoolId = req.session.schoolId;
+        if (!schoolId) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('School information not found'));
+        }
+
+        const { school, teachers, students, allClasses } = await getAdminData(schoolId);
+
+        res.render('admin-teacher-assignments', {
+            user: {
+                name: req.session.userName,
+                email: req.session.userEmail,
+                role: req.session.userRole
+            },
+            school: school,
+            teachers: teachers,
+            students: students,
+            allClasses: allClasses,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Admin teacher assignments error:', error);
+        res.redirect('/auth/login?error=' + encodeURIComponent('Failed to load teacher assignments'));
+    }
+});
+
+router.get('/people', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.redirect('/auth/login');
+        }
+
+        if (req.session.userRole !== 'school_admin') {
+            return res.redirect('/dashboard?error=' + encodeURIComponent('Access denied. School admins only.'));
+        }
+
+        const schoolId = req.session.schoolId;
+        if (!schoolId) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('School information not found'));
+        }
+
+        const { school, teachers, students, allClasses } = await getAdminData(schoolId);
+
+        res.render('admin-people', {
+            user: {
+                name: req.session.userName,
+                email: req.session.userEmail,
+                role: req.session.userRole
+            },
+            school: school,
+            teachers: teachers,
+            students: students,
+            allClasses: allClasses,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Admin people error:', error);
+        res.redirect('/auth/login?error=' + encodeURIComponent('Failed to load people'));
     }
 });
 
@@ -372,17 +592,17 @@ router.post('/create-user', async (req, res) => {
 
         const basicError = validateBasicFields(req.body);
         if (basicError) {
-            return respondWithError(res, req, basicError);
+            return respondWithError(res, req, basicError, 400, '/admin/add-user');
         }
 
         const roleError = await validateRoleSpecificFields(role, req, schoolId);
         if (roleError) {
-            return respondWithError(res, req, roleError);
+            return respondWithError(res, req, roleError, 400, '/admin/add-user');
         }
 
         const userExistsError = await checkUserExists(req.body.email);
         if (userExistsError) {
-            return respondWithError(res, req, userExistsError);
+            return respondWithError(res, req, userExistsError, 400, '/admin/add-user');
         }
 
         const userData = prepareUserData({ ...req.body, subjects }, schoolId);
@@ -401,7 +621,7 @@ router.post('/create-user', async (req, res) => {
         return respondWithSuccess(res, req, successMsg, additionalData);
     } catch (error) {
         console.error('Create user error:', error);
-        return respondWithError(res, req, 'Failed to create user. Please try again.', 500);
+        return respondWithError(res, req, 'Failed to create user. Please try again.', 500, '/admin/add-user');
     }
 });
 
@@ -829,6 +1049,13 @@ router.post('/update-user', async (req, res) => {
             const classError = await validateStudentClassYear(classYear, schoolId);
             if (classError) {
                 return respondWithError(res, req, classError);
+            }
+            const cnp = req.body.cnp;
+            if (cnp && String(cnp).trim()) {
+                const cnpResult = validateCNP(String(cnp).trim());
+                if (!cnpResult.valid) {
+                    return respondWithError(res, req, cnpResult.error || 'CNP is invalid');
+                }
             }
         }
 

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Students - Online Gradebook</title>
+    <title>Elevi - Catalog Online</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="container">
         <div class="dashboard">
-            <h1>All Students</h1>
+            <h1>Toți Elevii</h1>
 
 
             <% if (typeof error !== 'undefined' && error) { %>
@@ -25,19 +25,19 @@
             <% } %>
             
             <div class="navigation">
-                <a href="/dashboard">← Back to Dashboard</a>
+                <a href="/dashboard">← Înapoi la Panou</a>
             </div>
 
             <% if (students.length === 0) { %>
-                <p>No students found.</p>
+                <p>Niciun elev găsit.</p>
             <% } else { %>
                 <div class="students-list">
                     <table>
                         <thead>
                             <tr>
-                                <th>Name</th>
+                                <th>Nume</th>
                                 <th>Email</th>
-                                <th>Add a grade</th>
+                                <th>Adaugă o notă</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -53,24 +53,24 @@
                                             <input 
                                             type="text" 
                                             name="subject" 
-                                            placeholder="Subject (optional)" 
+                                            placeholder="Materie (opțional)" 
                                             class="subject-input"
                                             >
 
                                             <select id="grade" name="grade" class="grade-select" required>
-                                                <option value="">Select Grade</option>
-                                                <option value="10">10 - Excellent</option>
-                                                <option value="9">9 - Very Good</option>
-                                                <option value="8">8 - Good</option>
-                                                <option value="7">7 - Satisfactory</option>
-                                                <option value="6">6 - Sufficient</option>
-                                                <option value="5">5 - Insufficient</option>
-                                                <option value="4">4 - Insufficient</option>
-                                                <option value="3">3 - Insufficient</option>
-                                                <option value="2">2 - Insufficient</option>
-                                                <option value="1">1 - Insufficient</option>
+                                                <option value="">Selectează Nota</option>
+                                                <option value="10">10 - Excelent</option>
+                                                <option value="9">9 - Foarte Bine</option>
+                                                <option value="8">8 - Bine</option>
+                                                <option value="7">7 - Satisfăcător</option>
+                                                <option value="6">6 - Suficient</option>
+                                                <option value="5">5 - Insuficient</option>
+                                                <option value="4">4 - Insuficient</option>
+                                                <option value="3">3 - Insuficient</option>
+                                                <option value="2">2 - Insuficient</option>
+                                                <option value="1">1 - Insuficient</option>
                                             </select>
-                                            <button type="submit" class="btn-add-grade">Add</button>
+                                            <button type="submit" class="btn-add-grade">Adaugă</button>
                                         </form>
                                     </td>
 
@@ -83,7 +83,7 @@
 
             <div class="actions">
                 <form action="/auth/logout" method="GET">
-                    <button type="submit" class="btn-primary">Logout</button>
+                    <button type="submit" class="btn-primary">Deconectare</button>
                 </form>
             </div>
         </div>

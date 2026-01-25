@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Admin Login - Online Gradebook</title>
+    <title>Autentificare Administrator - Catalog Online</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="container">
         <div class="login-card">
             <div class="admin-header-section">
-                <div class="admin-badge">Administrator Portal</div>
-                <h1>School Admin Login</h1>
-                <p class="admin-subtitle">Manage your school's teachers and students</p>
+                <div class="admin-badge">Portal Administrator</div>
+                <h1>Autentificare Administrator</h1>
+                <p class="admin-subtitle">Gestionează profesorii și elevii școlii tale</p>
             </div>
             
             <% if (typeof error !== 'undefined' && error) { %>
@@ -29,40 +29,40 @@
 
             <form action="/auth/admin/login" method="POST">
                 <div class="form-group">
-                    <label for="email">Administrator Email</label>
+                    <label for="email">Email Administrator</label>
                     <input 
                         type="email" 
                         id="email" 
                         name="email" 
                         required 
                         autocomplete="email"
-                        placeholder="admin@yourschool.edu"
+                        placeholder="admin@scoalatale.ro"
                     >
                 </div>
 
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label for="password">Parolă</label>
                     <input 
                         type="password" 
                         id="password" 
                         name="password" 
                         required 
                         autocomplete="current-password"
-                        placeholder="Enter your password"
+                        placeholder="Introdu parola"
                     >
                 </div>
 
-                <button type="submit" class="btn-primary">Sign In</button>
+                <button type="submit" class="btn-primary">Conectare</button>
             </form>
 
             <div class="admin-info">
-                <div class="admin-info-title">Administrator Access Only</div>
-                <p>This portal is exclusively for school administrators. Teachers and students should use the standard login page to access their accounts.</p>
+                <div class="admin-info-title">Doar pentru Administratori</div>
+                <p>Acest portal este exclusiv pentru administratorii școlii. Profesorii și elevii trebuie să folosească pagina de autentificare standard pentru a accesa conturile lor.</p>
             </div>
 
             <div class="links-row">
-                <a href="/auth/admin/register">Register New School</a>
-                <a href="/auth/login" class="back-link">Back to Regular Login</a>
+                <a href="/auth/admin/register">Înregistrare Școală Nouă</a>
+                <a href="/auth/login" class="back-link">Înapoi la Autentificare Normală</a>
             </div>
         </div>
     </div>

@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parent Dashboard - Online Gradebook</title>
+    <title>Panou Părinte - Catalog Online</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="dashboard-container">
         <div class="dashboard-header">
-            <h1>Welcome, <%= user.name %>!</h1>
+            <h1>Bine ai venit, <%= user.name %>!</h1>
             <div class="user-info">
                 <p><strong>Email:</strong> <%= user.email %></p>
-                <p><strong>Role:</strong> Parent</p>
+                <p><strong>Rol:</strong> Părinte</p>
             </div>
         </div>
 
         <div class="dashboard-content">
             <% if (students.length === 0) { %>
                 <div class="empty-state">
-                    <p>No students linked to your account yet.</p>
+                    <p>Niciun elev conectat la contul tău încă.</p>
                 </div>
             <% } else { %>
                 <% students.forEach(function(student) { %>
@@ -28,7 +28,7 @@
                             <%= student.name %>
                             <% if (student.classYear) { %>
                                 <span style="font-size: 14px; font-weight: normal; color: var(--text-dim);">
-                                    - Grade <%= student.classYear %>
+                                    - Clasa <%= student.classYear %>
                                 </span>
                             <% } %>
                         </h2>
@@ -37,24 +37,24 @@
                         <div class="summary-stats" style="margin-bottom: 20px;">
                             <div class="stat-card">
                                 <div class="stat-value"><%= student.stats.overallAverage || '0.00' %></div>
-                                <div class="stat-label">Overall Average</div>
+                                <div class="stat-label">Medie Generală</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-value"><%= student.stats.totalSubjects %></div>
-                                <div class="stat-label">Total Subjects</div>
+                                <div class="stat-label">Total Materii</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-value"><%= student.stats.totalGrades %></div>
-                                <div class="stat-label">Total Grades</div>
+                                <div class="stat-label">Total Note</div>
                             </div>
                             <% if (student.stats.totalAbsences > 0) { %>
                                 <div class="stat-card">
                                     <div class="stat-value" style="color: #dc3545;"><%= student.stats.unmotivatedAbsences %></div>
-                                    <div class="stat-label">Unmotivated Absences</div>
+                                    <div class="stat-label">Absențe Nemotivate</div>
                                 </div>
                                 <div class="stat-card">
                                     <div class="stat-value" style="color: #28a745;"><%= student.stats.motivatedAbsences %></div>
-                                    <div class="stat-label">Motivated Absences</div>
+                                    <div class="stat-label">Absențe Motivate</div>
                                 </div>
                             <% } %>
                         </div>
@@ -62,7 +62,7 @@
                         <!-- Feedback Section -->
                         <% if (student.feedback) { %>
                         <div style="margin-bottom: 20px;">
-                            <h3>Academic Feedback for <%= student.name %></h3>
+                            <h3>Feedback Academic pentru <%= student.name %></h3>
                             <div class="feedback-container feedback-<%= student.feedback.tone %>">
                                 <div class="feedback-overall">
                                     <p class="feedback-overall-text"><%= student.feedback.overall %></p>
@@ -70,7 +70,7 @@
 
                                 <% if (student.feedback.recommendations && student.feedback.recommendations.length > 0) { %>
                                     <div class="feedback-recommendations">
-                                        <h4>Recommendations:</h4>
+                                        <h4>Recomandări:</h4>
                                         <ul>
                                             <% student.feedback.recommendations.forEach(function(rec) { %>
                                                 <li><%= rec %></li>
@@ -81,7 +81,7 @@
 
                                 <% if (student.feedback.subjects && student.feedback.subjects.length > 0) { %>
                                     <div class="feedback-subjects">
-                                        <h4>Subject-Specific Feedback:</h4>
+                                        <h4>Feedback pe Materii:</h4>
                                         <div class="feedback-subjects-grid">
                                             <% student.feedback.subjects.forEach(function(subjFeedback) { %>
                                                 <div class="feedback-subject-item status-<%= subjFeedback.status %>">
@@ -98,10 +98,10 @@
 
                         <!-- Grades by Subject -->
                         <div style="margin-bottom: 20px;">
-                            <h3>Grades by Subject</h3>
+                            <h3>Note pe Materii</h3>
                             <% if (student.subjects.length === 0) { %>
                                 <div class="empty-state">
-                                    <p>No subjects recorded yet.</p>
+                                    <p>Nicio materie înregistrată încă.</p>
                                 </div>
                             <% } else { %>
                                 <div class="grades-grid">
@@ -124,7 +124,7 @@
                                                     </span>
                                                 <% } else { %>
                                                     <span class="badge" style="background: var(--border); color: var(--text-dim);">
-                                                        No grades
+                                                        Fără note
                                                     </span>
                                                 <% } %>
                                             </div>
@@ -137,12 +137,12 @@
                                                     </div>
                                                     <% if (subject.teacherName) { %>
                                                         <p class="grade-comment">
-                                                            Teacher: <%= subject.teacherName %>
+                                                            Profesor: <%= subject.teacherName %>
                                                         </p>
                                                     <% } %>
                                                 <% } else { %>
                                                     <div class="muted-box" style="margin: 10px 0; padding: 12px;">
-                                                        No grades recorded yet
+                                                        Nicio notă înregistrată încă
                                                     </div>
                                                 <% } %>
                                             </div>
@@ -154,13 +154,13 @@
 
                         <!-- Absences -->
                         <div>
-                            <h3>Absences</h3>
+                            <h3>Absențe</h3>
                             <% 
                                 const hasAbsences = student.absencesBySubject && Object.keys(student.absencesBySubject).length > 0;
                             %>
                             <% if (!hasAbsences) { %>
                                 <div class="empty-state">
-                                    <p>No absences recorded.</p>
+                                    <p>Nicio absență înregistrată.</p>
                                 </div>
                             <% } else { %>
                                 <div class="grades-grid">
@@ -175,12 +175,12 @@
                                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                                     <% if (totalUnmotivated > 0) { %>
                                                         <span class="badge" style="background: #dc3545; color: white;">
-                                                            <%= totalUnmotivated %> Unmotivated
+                                                            <%= totalUnmotivated %> Nemotivate
                                                         </span>
                                                     <% } %>
                                                     <% if (totalMotivated > 0) { %>
                                                         <span class="badge" style="background: #28a745; color: white;">
-                                                            <%= totalMotivated %> Motivated
+                                                            <%= totalMotivated %> Motivate
                                                         </span>
                                                     <% } %>
                                                 </div>
@@ -188,7 +188,7 @@
                                             <div class="subject-details">
                                                 <% if (subjectAbsences.unmotivated.length > 0) { %>
                                                     <div style="margin-bottom: 12px;">
-                                                        <strong style="color: #dc3545;">Unmotivated Absences:</strong>
+                                                        <strong style="color: #dc3545;">Absențe Nemotivate:</strong>
                                                         <ul style="margin: 8px 0; padding-left: 20px;">
                                                             <% subjectAbsences.unmotivated.forEach(function(absence) { %>
                                                                 <li style="margin-bottom: 4px;">
@@ -212,7 +212,7 @@
                                                 
                                                 <% if (subjectAbsences.motivated.length > 0) { %>
                                                     <div>
-                                                        <strong style="color: #28a745;">Motivated Absences:</strong>
+                                                        <strong style="color: #28a745;">Absențe Motivate:</strong>
                                                         <ul style="margin: 8px 0; padding-left: 20px;">
                                                             <% subjectAbsences.motivated.forEach(function(absence) { %>
                                                                 <li style="margin-bottom: 4px;">
@@ -247,7 +247,7 @@
 
         <div class="dashboard-footer">
             <form action="/auth/logout" method="GET">
-                <button type="submit" class="btn-primary">Logout</button>
+                <button type="submit" class="btn-primary">Deconectare</button>
             </form>
         </div>
     </div>

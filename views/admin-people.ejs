@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persoane - <%= school.name %></title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><%= school.name %> - Persoane</h1>
+            <div class="user-info">
+                <p><strong>Nume:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Rol:</strong> Administrator Școală</p>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="section-nav-admin">
+            <a href="/admin/dashboard">Panou</a>
+            <a href="/admin/subjects">Materii</a>
+            <a href="/admin/classes">Clase</a>
+            <a href="/admin/add-user">Adaugă Utilizator</a>
+            <a href="/admin/teacher-assignments">Alocări Profesori</a>
+            <a href="/admin/people" class="active">Persoane</a>
+        </div>
+
+        <!-- Messages -->
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message"><%= error %></div>
+        <% } %>
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message"><%= success %></div>
+        <% } %>
+
+        <!-- People Section -->
+        <section class="section">
+            <h2>Persoane</h2>
+            <p class="helper" style="margin-bottom: 16px;">Filtrează și vizualizează profesorii și elevii tăi.</p>
+
+            <div class="grid-two">
+                <!-- Teachers -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <strong style="font-size: 16px;">Profesori</strong>
+                        <span class="badge" id="teacher-count"><%= teachers.length %></span>
+                    </div>
+                    <% if (teachers.length > 0) { %>
+                        <div class="filter">
+                            <label for="teacher-search">Caută după nume:</label>
+                            <input type="text" id="teacher-search" placeholder="Caută profesori..." oninput="filterTeachers()" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 14px;">
+                        </div>
+                        <div class="filter">
+                            <label for="subject-filter">Filtrează după materie:</label>
+                            <select id="subject-filter" onchange="filterTeachers()">
+                                <option value="all">Toate</option>
+                                <% if (school.subjects && school.subjects.length > 0) { %>
+                                    <% school.subjects.forEach(function(subject) { %>
+                                        <option value="<%= subject %>"><%= subject %></option>
+                                    <% }); %>
+                                <% } %>
+                                <option value="none">Fără materie</option>
+                            </select>
+                        </div>
+                        <div class="people-list" id="teachers-grid">
+                            <% teachers.forEach(function(t) { %>
+                                <% 
+                                    const teacherSubjects = t.subjects || (t.subject ? [t.subject] : []);
+                                    const subjectStr = teacherSubjects.length > 0 ? teacherSubjects.join(',') : 'none';
+                                %>
+                                <div class="person teacher-item" data-subjects="<%= subjectStr %>" data-name="<%= t.name.toLowerCase() %>" data-email="<%= t.email.toLowerCase() %>">
+                                    <div>
+                                        <strong><%= t.name %></strong>
+                                        <small><%= t.email %></small>
+                                        <% if (teacherSubjects.length > 0) { %>
+                                            <br><small><%= teacherSubjects.join(', ') %></small>
+                                        <% } %>
+                                    </div>
+                                    <button type="button" class="btn-edit" 
+                                            data-uid="<%= t.uid %>"
+                                            data-role="teacher"
+                                            data-name="<%= t.name %>"
+                                            data-email="<%= t.email %>"
+                                            data-classyear="<%= t.classYear || "" %>"
+                                            data-subjects='<%= JSON.stringify(teacherSubjects) %>'
+                                            data-parentemail="<%= t.parentEmail || "" %>"
+                                            onclick="openEditModalFromButton(this)" 
+                                            style="padding: 6px 12px; font-size: 13px;">Editează</button>
+                                </div>
+                            <% }); %>
+                        </div>
+                        <p id="no-teachers-filtered" class="helper" style="display: none; margin-top: 10px;">Niciun profesor nu corespunde acestui filtru.</p>
+                    <% } else { %>
+                        <div class="muted-box">Niciun profesor încă.</div>
+                    <% } %>
+                </div>
+
+                <!-- Students -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <strong style="font-size: 16px;">Elevi</strong>
+                        <span class="badge" id="student-count"><%= students.length %></span>
+                    </div>
+                    <% if (students.length > 0) { %>
+                        <div class="filter">
+                            <label for="student-search">Caută după nume:</label>
+                            <input type="text" id="student-search" placeholder="Caută elevi..." oninput="filterStudents()" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 14px;">
+                        </div>
+                        <div class="filter">
+                            <label for="class-filter">Filtrează după clasă:</label>
+                            <select id="class-filter" onchange="filterStudents()">
+                                <option value="all">Toate</option>
+                                <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
+                                    <option value="<%= cls %>"><%= cls %></option>
+                                <% }); %>
+                                <option value="none">Fără clasă</option>
+                            </select>
+                        </div>
+                        <div class="people-list" id="students-grid">
+                            <% students.forEach(function(s) { %>
+                                <div class="person student-item" data-classyear="<%= s.classYear || 'none' %>" data-name="<%= s.name.toLowerCase() %>" data-email="<%= s.email.toLowerCase() %>">
+                                    <div>
+                                        <strong><%= s.name %></strong>
+                                        <small><%= s.email %></small>
+                                        <% if (s.classYear) { %><br><small>Clasa <%= s.classYear %></small><% } %>
+                                    </div>
+                                    <button type="button" class="btn-edit" 
+                                            data-uid="<%= s.uid %>"
+                                            data-role="student"
+                                            data-name="<%= s.name %>"
+                                            data-email="<%= s.email %>"
+                                            data-classyear="<%= s.classYear || "" %>"
+                                            data-subjects=""
+                                            data-parentemail="<%= s.parentEmail || "" %>"
+                                            data-cnp="<%= s.cnp || "" %>"
+                                            data-fathersname="<%= s.fathersName || "" %>"
+                                            data-mothersname="<%= s.mothersName || "" %>"
+                                            data-address="<%= s.address || "" %>"
+                                            data-matricolnumber="<%= s.matricolNumber || "" %>"
+                                            data-parentphone="<%= s.parentPhone || "" %>"
+                                            data-placeofbirth="<%= s.placeOfBirth || "" %>"
+                                            data-birthdate="<%= s.birthDate || "" %>"
+                                            data-othermentions="<%= (s.otherMentions || "").replace(/&/g,'&amp;').replace(/"/g,'&quot;') %>"
+                                            onclick="openEditModalFromButton(this)" 
+                                            style="padding: 6px 12px; font-size: 13px;">Editează</button>
+                                </div>
+                            <% }); %>
+                        </div>
+                        <p id="no-students-filtered" class="helper" style="display: none; margin-top: 10px;">Niciun elev nu corespunde acestui filtru.</p>
+                    <% } else { %>
+                        <div class="muted-box">Niciun elev încă.</div>
+                    <% } %>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Deconectare</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content" style="max-width: 560px; max-height: 90vh; overflow-y: auto;">
+            <h3>Editează Utilizator</h3>
+            <form id="editUserForm" onsubmit="handleEditUser(event)">
+                <input type="hidden" id="edit-user-uid" name="uid">
+                <input type="hidden" id="edit-user-role" name="role">
+                
+                <div class="field" style="margin-bottom: 16px;">
+                    <label for="edit-user-name">Nume Complet</label>
+                    <input type="text" id="edit-user-name" name="name" required>
+                </div>
+                
+                <div class="field" style="margin-bottom: 16px;">
+                    <label for="edit-user-email">Email</label>
+                    <input type="email" id="edit-user-email" name="email" required>
+                </div>
+                
+                <div class="field" id="edit-classYearGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-classYear">Clasă</label>
+                    <select id="edit-user-classYear" name="classYear">
+                        <option value="">Selectează clasa</option>
+                        <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
+                            <option value="<%= cls %>"><%= cls %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                
+                <div class="field" id="edit-cnpGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-cnp">CNP (Cod Numeric Personal)</label>
+                    <input type="text" id="edit-user-cnp" name="cnp" maxlength="13" pattern="[0-9]{13}" placeholder="13 cifre" oninput="this.value=this.value.replace(/\D/g,''); var e=document.getElementById('edit-cnpError'); if(e)e.style.display='none';">
+                    <small class="helper" id="edit-cnpError" style="color: var(--error); display: none;"></small>
+                </div>
+                <div class="field" id="edit-fathersNameGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-fathersName">Numele tatălui</label>
+                    <input type="text" id="edit-user-fathersName" name="fathersName">
+                </div>
+                <div class="field" id="edit-mothersNameGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-mothersName">Numele mamei</label>
+                    <input type="text" id="edit-user-mothersName" name="mothersName">
+                </div>
+                <div class="field" id="edit-addressGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-address">Adresă</label>
+                    <input type="text" id="edit-user-address" name="address">
+                </div>
+                <div class="field" id="edit-matricolNumberGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-matricolNumber">Număr matricol</label>
+                    <input type="text" id="edit-user-matricolNumber" name="matricolNumber">
+                </div>
+                <div class="field" id="edit-parentPhoneGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-parentPhone">Telefon părinte</label>
+                    <input type="tel" id="edit-user-parentPhone" name="parentPhone">
+                </div>
+                <div class="field" id="edit-placeOfBirthGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-placeOfBirth">Locul nașterii</label>
+                    <input type="text" id="edit-user-placeOfBirth" name="placeOfBirth">
+                </div>
+                <div class="field" id="edit-birthDateGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-birthDate">Data nașterii</label>
+                    <input type="date" id="edit-user-birthDate" name="birthDate">
+                </div>
+                <div class="field" id="edit-otherMentionsGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-otherMentions">Alte mențiuni</label>
+                    <textarea id="edit-user-otherMentions" name="otherMentions" rows="3"></textarea>
+                </div>
+                
+                <div class="field" id="edit-subjectGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-subjects">Materii</label>
+                    <select id="edit-user-subjects" name="subjects" multiple style="min-height: 120px;">
+                        <% if (school.subjects && school.subjects.length > 0) { %>
+                            <% school.subjects.forEach(function(subject) { %>
+                                <option value="<%= subject %>"><%= subject %></option>
+                            <% }); %>
+                        <% } %>
+                    </select>
+                    <small class="helper">Ține apăsat Ctrl/Cmd pentru a selecta mai multe materii</small>
+                </div>
+                
+                <div class="field" id="edit-parentEmailGroup" style="margin-bottom: 16px; display: none;">
+                    <label for="edit-user-parentEmail">Email Părinte (Opțional)</label>
+                    <input type="email" id="edit-user-parentEmail" name="parentEmail" placeholder="parinte@exemplu.ro">
+                    <small class="helper">Lasă gol pentru a păstra contul de părinte curent</small>
+                </div>
+                
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button class="ghost-btn" type="button" onclick="closeEditModal()">Anulează</button>
+                    <button class="btn-primary" type="submit">Salvează Modificările</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function filterTeachers() {
+            const selected = document.getElementById('subject-filter').value;
+            const searchTerm = (document.getElementById('teacher-search').value || '').toLowerCase().trim();
+            const items = document.querySelectorAll('.teacher-item');
+            const msg = document.getElementById('no-teachers-filtered');
+            const count = document.getElementById('teacher-count');
+            let visible = 0;
+            items.forEach(item => {
+                const subjects = item.getAttribute('data-subjects');
+                const subjectArray = subjects.split(',');
+                const name = item.getAttribute('data-name') || '';
+                const email = item.getAttribute('data-email') || '';
+                
+                const subjectMatch = selected === 'all' || subjectArray.includes(selected);
+                const searchMatch = searchTerm === '' || name.includes(searchTerm) || email.includes(searchTerm);
+                
+                if (subjectMatch && searchMatch) {
+                    item.style.display = 'flex';
+                    visible++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            count.textContent = visible;
+            msg.style.display = visible === 0 ? 'block' : 'none';
+        }
+
+        function filterStudents() {
+            const selected = document.getElementById('class-filter').value;
+            const searchTerm = (document.getElementById('student-search').value || '').toLowerCase().trim();
+            const items = document.querySelectorAll('.student-item');
+            const msg = document.getElementById('no-students-filtered');
+            const count = document.getElementById('student-count');
+            let visible = 0;
+            items.forEach(item => {
+                const year = item.getAttribute('data-classyear');
+                const name = item.getAttribute('data-name') || '';
+                const email = item.getAttribute('data-email') || '';
+                
+                const classMatch = selected === 'all' || year === selected;
+                const searchMatch = searchTerm === '' || name.includes(searchTerm) || email.includes(searchTerm);
+                
+                if (classMatch && searchMatch) {
+                    item.style.display = 'flex';
+                    visible++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            count.textContent = visible;
+            msg.style.display = visible === 0 ? 'block' : 'none';
+        }
+
+        function openEditModalFromButton(button) {
+            const uid = button.getAttribute('data-uid');
+            const role = button.getAttribute('data-role');
+            const name = button.getAttribute('data-name');
+            const email = button.getAttribute('data-email');
+            const classYear = button.getAttribute('data-classyear') || '';
+            const subjectsJson = button.getAttribute('data-subjects') || '[]';
+            const parentEmail = button.getAttribute('data-parentemail') || '';
+            const studentData = role === 'student' ? {
+                cnp: button.getAttribute('data-cnp') || '',
+                fathersName: button.getAttribute('data-fathersname') || '',
+                mothersName: button.getAttribute('data-mothersname') || '',
+                address: button.getAttribute('data-address') || '',
+                matricolNumber: button.getAttribute('data-matricolnumber') || '',
+                parentPhone: button.getAttribute('data-parentphone') || '',
+                placeOfBirth: button.getAttribute('data-placeofbirth') || '',
+                birthDate: button.getAttribute('data-birthdate') || '',
+                otherMentions: button.getAttribute('data-othermentions') || ''
+            } : null;
+            
+            openEditModal(uid, role, name, email, classYear, subjectsJson, parentEmail, studentData);
+        }
+
+        function validateCNPClient(cnp) {
+            if (!cnp || typeof cnp !== 'string') return { valid: true };
+            const c = cnp.trim().replace(/\s/g, '');
+            if (c.length === 0) return { valid: true };
+            if (c.length !== 13) return { valid: false, error: 'CNP-ul trebuie să aibă exact 13 cifre' };
+            if (!/^\d{13}$/.test(c)) return { valid: false, error: 'CNP-ul trebuie să conțină doar cifre' };
+            const d = c.split('').map(Number);
+            const key = [2, 7, 9, 1, 4, 6, 3, 5, 8, 2, 7, 9];
+            let sum = 0;
+            for (let i = 0; i < 12; i++) sum += d[i] * key[i];
+            let control = sum % 11;
+            if (control === 10) control = 1;
+            if (control !== d[12]) return { valid: false, error: 'CNP invalid (suma de control nu corespunde)' };
+            if (d[0] < 1 || d[0] > 9) return { valid: false, error: 'CNP invalid' };
+            const yy = d[1]*10+d[2], mm = d[3]*10+d[4], dd = d[5]*10+d[6];
+            const century = d[0]<=2?1900:d[0]<=4?1800:d[0]<=6?2000:d[0]<=8?1800:2000;
+            const year = century + yy;
+            if (mm < 1 || mm > 12) return { valid: false, error: 'CNP invalid (lună invalidă)' };
+            const lastDay = new Date(year, mm, 0).getDate();
+            if (dd < 1 || dd > lastDay) return { valid: false, error: 'CNP invalid (zi invalidă)' };
+            const county = d[7]*10+d[8];
+            if ((county < 1 || county > 52) && county !== 99) return { valid: false, error: 'CNP invalid (județ invalid)' };
+            return { valid: true };
+        }
+
+        function openEditModal(uid, role, name, email, classYear, subjectsJson, parentEmail, studentData) {
+            const modal = document.getElementById('editUserModal');
+            const form = document.getElementById('editUserForm');
+            
+            document.getElementById('edit-user-uid').value = uid;
+            document.getElementById('edit-user-role').value = role;
+            document.getElementById('edit-user-name').value = name;
+            document.getElementById('edit-user-email').value = email;
+            
+            const studentGroups = ['edit-cnpGroup','edit-fathersNameGroup','edit-mothersNameGroup','edit-addressGroup','edit-matricolNumberGroup','edit-parentPhoneGroup','edit-placeOfBirthGroup','edit-birthDateGroup','edit-otherMentionsGroup'];
+            studentGroups.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            
+            const classYearGroup = document.getElementById('edit-classYearGroup');
+            const subjectGroup = document.getElementById('edit-subjectGroup');
+            const parentEmailGroup = document.getElementById('edit-parentEmailGroup');
+            const classYearSelect = document.getElementById('edit-user-classYear');
+            const subjectSelect = document.getElementById('edit-user-subjects');
+            const parentEmailInput = document.getElementById('edit-user-parentEmail');
+            const cnpErr = document.getElementById('edit-cnpError');
+            if (cnpErr) cnpErr.style.display = 'none';
+            
+            if (role === 'student') {
+                classYearGroup.style.display = 'block';
+                classYearSelect.value = classYear || '';
+                subjectGroup.style.display = 'none';
+                parentEmailGroup.style.display = 'block';
+                parentEmailInput.value = parentEmail || '';
+                studentGroups.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; });
+                if (studentData) {
+                    const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+                    set('edit-user-cnp', studentData.cnp);
+                    set('edit-user-fathersName', studentData.fathersName);
+                    set('edit-user-mothersName', studentData.mothersName);
+                    set('edit-user-address', studentData.address);
+                    set('edit-user-matricolNumber', studentData.matricolNumber);
+                    set('edit-user-parentPhone', studentData.parentPhone);
+                    set('edit-user-placeOfBirth', studentData.placeOfBirth);
+                    set('edit-user-birthDate', studentData.birthDate);
+                    set('edit-user-otherMentions', studentData.otherMentions);
+                }
+            } else if (role === 'teacher') {
+                classYearGroup.style.display = 'none';
+                subjectGroup.style.display = 'block';
+                parentEmailGroup.style.display = 'none';
+                
+                let subjects = [];
+                try {
+                    subjects = JSON.parse((subjectsJson || '[]').replace(/&apos;/g, "'"));
+                } catch (e) {
+                    subjects = [];
+                }
+                
+                Array.from(subjectSelect.options).forEach(option => {
+                    option.selected = subjects.includes(option.value);
+                });
+            }
+            
+            modal.classList.add('active');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editUserModal');
+            const form = document.getElementById('editUserForm');
+            modal.classList.remove('active');
+            form.reset();
+        }
+
+        async function handleEditUser(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            if (data.role === 'teacher') {
+                const subjectSelect = document.getElementById('edit-user-subjects');
+                const selected = Array.from(subjectSelect.selectedOptions).map(opt => opt.value);
+                data.subjects = selected;
+            }
+            
+            if (data.role === 'student' && data.cnp && String(data.cnp).trim()) {
+                const cnpResult = validateCNPClient(data.cnp);
+                if (!cnpResult.valid) {
+                    const cnpErr = document.getElementById('edit-cnpError');
+                    if (cnpErr) { cnpErr.textContent = cnpResult.error; cnpErr.style.display = 'block'; }
+                    alert('CNP invalid: ' + (cnpResult.error || 'Te rog introdu un CNP valid de 13 cifre.'));
+                    return;
+                }
+                const cnpErr = document.getElementById('edit-cnpError');
+                if (cnpErr) cnpErr.style.display = 'none';
+            }
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Se salvează...';
+            
+            try {
+                const response = await fetch('/admin/update-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    closeEditModal();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    console.error('Update user error:', result.error || 'Operation failed');
+                    alert(result.error || 'Eroare la actualizare utilizator. Te rog încearcă din nou.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Update user error:', error);
+                alert('A apărut o eroare. Te rog încearcă din nou.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+            }
+        }
+
+        window.addEventListener('click', (e) => {
+            const editModal = document.getElementById('editUserModal');
+            if (e.target === editModal) closeEditModal();
+        });
+    </script>
+</body>
+</html>

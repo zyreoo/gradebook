@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clase - <%= school.name %></title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><%= school.name %> - Clase</h1>
+            <div class="user-info">
+                <p><strong>Nume:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Rol:</strong> Administrator Școală</p>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="section-nav-admin">
+            <a href="/admin/dashboard">Panou</a>
+            <a href="/admin/subjects">Materii</a>
+            <a href="/admin/classes" class="active">Clase</a>
+            <a href="/admin/add-user">Adaugă Utilizator</a>
+            <a href="/admin/teacher-assignments">Alocări Profesori</a>
+            <a href="/admin/people">Persoane</a>
+        </div>
+
+        <!-- Messages -->
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message"><%= error %></div>
+        <% } %>
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message"><%= success %></div>
+        <% } %>
+
+        <!-- Classes Section -->
+        <section class="section">
+            <h2>Clase</h2>
+            <p class="helper" style="margin-bottom: 16px;">Toate clasele din școala ta. Clasele sunt create automat când profesorii sunt alocați, sau le poți adăuga manual mai jos.</p>
+
+            <% const allClassesList = typeof allClasses !== 'undefined' ? allClasses : []; %>
+            <% const explicitClasses = (school.classes || []); %>
+
+            <% if (allClassesList.length > 0) { %>
+                <div class="pill-rail">
+                    <% allClassesList.forEach(function(cls) { 
+                        const isExplicit = explicitClasses.includes(cls);
+                        const teacherCount = (school.classYearTeachers && school.classYearTeachers[cls]) ? school.classYearTeachers[cls].length : 0;
+                    %>
+                        <div class="pill"<% if (!isExplicit) { %> style="border-style: dashed;"<% } %>> 
+                            <span><%= cls %></span>
+                            <% if (teacherCount > 0) { %>
+                                <span style="font-size: 11px; color: var(--text-dim); margin: 0 4px;">(<%= teacherCount %> profesor<%= teacherCount !== 1 ? 'i' : '' %>)</span>
+                            <% } %>
+                            <% if (isExplicit) { %>
+                                <form action="/admin/remove-class" method="POST" style="display:inline; margin:0;">
+                                    <input type="hidden" name="className" value="<%= cls %>">
+                                    <button type="submit" aria-label="Elimină <%= cls %>" style="background:none; border:none; color:inherit; cursor:pointer; padding:0; margin-left:8px;">×</button>
+                                </form>
+                            <% } else { %>
+                                <span style="font-size: 11px; color: var(--text-dim); margin-left: 4px;" title="Această clasă a fost creată prin alocări de profesori">(auto)</span>
+                                <form action="/admin/remove-class" method="POST" style="display:inline; margin:0;">
+                                    <input type="hidden" name="className" value="<%= cls %>">
+                                    <button type="submit" aria-label="Elimină <%= cls %>" style="background:none; border:none; color:inherit; cursor:pointer; padding:0; margin-left:8px;">×</button>
+                                </form>
+                            <% } %>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="muted-box">Nicio clasă încă. Adaugă prima clasă mai jos sau alocă un profesor la o clasă.</div>
+            <% } %>
+
+            <form action="/admin/add-class" method="POST" style="margin-top: 18px;">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="className">Adaugă o clasă</label>
+                        <input id="className" name="className" type="text" placeholder="ex: 9A, 9B, 10C" maxlength="20" required>
+                    </div>
+                    <div class="field" style="align-self: flex-end;">
+                        <button class="btn-primary" type="submit">Adaugă Clasă</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Deconectare</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function handleFormSubmit(event, form) {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton?.textContent;
+            const originalDisabled = submitButton?.disabled;
+            
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    alert(`❌ Eroare: ${result.error || 'Operațiunea a eșuat'}`);
+                    if (submitButton) {
+                        submitButton.disabled = originalDisabled;
+                        if (originalText) submitButton.textContent = originalText;
+                    }
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                alert('❌ A apărut o eroare. Te rog încearcă din nou.');
+                if (submitButton) {
+                    submitButton.disabled = originalDisabled;
+                    if (originalText) submitButton.textContent = originalText;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const addClassForm = document.querySelector('form[action="/admin/add-class"]');
+            if (addClassForm) {
+                addClassForm.addEventListener('submit', (e) => handleFormSubmit(e, addClassForm));
+            }
+
+            document.querySelectorAll('form[action="/admin/remove-class"]').forEach(form => {
+                form.addEventListener('submit', (e) => handleFormSubmit(e, form));
+            });
+        });
+    </script>
+</body>
+</html>

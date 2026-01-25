@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class <%= classYear %> - Classmaster View</title>
+    <title>Clasa <%= classYear %> - Vedere Diriginte</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="dashboard-container">
         <div class="dashboard-header">
-            <h1>Class <%= classYear %> - Classmaster View</h1>
+            <h1>Clasa <%= classYear %> - Vedere Diriginte</h1>
             <div class="user-info">
-                <p><strong>Name:</strong> <%= user.name %></p>
+                <p><strong>Nume:</strong> <%= user.name %></p>
                 <p><strong>Email:</strong> <%= user.email %></p>
-                <p><strong style="color: var(--accent);">Classmaster</strong></p>
+                <p><strong style="color: var(--accent);">Diriginte</strong></p>
             </div>
         </div>
 
@@ -30,14 +30,14 @@
         <% } %>
 
         <div class="navigation">
-            <a href="/dashboard">← Back to Dashboard</a>
+            <a href="/dashboard">← Înapoi la Panou</a>
         </div>
 
         <div class="section">
-            <h2>Students (<%= students.length %>)</h2>
+            <h2>Elevi (<%= students.length %>)</h2>
             <% if (students.length === 0) { %>
                 <div class="empty-state">
-                    <p>No students found in this class yet.</p>
+                    <p>Niciun elev găsit în această clasă încă.</p>
                 </div>
             <% } else { %>
                 <div class="students-grid">
@@ -62,7 +62,7 @@
                                     <div class="student-stats">
                                         <% if (student.stats && student.stats.overallAverage > 0) { %>
                                             <div class="stat-mini">
-                                                <span class="stat-label-mini">Average</span>
+                                                <span class="stat-label-mini">Medie</span>
                                                 <span class="grade-badge <%= badgeClass %>">
                                                     <%= student.stats.overallAverage.toFixed(2) %>
                                                 </span>
@@ -70,13 +70,13 @@
                                         <% } %>
                                         <% if (student.stats && student.stats.totalGrades > 0) { %>
                                             <div class="stat-mini">
-                                                <span class="stat-label-mini">Grades</span>
+                                                <span class="stat-label-mini">Note</span>
                                                 <span class="stat-value-mini"><%= student.stats.totalGrades %></span>
                                             </div>
                                         <% } %>
                                         <% if (student.stats && student.stats.totalAbsences > 0) { %>
                                             <div class="stat-mini">
-                                                <span class="stat-label-mini">Absences</span>
+                                                <span class="stat-label-mini">Absențe</span>
                                                 <span class="stat-value-mini <%= student.stats.unmotivatedAbsences > 2 ? 'error' : 'dim' %>">
                                                     <%= student.stats.totalAbsences %>
                                                 </span>
@@ -93,7 +93,7 @@
 
         <div class="dashboard-footer">
             <form action="/auth/logout" method="GET">
-                <button type="submit" class="btn-primary">Logout</button>
+                <button type="submit" class="btn-primary">Deconectare</button>
             </form>
         </div>
     </div>

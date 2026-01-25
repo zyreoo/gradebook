@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaugă Utilizator - <%= school.name %></title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1><%= school.name %> - Adaugă Utilizator</h1>
+            <div class="user-info">
+                <p><strong>Nume:</strong> <%= user.name %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <p><strong>Rol:</strong> Administrator Școală</p>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="section-nav-admin">
+            <a href="/admin/dashboard">Panou</a>
+            <a href="/admin/subjects">Materii</a>
+            <a href="/admin/classes">Clase</a>
+            <a href="/admin/add-user" class="active">Adaugă Utilizator</a>
+            <a href="/admin/teacher-assignments">Alocări Profesori</a>
+            <a href="/admin/people">Persoane</a>
+        </div>
+
+        <!-- Messages -->
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-message"><%= error %></div>
+        <% } %>
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="success-message"><%= success %></div>
+        <% } %>
+
+        <!-- Create User Section -->
+        <section class="section">
+            <h2>Creează un Utilizator</h2>
+            <p class="helper" style="margin-bottom: 16px;">Adaugă profesori sau elevi și setează câmpurile corecte dintr-o dată.</p>
+            
+            <form action="/admin/create-user" method="POST">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="name">Nume complet</label>
+                        <input id="name" name="name" type="text" placeholder="Ion Popescu" autocomplete="name" required>
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input id="email" name="email" type="email" placeholder="ion.popescu@scoala.ro" autocomplete="email" required>
+                    </div>
+                    <div class="field">
+                        <label for="password">Parolă</label>
+                        <input id="password" name="password" type="password" minlength="6" placeholder="Minim 6 caractere" autocomplete="new-password" required>
+                    </div>
+                    <div class="field">
+                        <label for="confirmPassword">Confirmă parola</label>
+                        <input id="confirmPassword" name="confirmPassword" type="password" minlength="6" placeholder="Reintroduceți parola" autocomplete="new-password" required>
+                    </div>
+                    <div class="field">
+                        <label for="role">Rol</label>
+                        <select id="role" name="role" required>
+                            <option value="">Selectează rol</option>
+                            <option value="student">Elev</option>
+                            <option value="teacher">Profesor</option>
+                        </select>
+                    </div>
+                    <div class="field" id="classYearGroup" style="display: none;">
+                        <label for="classYear">Clasă</label>
+                        <select id="classYear" name="classYear">
+                            <option value="">Selectează clasa</option>
+                            <% (typeof allClasses !== 'undefined' ? allClasses : (school.classes || [])).forEach(function(cls) { %>
+                                <option value="<%= cls %>"><%= cls %></option>
+                            <% }); %>
+                        </select>
+                        <% 
+                            const availableClasses = typeof allClasses !== 'undefined' ? allClasses : (school.classes || []);
+                            if (availableClasses.length === 0) { 
+                        %>
+                            <small class="helper" style="color: #dc3545;">Nicio clasă definită. Te rog adaugă clase în secțiunea Clase sau alocă profesori pentru a crea clase automat.</small>
+                        <% } %>
+                    </div>
+                    <div class="field" id="cnpGroup" style="display: none;">
+                        <label for="cnp">CNP (Cod Numeric Personal) <span style="color: var(--error);">*</span></label>
+                        <input id="cnp" name="cnp" type="text" placeholder="13 cifre, ex: 5010312420012" maxlength="13" pattern="[0-9]{13}" inputmode="numeric" autocomplete="off" oninput="this.value=this.value.replace(/\D/g,''); var e=document.getElementById('cnpError'); if(e)e.style.display='none';">
+                        <small class="helper" id="cnpError" style="color: var(--error); display: none;"></small>
+                        <small class="helper">Cod numeric personal românesc de 13 cifre. CNP invalid va fi respins.</small>
+                    </div>
+                    <div class="field" id="fathersNameGroup" style="display: none;">
+                        <label for="fathersName">Numele tatălui</label>
+                        <input id="fathersName" name="fathersName" type="text" placeholder="Ion Popescu">
+                    </div>
+                    <div class="field" id="mothersNameGroup" style="display: none;">
+                        <label for="mothersName">Numele mamei</label>
+                        <input id="mothersName" name="mothersName" type="text" placeholder="Maria Popescu">
+                    </div>
+                    <div class="field" id="addressGroup" style="display: none;">
+                        <label for="address">Adresă (unde locuiește elevul)</label>
+                        <input id="address" name="address" type="text" placeholder="Str. Exemplu nr. 1, Oraș">
+                    </div>
+                    <div class="field" id="matricolNumberGroup" style="display: none;">
+                        <label for="matricolNumber">Număr matricol</label>
+                        <input id="matricolNumber" name="matricolNumber" type="text" placeholder="ex: 12345">
+                    </div>
+                    <div class="field" id="parentPhoneGroup" style="display: none;">
+                        <label for="parentPhone">Telefon părinte</label>
+                        <input id="parentPhone" name="parentPhone" type="tel" placeholder="+40 712 345 678" autocomplete="tel">
+                    </div>
+                    <div class="field" id="placeOfBirthGroup" style="display: none;">
+                        <label for="placeOfBirth">Locul nașterii</label>
+                        <input id="placeOfBirth" name="placeOfBirth" type="text" placeholder="București">
+                    </div>
+                    <div class="field" id="birthDateGroup" style="display: none;">
+                        <label for="birthDate">Data nașterii</label>
+                        <input id="birthDate" name="birthDate" type="date" placeholder="AAAA-LL-ZZ">
+                    </div>
+                    <div class="field" id="otherMentionsGroup" style="display: none;">
+                        <label for="otherMentions">Alte mențiuni</label>
+                        <textarea id="otherMentions" name="otherMentions" rows="3" placeholder="Note suplimentare despre elev"></textarea>
+                    </div>
+                    <div class="field" id="parentEmailGroup" style="display: none;">
+                        <label for="parentEmail">Email Părinte (Opțional)</label>
+                        <input id="parentEmail" name="parentEmail" type="email" placeholder="parinte@exemplu.ro" autocomplete="email">
+                        <small class="helper">Contul de părinte va fi creat automat</small>
+                    </div>
+                    <div class="field" id="parentPasswordGroup" style="display: none;">
+                        <label for="parentPassword">Parolă Părinte (Opțional)</label>
+                        <input id="parentPassword" name="parentPassword" type="password" minlength="6" placeholder="Minim 6 caractere" autocomplete="new-password">
+                        <small class="helper">Necesar dacă este furnizat emailul părintelui</small>
+                    </div>
+                    <div class="field" id="subjectGroup" style="display: none;">
+                        <label for="subject">Materii</label>
+                        <select id="subject" name="subjects" multiple style="min-height: 120px;">
+                            <% if (school.subjects && school.subjects.length > 0) { %>
+                                <% school.subjects.forEach(function(subject) { %>
+                                    <option value="<%= subject %>"><%= subject %></option>
+                                <% }); %>
+                            <% } %>
+                        </select>
+                        <small class="helper">Ține apăsat Ctrl/Cmd pentru a selecta mai multe materii</small>
+                    </div>
+                </div>
+                <div style="margin-top: 14px;">
+                    <button class="btn-primary" type="submit">Creează Utilizator</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <form action="/auth/logout" method="GET">
+                <button type="submit" class="btn-primary">Deconectare</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function handleFormSubmit(event, form) {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            const multiSelects = form.querySelectorAll('select[multiple]');
+            multiSelects.forEach(select => {
+                const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+                data[select.name] = selected;
+            });
+
+            if (data.role === 'student') {
+                if (!data.cnp || !String(data.cnp).trim()) {
+                    alert('CNP (Cod Numeric Personal) este obligatoriu pentru elevi.');
+                    return;
+                }
+                const cnpResult = validateCNPClient(data.cnp);
+                if (!cnpResult.valid) {
+                    const cnpErr = document.getElementById('cnpError');
+                    if (cnpErr) { cnpErr.textContent = cnpResult.error; cnpErr.style.display = 'block'; }
+                    alert('CNP invalid: ' + (cnpResult.error || 'Te rog introdu un CNP valid de 13 cifre.'));
+                    return;
+                }
+                const cnpErr = document.getElementById('cnpError');
+                if (cnpErr) { cnpErr.style.display = 'none'; }
+            }
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton?.textContent;
+            const originalDisabled = submitButton?.disabled;
+            
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    form.reset();
+                    toggleRoleFields();
+                    alert(`✅ ${result.message}`);
+                } else {
+                    alert(`❌ Eroare: ${result.error || 'Operațiunea a eșuat'}`);
+                    if (submitButton) {
+                        submitButton.disabled = originalDisabled;
+                        if (originalText) submitButton.textContent = originalText;
+                    }
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                alert('❌ A apărut o eroare. Te rog încearcă din nou.');
+                if (submitButton) {
+                    submitButton.disabled = originalDisabled;
+                    if (originalText) submitButton.textContent = originalText;
+                }
+            }
+        }
+
+        function validateCNPClient(cnp) {
+            if (!cnp || typeof cnp !== 'string') return { valid: false, error: 'CNP este obligatoriu' };
+            const c = cnp.trim().replace(/\s/g, '');
+            if (c.length !== 13) return { valid: false, error: 'CNP-ul trebuie să aibă exact 13 cifre' };
+            if (!/^\d{13}$/.test(c)) return { valid: false, error: 'CNP-ul trebuie să conțină doar cifre' };
+            const d = c.split('').map(Number);
+            const key = [2, 7, 9, 1, 4, 6, 3, 5, 8, 2, 7, 9];
+            let sum = 0;
+            for (let i = 0; i < 12; i++) sum += d[i] * key[i];
+            let control = sum % 11;
+            if (control === 10) control = 1;
+            if (control !== d[12]) return { valid: false, error: 'CNP invalid (suma de control nu corespunde)' };
+            if (d[0] < 1 || d[0] > 9) return { valid: false, error: 'CNP invalid (prima cifră invalidă)' };
+            const yy = d[1] * 10 + d[2], mm = d[3] * 10 + d[4], dd = d[5] * 10 + d[6];
+            const century = d[0] <= 2 ? 1900 : d[0] <= 4 ? 1800 : d[0] <= 6 ? 2000 : d[0] <= 8 ? 1800 : 2000;
+            const year = century + yy;
+            if (mm < 1 || mm > 12) return { valid: false, error: 'CNP invalid (lună invalidă)' };
+            const lastDay = new Date(year, mm, 0).getDate();
+            if (dd < 1 || dd > lastDay) return { valid: false, error: 'CNP invalid (zi invalidă)' };
+            const county = d[7] * 10 + d[8];
+            if ((county < 1 || county > 52) && county !== 99) return { valid: false, error: 'CNP invalid (cod județ invalid)' };
+            return { valid: true };
+        }
+
+        function toggleRoleFields() {
+            const role = document.getElementById('role').value;
+            const groups = ['classYearGroup', 'cnpGroup', 'fathersNameGroup', 'mothersNameGroup', 'addressGroup', 'matricolNumberGroup', 'parentPhoneGroup', 'placeOfBirthGroup', 'birthDateGroup', 'otherMentionsGroup', 'parentEmailGroup', 'parentPasswordGroup'];
+            const classYearSelect = document.getElementById('classYear');
+            const cnpInput = document.getElementById('cnp');
+            const subjectGroup = document.getElementById('subjectGroup');
+            const subjectSelect = document.getElementById('subject');
+            const parentEmailGroup = document.getElementById('parentEmailGroup');
+            const parentPasswordGroup = document.getElementById('parentPasswordGroup');
+            const cnpError = document.getElementById('cnpError');
+
+            groups.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            if (role === 'student') {
+                groups.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'block';
+                });
+                classYearSelect.required = true;
+                if (cnpInput) { cnpInput.required = true; }
+                if (cnpError) { cnpError.style.display = 'none'; }
+                subjectGroup.style.display = 'none';
+                subjectSelect.required = false;
+                subjectSelect.value = '';
+            } else if (role === 'teacher') {
+                subjectGroup.style.display = 'block';
+                subjectSelect.required = false;
+                classYearSelect.required = false;
+                classYearSelect.value = '';
+                if (cnpInput) { cnpInput.required = false; cnpInput.value = ''; }
+                document.getElementById('parentEmail').value = '';
+                document.getElementById('parentPassword').value = '';
+            } else {
+                classYearSelect.required = false;
+                classYearSelect.value = '';
+                subjectSelect.required = false;
+                subjectSelect.value = '';
+                if (cnpInput) { cnpInput.required = false; cnpInput.value = ''; }
+                document.getElementById('parentEmail').value = '';
+                document.getElementById('parentPassword').value = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const createUserForm = document.querySelector('form[action="/admin/create-user"]');
+            if (createUserForm) {
+                createUserForm.addEventListener('submit', (e) => {
+                    handleFormSubmit(e, createUserForm);
+                });
+            }
+
+            const roleSelect = document.getElementById('role');
+            if (roleSelect) {
+                roleSelect.addEventListener('change', toggleRoleFields);
+                toggleRoleFields();
+            }
+        });
+    </script>
+</body>
+</html>
