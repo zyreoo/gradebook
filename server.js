@@ -37,10 +37,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+let sessionStore;
+try {
+    const FirestoreSessionStore = require('./store/sessionStore');
+    sessionStore = new FirestoreSessionStore();
+    console.log('✓ Using Firestore session store');
+} catch (e) {
+    console.warn('⚠ Firestore session store unavailable, using memory:', e.message);
+    sessionStore = null;
+}
 
-
-
-app.use(session({
+const sessionOptions = {
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
     resave: false,
     saveUninitialized: false,
@@ -48,7 +55,10 @@ app.use(session({
     cookie: {
         maxAge: 72 * 60 * 60 * 1000
     }
-}))
+};
+if (sessionStore) sessionOptions.store = sessionStore;
+
+app.use(session(sessionOptions))
 
 
 app.set('view engine', 'ejs');

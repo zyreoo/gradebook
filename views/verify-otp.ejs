@@ -22,7 +22,7 @@
                 <div class="success-message"><%= success %></div>
             <% } %>
 
-            <form action="/auth/verify-otp" method="POST">
+            <form action="/auth/verify-otp" method="POST" id="verifyForm">
                 <div class="form-group">
                     <label for="code">Verification Code</label>
                     <input 
@@ -39,11 +39,11 @@
                         autofocus
                     >
                     <small style="color: var(--text-dim); font-size: 15px; display: block; margin-top: 8px;">
-                        Code expires in 15 minutes
+                        Code expires in 15 minutes — submits automatically at 6 digits
                     </small>
                 </div>
 
-                <button type="submit" class="btn-primary" style="width: 100%;">
+                <button type="submit" class="btn-primary" id="verifyBtn" style="width: 100%;">
                     Verify Code
                 </button>
             </form>
@@ -72,16 +72,33 @@
     </div>
 
     <script>
-        // Auto-focus and auto-submit on 6 digits
+        // Auto-focus and auto-submit on 6 digits; prevent double submit
         const codeInput = document.getElementById('code');
-        
+        const form = document.getElementById('verifyForm');
+        const verifyBtn = document.getElementById('verifyBtn');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (window._otpSubmitting) return;
+            var code = (codeInput.value || '').replace(/[^0-9]/g, '');
+            if (code.length !== 6) {
+                form.reportValidity();
+                return;
+            }
+            window._otpSubmitting = true;
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying…';
+            form.submit();
+        });
+
         codeInput.addEventListener('input', (e) => {
-            // Only allow numbers
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
-            
-            // Auto-submit when 6 digits entered
             if (e.target.value.length === 6) {
-                e.target.form.submit();
+                if (window._otpSubmitting) return;
+                window._otpSubmitting = true;
+                verifyBtn.disabled = true;
+                verifyBtn.textContent = 'Verifying…';
+                form.submit();
             }
         });
 
@@ -97,9 +114,8 @@
             try {
                 const response = await fetch('/auth/resend-otp', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin'
                 });
                 
                 const data = await response.json();
@@ -141,9 +157,12 @@
             const pastedText = (e.clipboardData || window.clipboardData).getData('text');
             const numbers = pastedText.replace(/[^0-9]/g, '').slice(0, 6);
             codeInput.value = numbers;
-            
             if (numbers.length === 6) {
-                codeInput.form.submit();
+                if (window._otpSubmitting) return;
+                window._otpSubmitting = true;
+                verifyBtn.disabled = true;
+                verifyBtn.textContent = 'Verifying…';
+                form.submit();
             }
         });
     </script>
