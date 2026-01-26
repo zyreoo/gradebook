@@ -86,21 +86,35 @@ router.post('/admin/login', async (req, res) => {
             return res.redirect('/auth/admin/login?error=' + encodeURIComponent('Invalid email or password')); 
         }
 
-        const otpResult = await OTP.create(user.uid, user.email);
-        const emailResult = await emailService.sendOTP(user.email, otpResult.code, user.name);
+        // Check if 2FA is enabled for this user (default to true for backward compatibility)
+        const twoFactorEnabled = user.twoFactorEnabled !== false;
 
-        if (!emailResult.success) {
-            console.error('Failed to send OTP:', emailResult.error);
-            return res.redirect('/auth/admin/login?error=' + encodeURIComponent('Failed to send verification code. Please try again.'));
+        if (twoFactorEnabled) {
+            const otpResult = await OTP.create(user.uid, user.email);
+            const emailResult = await emailService.sendOTP(user.email, otpResult.code, user.name);
+
+            if (!emailResult.success) {
+                console.error('Failed to send OTP:', emailResult.error);
+                return res.redirect('/auth/admin/login?error=' + encodeURIComponent('Failed to send verification code. Please try again.'));
+            }
+
+            req.session.pendingUserId = user.uid;
+            req.session.pendingUserEmail = user.email;
+            req.session.pendingUserName = user.name;
+            req.session.pendingUserRole = user.role;
+            req.session.pendingSchoolId = user.schoolId || null;
+
+            return res.redirect('/auth/verify-otp');
         }
 
-        req.session.pendingUserId = user.uid;
-        req.session.pendingUserEmail = user.email;
-        req.session.pendingUserName = user.name;
-        req.session.pendingUserRole = user.role;
-        req.session.pendingSchoolId = user.schoolId || null;
+        // 2FA disabled - proceed directly to admin dashboard
+        req.session.userId = user.uid;
+        req.session.userEmail = user.email;
+        req.session.userName = user.name;
+        req.session.userRole = user.role;
+        req.session.schoolId = user.schoolId || null;
 
-        return res.redirect('/auth/verify-otp');
+        return res.redirect('/admin/dashboard');
 
     } catch (error) {
         console.error('Admin login error', error);
@@ -136,7 +150,11 @@ router.post('/login', async (req, res) => {
             return res.redirect('/auth/login?error=' + encodeURIComponent('Invalid email or password')); 
         }
 
-        const requires2FA = user.role === 'school_admin' || user.role === 'teacher';
+        // Check if 2FA is required based on role and user preference
+        // Default to requiring 2FA for school_admin and teacher roles if not explicitly disabled
+        const roleRequires2FA = user.role === 'school_admin' || user.role === 'teacher';
+        const twoFactorEnabled = user.twoFactorEnabled !== false; // Default to true if not set
+        const requires2FA = roleRequires2FA && twoFactorEnabled;
 
         if (requires2FA) {
             const otpResult = await OTP.create(user.uid, user.email);
